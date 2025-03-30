@@ -14,14 +14,20 @@
     "migration:run": "npm run typeorm -- migration:run -d ./src/config/ormconfig.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d ./src/config/ormconfig.ts"
   },
-  "keywords": ["sheep", "management", "system", "farm"],
+  "keywords": [
+    "sheep",
+    "management",
+    "system",
+    "farm"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@awsp__/utils": "^1.0.3",
+    "@awsp__/utils": "file:../awsp-utils",
+    "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "@types/node": "^22.12.0",
+    "compression": "^1.7.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -34,6 +40,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
+    "@types/node": "^22.12.0",
     "@types/supertest": "^6.0.2",
     "jest": "^29.7.0",
     "supertest": "^7.0.0",

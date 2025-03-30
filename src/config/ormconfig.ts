@@ -1,19 +1,23 @@
 import { DataSource } from 'typeorm';
-import { SheepEntity } from '../entities/Sheep';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'sheep_system',
-  synchronize: process.env.NODE_ENV === 'development',
-  logging: process.env.NODE_ENV === 'development',
-  entities: [SheepEntity],
-  migrations: ['src/migrations/*.ts'],
-  subscribers: ['src/subscribers/*.ts'],
-}); 
+    type: 'postgres',
+    url: process.env.DATABASE_URL,
+    synchronize: false,
+    logging: !isProduction,
+    schema: process.env.DATABASE_SCHEMA || 'public',
+    entities: [isProduction ? 'dist/entities/**/*.js' : 'src/entities/**/*.ts'],
+    migrations: [
+        isProduction ? 'dist/migrations/**/*.js' : 'src/migrations/**/*.ts',
+    ],
+    migrationsRun: true,
+    extra: {
+        max: 10,
+        idleTimeoutMillis: 30000,
+    },
+});
