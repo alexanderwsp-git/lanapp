@@ -37,7 +37,7 @@ router.post(
     verifyToken,
     validateSchema(MedicineSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const medicine = await medicineService.create(req.body, req.user?.username || 'system');
+        const medicine = await medicineService.create(req.body, req.user!.username);
         created(res, medicine);
     })
 );
@@ -49,7 +49,7 @@ router.put(
     validateParams(IdSchema),
     validateSchema(MedicinePartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const medicine = await medicineService.update(req.params.id, req.body, req.user?.username || 'system');
+        const medicine = await medicineService.update(req.params.id, req.body, req.user!.username);
         if (!medicine) return failed(res, 'Medicine not found');
         updated(res, medicine);
     })
@@ -70,6 +70,7 @@ router.delete(
 // Get medicine with applications
 router.get(
     '/:id/applications',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const medicine = await medicineService.findWithApplications(req.params.id);

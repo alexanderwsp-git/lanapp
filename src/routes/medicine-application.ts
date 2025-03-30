@@ -37,7 +37,7 @@ router.post(
     verifyToken,
     validateSchema(MedicineApplicationSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const application = await medicineApplicationService.create(req.body, req.user?.username || 'system');
+        const application = await medicineApplicationService.create(req.body, req.user!.username);
         created(res, application);
     })
 );
@@ -49,7 +49,7 @@ router.put(
     validateParams(IdSchema),
     validateSchema(MedicineApplicationPartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const application = await medicineApplicationService.update(req.params.id, req.body, req.user?.username || 'system');
+        const application = await medicineApplicationService.update(req.params.id, req.body, req.user!.username);
         if (!application) return failed(res, 'Medicine application not found');
         updated(res, application);
     })
@@ -81,6 +81,7 @@ router.get(
 // Get pending applications
 router.get(
     '/pending',
+    verifyToken,
     asyncHandler(async (req: Request, res: Response) => {
         const applications = await medicineApplicationService.findPending();
         found(res, applications);
@@ -90,6 +91,7 @@ router.get(
 // Get application with details
 router.get(
     '/:id/details',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const application = await medicineApplicationService.findWithDetails(req.params.id);

@@ -26,43 +26,43 @@ router.get(
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const weight = await weightService.findOne(req.params.id);
-        if (!weight) return failed(res, 'Weight record not found');
+        if (!weight) return failed(res, 'Weight not found');
         found(res, weight);
     })
 );
 
-// Create new weight record
+// Create new weight
 router.post(
     '/',
     verifyToken,
     validateSchema(WeightSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const weight = await weightService.create(req.body, req.user?.username || 'system');
+        const weight = await weightService.create(req.body, req.user!.username);
         created(res, weight);
     })
 );
 
-// Update weight record
+// Update weight
 router.put(
     '/:id',
     verifyToken,
     validateParams(IdSchema),
     validateSchema(WeightPartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const weight = await weightService.update(req.params.id, req.body, req.user?.username || 'system');
-        if (!weight) return failed(res, 'Weight record not found');
+        const weight = await weightService.update(req.params.id, req.body, req.user!.username);
+        if (!weight) return failed(res, 'Weight not found');
         updated(res, weight);
     })
 );
 
-// Delete weight record
+// Delete weight
 router.delete(
     '/:id',
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const result = await weightService.delete(req.params.id);
-        if (!result) return failed(res, 'Weight record not found');
+        if (!result) return failed(res, 'Weight not found');
         deleted(res);
     })
 );
@@ -73,8 +73,8 @@ router.get(
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const history = await weightService.getWeightHistory(req.params.sheepId);
-        found(res, history);
+        const weights = await weightService.findBySheep(req.params.sheepId);
+        found(res, weights);
     })
 );
 
@@ -84,9 +84,9 @@ router.get(
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const latest = await weightService.findLatestBySheep(req.params.sheepId);
-        if (!latest) return failed(res, 'No weight records found for this sheep');
-        found(res, latest);
+        const weight = await weightService.findLatestBySheep(req.params.sheepId);
+        if (!weight) return failed(res, 'No weight records found for this sheep');
+        found(res, weight);
     })
 );
 

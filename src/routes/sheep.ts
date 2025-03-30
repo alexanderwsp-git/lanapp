@@ -37,7 +37,7 @@ router.post(
     verifyToken,
     validateSchema(SheepSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const sheep = await sheepService.create(req.body, req.user?.username || 'system');
+        const sheep = await sheepService.create(req.body, req.user!.username);
         created(res, sheep);
     })
 );
@@ -49,7 +49,7 @@ router.put(
     validateParams(IdSchema),
     validateSchema(SheepPartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const sheep = await sheepService.update(req.params.id, req.body, req.user?.username || 'system');
+        const sheep = await sheepService.update(req.params.id, req.body, req.user!.username);
         if (!sheep) return failed(res, 'Sheep not found');
         updated(res, sheep);
     })
@@ -86,7 +86,7 @@ router.patch(
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { status } = req.body;
-        const sheep = await sheepService.updateStatus(req.params.id, status, req.user?.username || 'system');
+        const sheep = await sheepService.updateStatus(req.params.id, status, req.user!.username);
         if (!sheep) return failed(res, 'Sheep not found');
         updated(res, sheep);
     })
@@ -99,7 +99,7 @@ router.patch(
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { isBreedingAnimal } = req.body;
-        const sheep = await sheepService.updateBreedingStatus(req.params.id, isBreedingAnimal, req.user?.username || 'system');
+        const sheep = await sheepService.updateBreedingStatus(req.params.id, isBreedingAnimal, req.user!.username);
         if (!sheep) return failed(res, 'Sheep not found');
         updated(res, sheep);
     })
@@ -112,7 +112,7 @@ router.patch(
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { isMalton } = req.body;
-        const sheep = await sheepService.updateMaltonStatus(req.params.id, isMalton, req.user?.username || 'system');
+        const sheep = await sheepService.updateMaltonStatus(req.params.id, isMalton, req.user!.username);
         if (!sheep) return failed(res, 'Sheep not found');
         updated(res, sheep);
     })
@@ -125,7 +125,7 @@ router.patch(
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { isBreastfeeding } = req.body;
-        const sheep = await sheepService.updateBreastfeedingStatus(req.params.id, isBreastfeeding, req.user?.username || 'system');
+        const sheep = await sheepService.updateBreastfeedingStatus(req.params.id, isBreastfeeding, req.user!.username);
         if (!sheep) return failed(res, 'Sheep not found');
         updated(res, sheep);
     })

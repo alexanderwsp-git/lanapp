@@ -37,7 +37,7 @@ router.post(
     verifyToken,
     validateSchema(MatingSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.create(req.body, req.user?.username || 'system');
+        const mating = await matingService.create(req.body, req.user!.username);
         created(res, mating);
     })
 );
@@ -49,7 +49,7 @@ router.put(
     validateParams(IdSchema),
     validateSchema(MatingPartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.update(req.params.id, req.body, req.user?.username || 'system');
+        const mating = await matingService.update(req.params.id, req.body, req.user!.username);
         if (!mating) return failed(res, 'Mating not found');
         updated(res, mating);
     })
@@ -84,7 +84,7 @@ router.post(
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.markAsEffective(req.params.id, req.user?.username || 'system');
+        const mating = await matingService.markAsEffective(req.params.id, req.user!.username);
         if (!mating) return failed(res, 'Mating not found');
         updated(res, mating);
     })
@@ -96,7 +96,7 @@ router.post(
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.markAsIneffective(req.params.id, req.user?.username || 'system');
+        const mating = await matingService.markAsIneffective(req.params.id, req.user!.username);
         if (!mating) return failed(res, 'Mating not found');
         updated(res, mating);
     })
@@ -108,7 +108,7 @@ router.post(
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.incrementMatingCount(req.params.id, req.user?.username || 'system');
+        const mating = await matingService.incrementMatingCount(req.params.id, req.user!.username);
         if (!mating) return failed(res, 'Mating not found');
         updated(res, mating);
     })
