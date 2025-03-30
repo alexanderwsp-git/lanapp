@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { SheepService } from '../services';
 import { SheepSchema, SheepPartialSchema, IdSchema, created, deleted, failed, found, updated } from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
+import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 const sheepService = new SheepService();
@@ -9,6 +10,7 @@ const sheepService = new SheepService();
 // Get all sheep with pagination
 router.get(
     '/',
+    verifyToken,
     asyncHandler(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
@@ -20,6 +22,7 @@ router.get(
 // Get sheep by ID
 router.get(
     '/:id',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const sheep = await sheepService.findOne(req.params.id);
@@ -31,6 +34,7 @@ router.get(
 // Create new sheep
 router.post(
     '/',
+    verifyToken,
     validateSchema(SheepSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const sheep = await sheepService.create(req.body, req.user?.username || 'system');
@@ -41,6 +45,7 @@ router.post(
 // Update sheep
 router.put(
     '/:id',
+    verifyToken,
     validateParams(IdSchema),
     validateSchema(SheepPartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
@@ -53,6 +58,7 @@ router.put(
 // Delete sheep
 router.delete(
     '/:id',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const result = await sheepService.delete(req.params.id);
@@ -64,6 +70,7 @@ router.delete(
 // Get sheep with parents
 router.get(
     '/:id/parents',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const sheep = await sheepService.findWithParents(req.params.id);
@@ -75,6 +82,7 @@ router.get(
 // Update sheep status
 router.patch(
     '/:id/status',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { status } = req.body;
@@ -87,6 +95,7 @@ router.patch(
 // Update breeding status
 router.patch(
     '/:id/breeding-status',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { isBreedingAnimal } = req.body;
@@ -99,6 +108,7 @@ router.patch(
 // Update malton status
 router.patch(
     '/:id/malton-status',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { isMalton } = req.body;
@@ -111,6 +121,7 @@ router.patch(
 // Update breastfeeding status
 router.patch(
     '/:id/breastfeeding-status',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { isBreastfeeding } = req.body;

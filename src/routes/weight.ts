@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { WeightService } from '../services';
 import { WeightSchema, WeightPartialSchema, IdSchema, created, deleted, failed, found, updated } from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
+import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 const weightService = new WeightService();
@@ -9,6 +10,7 @@ const weightService = new WeightService();
 // Get all weights with pagination
 router.get(
     '/',
+    verifyToken,
     asyncHandler(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
@@ -20,6 +22,7 @@ router.get(
 // Get weight by ID
 router.get(
     '/:id',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const weight = await weightService.findOne(req.params.id);
@@ -31,6 +34,7 @@ router.get(
 // Create new weight record
 router.post(
     '/',
+    verifyToken,
     validateSchema(WeightSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const weight = await weightService.create(req.body, req.user?.username || 'system');
@@ -41,6 +45,7 @@ router.post(
 // Update weight record
 router.put(
     '/:id',
+    verifyToken,
     validateParams(IdSchema),
     validateSchema(WeightPartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
@@ -53,6 +58,7 @@ router.put(
 // Delete weight record
 router.delete(
     '/:id',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const result = await weightService.delete(req.params.id);
@@ -64,6 +70,7 @@ router.delete(
 // Get weight history for a sheep
 router.get(
     '/sheep/:sheepId',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const history = await weightService.getWeightHistory(req.params.sheepId);
@@ -74,6 +81,7 @@ router.get(
 // Get latest weight for a sheep
 router.get(
     '/sheep/:sheepId/latest',
+    verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const latest = await weightService.findLatestBySheep(req.params.sheepId);

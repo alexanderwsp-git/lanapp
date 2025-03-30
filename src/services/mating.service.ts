@@ -20,6 +20,10 @@ export class MatingService extends BaseService<Mating> {
         return (this.repository as MatingRepository).findByFemale(femaleId);
     }
 
+    async findBySheep(sheepId: string): Promise<Mating[]> {
+        return (this.repository as MatingRepository).findBySheep(sheepId);
+    }
+
     async findWithDetails(id: string): Promise<Mating | null> {
         return (this.repository as MatingRepository).findWithDetails(id);
     }
