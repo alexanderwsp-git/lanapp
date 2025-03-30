@@ -1,0 +1,57 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.pid.lock
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build directories
+dist/
+build/
+
+# Environment files
+.env
+.env.test
+.env.production
+.env.local
+.env.*.local
+
+# Cache files
+.cache/
+.next/
+.nuxt/
+out/
+.vscode/*
+!.vscode/settings.json  # Optional: Keep specific settings
+!.vscode/extensions.json  # Optional: Keep extensions
+
+# IDE settings and backups
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Coverage directories
+coverage/
+*.lcov
+
+# Optional npm files
+npm-shrinkwrap.json
+
+# Typescript build outputs
+*.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/

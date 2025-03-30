@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  lanapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-runner}
+    image: alexander/lanapp:latest
+    container_name: lanapp
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://admin:adm1n*@awsp_postgres:5432/webapp?schema=lanapp
+    ports:
+      - '2080:2080'
+    volumes:
+      - .:/app
+    restart: always
+    networks:
+      - awsp_network
+
+networks:
+  awsp_network:
+    external: true
+
+volumes:
+  postgres_data: 
