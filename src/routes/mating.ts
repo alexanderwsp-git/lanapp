@@ -1,15 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { MatingService } from '../services';
-import {
-    MatingSchema,
-    MatingPartialSchema,
-    IdSchema,
-    created,
-    deleted,
-    failed,
-    found,
-    updated,
-} from '@awsp__/utils';
+import { MatingSchema, IdSchema, created, failed, found, updated } from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -34,7 +25,7 @@ router.get(
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.findOne(req.params.id);
+        const mating = await matingService.findWithDetails(req.params.id);
         if (!mating) return failed(res, 'Mating not found');
         found(res, mating);
     })
@@ -46,44 +37,8 @@ router.post(
     verifyToken,
     validateSchema(MatingSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.create(req.body, req.user!.username);
+        const mating = await matingService.recordMating(req.body, req.user!.username);
         created(res, mating);
-    })
-);
-
-// Update mating
-router.put(
-    '/:id',
-    verifyToken,
-    validateParams(IdSchema),
-    validateSchema(MatingPartialSchema),
-    asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.update(req.params.id, req.body, req.user!.username);
-        if (!mating) return failed(res, 'Mating not found');
-        updated(res, mating);
-    })
-);
-
-// Delete mating
-router.delete(
-    '/:id',
-    verifyToken,
-    validateParams(IdSchema),
-    asyncHandler(async (req: Request, res: Response) => {
-        const result = await matingService.delete(req.params.id);
-        if (!result) return failed(res, 'Mating not found');
-        deleted(res);
-    })
-);
-
-// Get matings by sheep
-router.get(
-    '/sheep/:sheepId',
-    verifyToken,
-    validateParams(IdSchema),
-    asyncHandler(async (req: Request, res: Response) => {
-        const matings = await matingService.findBySheep(req.params.sheepId);
-        found(res, matings);
     })
 );
 
@@ -111,15 +66,46 @@ router.post(
     })
 );
 
-// Increment mating count
-router.post(
-    '/:id/increment-count',
+// Get matings by status
+router.get(
+    '/status/:status',
+    verifyToken,
+    asyncHandler(async (req: Request, res: Response) => {
+        const matings = await matingService.findByStatus(req.params.status as any);
+        found(res, matings);
+    })
+);
+
+// Get matings by male
+router.get(
+    '/male/:maleId',
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const mating = await matingService.incrementMatingCount(req.params.id, req.user!.username);
-        if (!mating) return failed(res, 'Mating not found');
-        updated(res, mating);
+        const matings = await matingService.findByMale(req.params.maleId);
+        found(res, matings);
+    })
+);
+
+// Get matings by female
+router.get(
+    '/female/:femaleId',
+    verifyToken,
+    validateParams(IdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const matings = await matingService.findByFemale(req.params.femaleId);
+        found(res, matings);
+    })
+);
+
+// Get matings by sheep (either male or female)
+router.get(
+    '/sheep/:sheepId',
+    verifyToken,
+    validateParams(IdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const matings = await matingService.findBySheep(req.params.sheepId);
+        found(res, matings);
     })
 );
 

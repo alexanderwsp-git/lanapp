@@ -5,6 +5,7 @@ import medicine from './medicine';
 import medicineApplication from './medicine-application';
 import mating from './mating';
 import weight from './weight';
+import pregnancyCheckRoutes from './pregnancy-check';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/medicine', medicine);
 router.use('/medicine-application', medicineApplication);
 router.use('/mating', mating);
 router.use('/weight', weight);
+router.use('/pregnancy-check', pregnancyCheckRoutes);
 
 export default router;

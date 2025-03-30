@@ -1,11 +1,68 @@
 import { BaseService } from './base.service';
 import { MatingRepository } from '../repositories/mating.repository';
 import { Mating } from '../entities/mating.entity';
+import { SheepService } from './sheep.service';
 import { MatingStatus } from '@awsp__/utils';
 
 export class MatingService extends BaseService<Mating> {
+    private sheepService: SheepService;
+
     constructor() {
         super(new MatingRepository());
+        this.sheepService = new SheepService();
+    }
+
+    async recordMating(
+        data: {
+            maleId: string;
+            femaleId: string;
+            matingDate: Date;
+            expectedBirthDate?: Date;
+        },
+        username: string
+    ): Promise<Mating> {
+        const mating = await this.create(
+            {
+                ...data,
+                status: MatingStatus.PENDING,
+            },
+            username
+        );
+
+        // Update female's last mounted date
+        await this.sheepService.update(
+            data.femaleId,
+            { lastMountedDate: data.matingDate },
+            username
+        );
+
+        return mating;
+    }
+
+    async markAsEffective(id: string, username: string): Promise<Mating> {
+        const mating = await this.findOne(id);
+        if (!mating) throw new Error('Mating not found');
+
+        const updates: Partial<Mating> = {
+            status: MatingStatus.EFFECTIVE,
+        };
+
+        const updated = await this.update(id, updates, username);
+        if (!updated) throw new Error('Failed to update mating');
+        return updated;
+    }
+
+    async markAsIneffective(id: string, username: string): Promise<Mating> {
+        const mating = await this.findOne(id);
+        if (!mating) throw new Error('Mating not found');
+
+        const updates: Partial<Mating> = {
+            status: MatingStatus.INEFFECTIVE,
+        };
+
+        const updated = await this.update(id, updates, username);
+        if (!updated) throw new Error('Failed to update mating');
+        return updated;
     }
 
     async findByStatus(status: MatingStatus): Promise<Mating[]> {
@@ -26,54 +83,5 @@ export class MatingService extends BaseService<Mating> {
 
     async findWithDetails(id: string): Promise<Mating | null> {
         return (this.repository as MatingRepository).findWithDetails(id);
-    }
-
-    async recordMating(data: Partial<Mating>, username: string): Promise<Mating> {
-        return this.create(
-            {
-                ...data,
-                status: MatingStatus.PENDING,
-                matingCount: 1,
-                effectivenessCounter: 0,
-            },
-            username
-        );
-    }
-
-    async markAsEffective(id: string, username: string): Promise<Mating | null> {
-        const mating = await this.findOne(id);
-        if (!mating) return null;
-
-        return this.update(
-            id,
-            {
-                status: MatingStatus.EFFECTIVE,
-                effectivenessCounter: (mating.effectivenessCounter || 0) + 1,
-            },
-            username
-        );
-    }
-
-    async markAsIneffective(id: string, username: string): Promise<Mating | null> {
-        return this.update(
-            id,
-            {
-                status: MatingStatus.INEFFECTIVE,
-            },
-            username
-        );
-    }
-
-    async incrementMatingCount(id: string, username: string): Promise<Mating | null> {
-        const mating = await this.findOne(id);
-        if (!mating) return null;
-
-        return this.update(
-            id,
-            {
-                matingCount: (mating.matingCount || 1) + 1,
-            },
-            username
-        );
     }
 }
