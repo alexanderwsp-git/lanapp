@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import {
     Gender,
@@ -8,6 +8,9 @@ import {
     SheepCategory,
     RecordType,
 } from '@awsp__/utils';
+import { Location } from './location.entity';
+import { Mating } from './mating.entity';
+import { MedicineApplication } from './medicine-application.entity';
 
 @Entity('sheep')
 export class Sheep extends BaseEntity {
@@ -96,4 +99,25 @@ export class Sheep extends BaseEntity {
     @ManyToOne(() => Sheep, { nullable: true })
     @JoinColumn()
     father: Sheep;
+
+    @Column({ nullable: true })
+    imageUrl?: string;
+
+    @Column({ nullable: true })
+    notes?: string;
+
+    @ManyToOne(() => Location, location => location.sheepBornHere)
+    birthLocation: Location;
+
+    @ManyToOne(() => Location, location => location.sheepCurrentlyHere)
+    currentLocation: Location;
+
+    @OneToMany(() => Mating, mating => mating.male)
+    matingsAsMale: Mating[];
+
+    @OneToMany(() => Mating, mating => mating.female)
+    matingsAsFemale: Mating[];
+
+    @OneToMany(() => MedicineApplication, application => application.sheep)
+    medicineApplications: MedicineApplication[];
 }

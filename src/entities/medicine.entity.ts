@@ -26,6 +26,21 @@ export class Medicine extends BaseEntity {
     @Column({ nullable: true })
     notes: string;
 
+    @Column({ nullable: true })
+    imageUrl?: string;
+
+    @Column({ nullable: true })
+    manufacturer?: string;
+
+    @Column({ nullable: true })
+    batchNumber?: string;
+
+    @Column({ type: 'date', nullable: true })
+    expiryDate?: Date;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+    price?: number;
+
     @OneToMany(() => MedicineApplication, application => application.medicine)
     applications: MedicineApplication[];
 }

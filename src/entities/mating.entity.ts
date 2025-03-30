@@ -6,10 +6,12 @@ import {
     PrimaryGeneratedColumn,
     CreateDateColumn,
     UpdateDateColumn,
+    OneToMany,
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { MatingStatus } from '@awsp__/utils';
 import { Sheep } from './sheep.entity';
+import { PregnancyCheck } from './pregnancy-check.entity';
 
 @Entity('mating')
 export class Mating extends BaseEntity {
@@ -19,21 +21,21 @@ export class Mating extends BaseEntity {
     @Column()
     maleId: string;
 
-    @ManyToOne(() => Sheep)
-    @JoinColumn({ name: 'maleId' })
-    male: Sheep;
-
     @Column()
     femaleId: string;
 
-    @ManyToOne(() => Sheep)
+    @ManyToOne(() => Sheep, sheep => sheep.matingsAsMale)
+    @JoinColumn({ name: 'maleId' })
+    male: Sheep;
+
+    @ManyToOne(() => Sheep, sheep => sheep.matingsAsFemale)
     @JoinColumn({ name: 'femaleId' })
     female: Sheep;
 
-    @Column()
+    @Column({ type: 'date' })
     matingDate: Date;
 
-    @Column({ nullable: true })
+    @Column({ type: 'date', nullable: true })
     expectedBirthDate?: Date;
 
     @Column({
@@ -42,4 +44,7 @@ export class Mating extends BaseEntity {
         default: MatingStatus.PENDING,
     })
     status: MatingStatus;
+
+    @OneToMany(() => PregnancyCheck, check => check.mating)
+    pregnancyChecks: PregnancyCheck[];
 }
