@@ -1,52 +1,56 @@
 {
-  "name": "lanapp",
-  "version": "1.0.0",
-  "description": "Lan App Backend",
-  "main": "dist/index.js",
-  "scripts": {
-    "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
-    "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name -d ./src/config/ormconfig.ts",
-    "migration:run": "npm run typeorm -- migration:run -d ./src/config/ormconfig.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d ./src/config/ormconfig.ts"
-  },
-  "keywords": [
-    "sheep",
-    "management",
-    "system",
-    "farm"
-  ],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@aws-sdk/client-cognito-identity-provider": "^3.777.0",
-    "@awsp__/utils": "file:../awsp-utils",
-    "@types/compression": "^1.7.5",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "compression": "^1.7.5",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "pg": "^8.13.1",
-    "reflect-metadata": "^0.2.2",
-    "typeorm": "^0.3.20",
-    "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.12.0",
-    "@types/supertest": "^6.0.2",
-    "jest": "^29.7.0",
-    "supertest": "^7.0.0",
-    "ts-jest": "^29.2.5",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.7.3"
-  }
+    "name": "lanapp",
+    "version": "1.0.0",
+    "description": "Lan App Backend",
+    "main": "dist/index.js",
+    "scripts": {
+        "start": "node dist/index.js",
+        "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+        "build": "tsc",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+        "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name -d ./src/config/ormconfig.ts",
+        "migration:run": "npm run typeorm -- migration:run -d ./src/config/ormconfig.ts",
+        "migration:revert": "npm run typeorm -- migration:revert -d ./src/config/ormconfig.ts",
+        "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+        "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
+    },
+    "keywords": [
+        "sheep",
+        "management",
+        "system",
+        "farm"
+    ],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@aws-sdk/client-cognito-identity-provider": "^3.777.0",
+        "@awsp__/utils": "file:../awsp-utils",
+        "@types/compression": "^1.7.5",
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.0",
+        "compression": "^1.7.5",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2",
+        "pg": "^8.13.1",
+        "reflect-metadata": "^0.2.2",
+        "typeorm": "^0.3.20",
+        "winston": "^3.17.0",
+        "winston-daily-rotate-file": "^5.0.0",
+        "zod": "^3.24.1"
+    },
+    "devDependencies": {
+        "@types/jest": "^29.5.14",
+        "@types/node": "^22.12.0",
+        "@types/supertest": "^6.0.2",
+        "eslint-config-prettier": "^10.1.1",
+        "jest": "^29.7.0",
+        "prettier": "^3.5.3",
+        "supertest": "^7.0.0",
+        "ts-jest": "^29.2.5",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.7.3"
+    }
 }

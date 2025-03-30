@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { SheepService } from '../services';
-import { SheepSchema, SheepPartialSchema, IdSchema, created, deleted, failed, found, updated } from '@awsp__/utils';
+import {
+    SheepSchema,
+    SheepPartialSchema,
+    IdSchema,
+    created,
+    deleted,
+    failed,
+    found,
+    updated,
+} from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 import { RecordType, SheepStatus } from '@awsp__/utils';
@@ -128,4 +137,4 @@ router.post(
     })
 );
 
-export default router; 
+export default router;

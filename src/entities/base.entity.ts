@@ -13,4 +13,4 @@ export abstract class BaseEntity {
 
     @Column({ name: 'updated_by' })
     updatedBy: string;
-} 
+}

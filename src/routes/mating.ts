@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { MatingService } from '../services';
-import { MatingSchema, MatingPartialSchema, IdSchema, created, deleted, failed, found, updated } from '@awsp__/utils';
+import {
+    MatingSchema,
+    MatingPartialSchema,
+    IdSchema,
+    created,
+    deleted,
+    failed,
+    found,
+    updated,
+} from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -114,4 +123,4 @@ router.post(
     })
 );
 
-export default router; 
+export default router;

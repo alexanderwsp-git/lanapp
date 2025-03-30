@@ -7,23 +7,23 @@ export class WeightRepository extends BaseRepository<Weight> {
     }
 
     async findBySheep(sheepId: string): Promise<Weight[]> {
-        return this.repository.find({ 
+        return this.repository.find({
             where: { sheepId } as any,
-            order: { measurementDate: 'DESC' } as any
+            order: { measurementDate: 'DESC' } as any,
         });
     }
 
     async findLatestBySheep(sheepId: string): Promise<Weight | null> {
         return this.repository.findOne({
             where: { sheepId } as any,
-            order: { measurementDate: 'DESC' } as any
+            order: { measurementDate: 'DESC' } as any,
         });
     }
 
     async findWithDetails(id: string): Promise<Weight | null> {
         return this.repository.findOne({
             where: { id } as any,
-            relations: ['sheep']
+            relations: ['sheep'],
         });
     }
-} 
+}

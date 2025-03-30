@@ -33,8 +33,12 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
             return failed(res, 'Invalid token');
         }
 
-        const username = response.UserAttributes.find((attr: AttributeType) => attr.Name === 'username')?.Value;
-        const email = response.UserAttributes.find((attr: AttributeType) => attr.Name === 'email')?.Value;
+        const username = response.UserAttributes.find(
+            (attr: AttributeType) => attr.Name === 'username'
+        )?.Value;
+        const email = response.UserAttributes.find(
+            (attr: AttributeType) => attr.Name === 'email'
+        )?.Value;
 
         if (!username || !email) {
             return failed(res, 'Invalid user data');
@@ -45,4 +49,4 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
     } catch (error) {
         return failed(res, 'Invalid token');
     }
-}; 
+};

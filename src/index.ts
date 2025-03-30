@@ -41,9 +41,7 @@ if (process.env.NODE_ENV !== 'test') {
             console.log('✅ Database connected!');
 
             app.listen(PORT, () => {
-                console.log(
-                    `🚀 Server is running on port ${PORT}, TZ: ${process.env.TZ}`
-                );
+                console.log(`🚀 Server is running on port ${PORT}, TZ: ${process.env.TZ}`);
             });
         } catch (error) {
             console.error('❌ Database connection failed:', error);
@@ -52,4 +50,4 @@ if (process.env.NODE_ENV !== 'test') {
     };
 
     startServer();
-} 
+}

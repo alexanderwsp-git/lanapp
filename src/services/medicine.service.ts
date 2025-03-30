@@ -15,4 +15,4 @@ export class MedicineService extends BaseService<Medicine> {
     async findWithApplications(id: string): Promise<Medicine | null> {
         return (this.repository as MedicineRepository).findWithApplications(id);
     }
-} 
+}

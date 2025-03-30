@@ -9,12 +9,7 @@ export abstract class BaseService<T extends BaseEntity> {
         return this.repository.findOne(id);
     }
 
-    async find(options?: {
-        where?: any;
-        order?: any;
-        skip?: number;
-        take?: number;
-    }): Promise<T[]> {
+    async find(options?: { where?: any; order?: any; skip?: number; take?: number }): Promise<T[]> {
         return this.repository.find(options);
     }
 
@@ -22,14 +17,14 @@ export abstract class BaseService<T extends BaseEntity> {
         return this.repository.create({
             ...data,
             createdBy: username,
-            updatedBy: username
+            updatedBy: username,
         });
     }
 
     async update(id: string, data: DeepPartial<T>, username: string): Promise<T | null> {
         return this.repository.update(id, {
             ...data,
-            updatedBy: username
+            updatedBy: username,
         });
     }
 
@@ -40,4 +35,4 @@ export abstract class BaseService<T extends BaseEntity> {
     async findAll(page: number = 1, limit: number = 10): Promise<{ data: T[]; total: number }> {
         return this.repository.findAll(page, limit);
     }
-} 
+}

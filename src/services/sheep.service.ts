@@ -2,7 +2,7 @@ import { BaseService } from './base.service';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { Sheep } from '../entities/sheep.entity';
 import { Gender, SheepStatus, RecordType } from '@awsp__/utils';
-import { determineCategory, calculateQuarantineEndDate, isInQuarantine } from '../utils/utils';
+import { determineCategory, isInQuarantine } from '../utils/utils';
 
 export class SheepService extends BaseService<Sheep> {
     constructor() {
@@ -34,16 +34,25 @@ export class SheepService extends BaseService<Sheep> {
     }
 
     async create(data: Partial<Sheep>, username: string): Promise<Sheep> {
-        const sheep = await super.create(data, username);
-        
-        // If the sheep was born on the farm, set quarantine
-        if (sheep.recordType === RecordType.BORN) {
-            const quarantineEndDate = calculateQuarantineEndDate(sheep.birthDate);
-            await this.update(sheep.id, {
-                status: SheepStatus.QUARANTINE,
-                quarantineEndDate
-            }, username);
-        }
+        // Set initial category based on gender, birth date, and status
+        const category = determineCategory(
+            data.gender!,
+            data.birthDate!,
+            data.isPregnant || false,
+            !!data.deliveryDate
+        );
+
+        // Set initial status based on record type
+        const status =
+            data.recordType === RecordType.BORN ? SheepStatus.QUARANTINE : SheepStatus.ACTIVE;
+
+        const sheep = await this.repository.create({
+            ...data,
+            category,
+            status,
+            createdBy: username,
+            updatedBy: username,
+        });
 
         return sheep;
     }
@@ -59,13 +68,17 @@ export class SheepService extends BaseService<Sheep> {
             sheep.isPregnant,
             !!sheep.deliveryDate
         );
-        
+
         // Check if quarantine should be lifted
         if (sheep.status === SheepStatus.QUARANTINE && !isInQuarantine(sheep.birthDate)) {
-            await super.update(id, {
-                status: SheepStatus.ACTIVE,
-                category
-            }, username);
+            await super.update(
+                id,
+                {
+                    status: SheepStatus.ACTIVE,
+                    category,
+                },
+                username
+            );
         } else {
             await super.update(id, { category }, username);
         }
@@ -83,11 +96,15 @@ export class SheepService extends BaseService<Sheep> {
                     sheep.isPregnant,
                     !!sheep.deliveryDate
                 );
-                await this.update(sheep.id, {
-                    status: SheepStatus.ACTIVE,
-                    category
-                }, 'system');
+                await this.update(
+                    sheep.id,
+                    {
+                        status: SheepStatus.ACTIVE,
+                        category,
+                    },
+                    'system'
+                );
             }
         }
     }
-} 
+}

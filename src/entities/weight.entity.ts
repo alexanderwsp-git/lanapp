@@ -22,4 +22,4 @@ export class Weight extends BaseEntity {
     @ManyToOne(() => Sheep)
     @JoinColumn()
     sheep: Sheep;
-} 
+}

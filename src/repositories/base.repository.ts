@@ -31,7 +31,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
         const [data, total] = await this.repository.findAndCount({
             skip: (page - 1) * limit,
             take: limit,
-            order: { createdAt: 'DESC' } as any
+            order: { createdAt: 'DESC' } as any,
         });
         return { data, total };
     }
@@ -48,4 +48,4 @@ export abstract class BaseRepository<T extends BaseEntity> {
         const result = await this.repository.delete(id);
         return result.affected !== 0;
     }
-} 
+}

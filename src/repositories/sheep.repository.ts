@@ -20,11 +20,11 @@ export class SheepRepository extends BaseRepository<Sheep> {
     }
 
     async findInQuarantine(): Promise<Sheep[]> {
-        return this.repository.find({ 
-            where: { 
+        return this.repository.find({
+            where: {
                 status: SheepStatus.QUARANTINE,
-                quarantineEndDate: { $gt: new Date() } 
-            } as any 
+                quarantineEndDate: { $gt: new Date() },
+            } as any,
         });
     }
 
@@ -43,23 +43,30 @@ export class SheepRepository extends BaseRepository<Sheep> {
     async findWithParents(id: string): Promise<Sheep | null> {
         return this.repository.findOne({
             where: { id } as any,
-            relations: ['mother', 'father']
+            relations: ['mother', 'father'],
         });
     }
 
     async findWithDetails(id: string): Promise<Sheep | null> {
         return this.repository.findOne({
             where: { id } as any,
-            relations: ['mother', 'father', 'weights', 'medicineApplications', 'matingsAsMale', 'matingsAsFemale']
+            relations: [
+                'mother',
+                'father',
+                'weights',
+                'medicineApplications',
+                'matingsAsMale',
+                'matingsAsFemale',
+            ],
         });
     }
 
     async findActive(): Promise<Sheep[]> {
-        return this.repository.find({ 
-            where: { 
+        return this.repository.find({
+            where: {
                 status: SheepStatus.ACTIVE,
-                quarantineEndDate: { $lt: new Date() } 
-            } as any 
+                quarantineEndDate: { $lt: new Date() },
+            } as any,
         });
     }
-} 
+}

@@ -12,9 +12,7 @@ export const AppDataSource = new DataSource({
     logging: !isProduction,
     schema: process.env.DATABASE_SCHEMA || 'public',
     entities: [isProduction ? 'dist/entities/**/*.js' : 'src/entities/**/*.ts'],
-    migrations: [
-        isProduction ? 'dist/migrations/**/*.js' : 'src/migrations/**/*.ts',
-    ],
+    migrations: [isProduction ? 'dist/migrations/**/*.js' : 'src/migrations/**/*.ts'],
     migrationsRun: true,
     extra: {
         max: 10,

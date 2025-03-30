@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { MedicineApplicationService } from '../services';
-import { MedicineApplicationSchema, MedicineApplicationPartialSchema, IdSchema, created, deleted, failed, found, updated } from '@awsp__/utils';
+import {
+    MedicineApplicationSchema,
+    MedicineApplicationPartialSchema,
+    IdSchema,
+    created,
+    deleted,
+    failed,
+    found,
+    updated,
+} from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -49,7 +58,11 @@ router.put(
     validateParams(IdSchema),
     validateSchema(MedicineApplicationPartialSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const application = await medicineApplicationService.update(req.params.id, req.body, req.user!.username);
+        const application = await medicineApplicationService.update(
+            req.params.id,
+            req.body,
+            req.user!.username
+        );
         if (!application) return failed(res, 'Medicine application not found');
         updated(res, application);
     })
@@ -100,4 +113,4 @@ router.get(
     })
 );
 
-export default router; 
+export default router;

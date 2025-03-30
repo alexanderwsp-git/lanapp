@@ -26,7 +26,7 @@ export class WeightService extends BaseService<Weight> {
     async getWeightHistory(sheepId: string): Promise<Weight[]> {
         return this.find({
             where: { sheepId },
-            order: { measurementDate: 'DESC' }
+            order: { measurementDate: 'DESC' },
         });
     }
-} 
+}

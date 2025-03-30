@@ -29,36 +29,51 @@ export class MatingService extends BaseService<Mating> {
     }
 
     async recordMating(data: Partial<Mating>, username: string): Promise<Mating> {
-        return this.create({
-            ...data,
-            status: MatingStatus.PENDING,
-            matingCount: 1,
-            effectivenessCounter: 0
-        }, username);
+        return this.create(
+            {
+                ...data,
+                status: MatingStatus.PENDING,
+                matingCount: 1,
+                effectivenessCounter: 0,
+            },
+            username
+        );
     }
 
     async markAsEffective(id: string, username: string): Promise<Mating | null> {
         const mating = await this.findOne(id);
         if (!mating) return null;
 
-        return this.update(id, {
-            status: MatingStatus.EFFECTIVE,
-            effectivenessCounter: (mating.effectivenessCounter || 0) + 1
-        }, username);
+        return this.update(
+            id,
+            {
+                status: MatingStatus.EFFECTIVE,
+                effectivenessCounter: (mating.effectivenessCounter || 0) + 1,
+            },
+            username
+        );
     }
 
     async markAsIneffective(id: string, username: string): Promise<Mating | null> {
-        return this.update(id, {
-            status: MatingStatus.INEFFECTIVE
-        }, username);
+        return this.update(
+            id,
+            {
+                status: MatingStatus.INEFFECTIVE,
+            },
+            username
+        );
     }
 
     async incrementMatingCount(id: string, username: string): Promise<Mating | null> {
         const mating = await this.findOne(id);
         if (!mating) return null;
 
-        return this.update(id, {
-            matingCount: (mating.matingCount || 1) + 1
-        }, username);
+        return this.update(
+            id,
+            {
+                matingCount: (mating.matingCount || 1) + 1,
+            },
+            username
+        );
     }
-} 
+}

@@ -15,4 +15,4 @@ router.use('/medicine-application', medicineApplication);
 router.use('/mating', mating);
 router.use('/weight', weight);
 
-export default router; 
+export default router;

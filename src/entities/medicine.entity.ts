@@ -10,7 +10,7 @@ export class Medicine extends BaseEntity {
 
     @Column({
         type: 'enum',
-        enum: MedicineType
+        enum: MedicineType,
     })
     type: MedicineType;
 
@@ -28,4 +28,4 @@ export class Medicine extends BaseEntity {
 
     @OneToMany(() => MedicineApplication, application => application.medicine)
     applications: MedicineApplication[];
-} 
+}

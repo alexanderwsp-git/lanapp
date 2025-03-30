@@ -12,9 +12,9 @@ export class MedicineApplicationRepository extends BaseRepository<MedicineApplic
     }
 
     async findBySheep(sheepId: string): Promise<MedicineApplication[]> {
-        return this.repository.find({ 
+        return this.repository.find({
             where: { sheepId } as any,
-            relations: ['medicine']
+            relations: ['medicine'],
         });
     }
 
@@ -27,18 +27,18 @@ export class MedicineApplicationRepository extends BaseRepository<MedicineApplic
     }
 
     async findPending(): Promise<MedicineApplication[]> {
-        return this.repository.find({ 
-            where: { 
-                nextApplicationDate: { $lte: new Date() } 
+        return this.repository.find({
+            where: {
+                nextApplicationDate: { $lte: new Date() },
             } as any,
-            relations: ['medicine', 'sheep']
+            relations: ['medicine', 'sheep'],
         });
     }
 
     async findWithDetails(id: string): Promise<MedicineApplication | null> {
         return this.repository.findOne({
             where: { id } as any,
-            relations: ['medicine', 'sheep']
+            relations: ['medicine', 'sheep'],
         });
     }
-} 
+}

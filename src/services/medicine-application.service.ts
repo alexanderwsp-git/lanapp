@@ -32,28 +32,46 @@ export class MedicineApplicationService extends BaseService<MedicineApplication>
         return (this.repository as MedicineApplicationRepository).findWithDetails(id);
     }
 
-    async scheduleApplication(data: Partial<MedicineApplication>, username: string): Promise<MedicineApplication> {
-        return this.create({
-            ...data,
-            status: MedicineStatus.SCHEDULED
-        }, username);
+    async scheduleApplication(
+        data: Partial<MedicineApplication>,
+        username: string
+    ): Promise<MedicineApplication> {
+        return this.create(
+            {
+                ...data,
+                status: MedicineStatus.SCHEDULED,
+            },
+            username
+        );
     }
 
     async applyMedicine(id: string, username: string): Promise<MedicineApplication | null> {
-        return this.update(id, {
-            status: MedicineStatus.APPLIED
-        }, username);
+        return this.update(
+            id,
+            {
+                status: MedicineStatus.APPLIED,
+            },
+            username
+        );
     }
 
     async cancelApplication(id: string, username: string): Promise<MedicineApplication | null> {
-        return this.update(id, {
-            status: MedicineStatus.CANCELLED
-        }, username);
+        return this.update(
+            id,
+            {
+                status: MedicineStatus.CANCELLED,
+            },
+            username
+        );
     }
 
     async markAsMissed(id: string, username: string): Promise<MedicineApplication | null> {
-        return this.update(id, {
-            status: MedicineStatus.MISSED
-        }, username);
+        return this.update(
+            id,
+            {
+                status: MedicineStatus.MISSED,
+            },
+            username
+        );
     }
-} 
+}

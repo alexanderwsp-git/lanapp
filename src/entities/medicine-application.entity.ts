@@ -23,7 +23,7 @@ export class MedicineApplication extends BaseEntity {
 
     @Column({
         type: 'enum',
-        enum: MedicineStatus
+        enum: MedicineStatus,
     })
     status: MedicineStatus;
 
@@ -37,4 +37,4 @@ export class MedicineApplication extends BaseEntity {
     @ManyToOne(() => Sheep)
     @JoinColumn()
     sheep: Sheep;
-} 
+}

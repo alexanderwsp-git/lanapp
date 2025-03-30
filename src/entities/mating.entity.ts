@@ -22,7 +22,7 @@ export class Mating extends BaseEntity {
 
     @Column({
         type: 'enum',
-        enum: MatingStatus
+        enum: MatingStatus,
     })
     status: MatingStatus;
 
@@ -42,4 +42,4 @@ export class Mating extends BaseEntity {
     @ManyToOne(() => Sheep)
     @JoinColumn()
     female: Sheep;
-} 
+}

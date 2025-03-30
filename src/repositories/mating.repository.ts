@@ -21,17 +21,14 @@ export class MatingRepository extends BaseRepository<Mating> {
 
     async findBySheep(sheepId: string): Promise<Mating[]> {
         return this.repository.find({
-            where: [
-                { maleId: sheepId } as any,
-                { femaleId: sheepId } as any
-            ]
+            where: [{ maleId: sheepId } as any, { femaleId: sheepId } as any],
         });
     }
 
     async findWithDetails(id: string): Promise<Mating | null> {
         return this.repository.findOne({
             where: { id } as any,
-            relations: ['male', 'female']
+            relations: ['male', 'female'],
         });
     }
-} 
+}

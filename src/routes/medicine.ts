@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { MedicineService } from '../services';
-import { MedicineSchema, MedicinePartialSchema, IdSchema, created, deleted, failed, found, updated } from '@awsp__/utils';
+import {
+    MedicineSchema,
+    MedicinePartialSchema,
+    IdSchema,
+    created,
+    deleted,
+    failed,
+    found,
+    updated,
+} from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -79,4 +88,4 @@ router.get(
     })
 );
 
-export default router; 
+export default router;

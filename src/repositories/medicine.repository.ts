@@ -14,7 +14,7 @@ export class MedicineRepository extends BaseRepository<Medicine> {
     async findWithApplications(id: string): Promise<Medicine | null> {
         return this.repository.findOne({
             where: { id } as any,
-            relations: ['applications']
+            relations: ['applications'],
         });
     }
-} 
+}

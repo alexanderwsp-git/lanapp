@@ -1,106 +1,99 @@
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity } from './base.entity';
 import {
-    Column,
-    Entity,
-    JoinColumn,
-    ManyToOne,
-    PrimaryGeneratedColumn,
-  } from 'typeorm';
-  import { BaseEntity } from './base.entity';
-  import {
     Gender,
     SheepStatus,
     BirthType,
     SheepBreed,
     SheepCategory,
     RecordType,
-  } from '@awsp__/utils';
-  
-  @Entity('sheep')
-  export class Sheep extends BaseEntity {
+} from '@awsp__/utils';
+
+@Entity('sheep')
+export class Sheep extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
-  
+
     @Column()
     tag: string;
-  
+
     @Column({ nullable: true })
     name: string;
-  
+
     @Column({
-      type: 'enum',
-      enum: SheepBreed,
+        type: 'enum',
+        enum: SheepBreed,
     })
     breed: SheepBreed;
-  
+
     @Column({
-      type: 'enum',
-      enum: Gender,
+        type: 'enum',
+        enum: Gender,
     })
     gender: Gender;
-  
+
     @Column()
     birthDate: Date;
-  
+
     @Column({
-      type: 'enum',
-      enum: BirthType,
+        type: 'enum',
+        enum: BirthType,
     })
     birthType: BirthType;
-  
+
     @Column('decimal', { precision: 5, scale: 2 })
     weight: number;
-  
+
     @Column({
-      type: 'enum',
-      enum: SheepStatus,
+        type: 'enum',
+        enum: SheepStatus,
     })
     status: SheepStatus;
-  
+
     @Column({
-      type: 'enum',
-      enum: SheepCategory,
+        type: 'enum',
+        enum: SheepCategory,
     })
     category: SheepCategory;
-  
+
     @Column({
-      type: 'enum',
-      enum: RecordType,
+        type: 'enum',
+        enum: RecordType,
     })
     recordType: RecordType;
-  
+
     @Column({ type: 'date', nullable: true })
     quarantineEndDate?: Date;
-  
+
     @Column({ type: 'int', default: 0 })
     matingCount: number;
-  
+
     @Column({ type: 'int', default: 0 })
     effectivenessCount: number;
-  
+
     @Column({ type: 'timestamp', nullable: true })
     lastMountedDate?: Date;
-  
+
     @Column({ type: 'boolean', default: false })
     isPregnant: boolean;
-  
+
     @Column({ type: 'date', nullable: true })
     pregnancyConfirmedAt?: Date;
-  
+
     @Column({ type: 'date', nullable: true })
     deliveryDate?: Date;
-  
+
     @Column({ nullable: true })
     motherId: string;
-  
+
     @Column({ nullable: true })
     fatherId: string;
-  
+
     @ManyToOne(() => Sheep, { nullable: true })
     @JoinColumn()
     mother: Sheep;
-  
+
     @ManyToOne(() => Sheep, { nullable: true })
     @JoinColumn()
     father: Sheep;
-  }
-  
+}

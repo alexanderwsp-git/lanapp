@@ -1,4 +1,4 @@
-import { Gender, SheepBreed, SheepCategory, SheepStatus } from "@awsp__/utils";
+import { Gender, SheepBreed, SheepCategory, SheepStatus } from '@awsp__/utils';
 
 /**
  * Calculates the quarantine end date (7 days from birth)
@@ -30,12 +30,13 @@ export function isInQuarantine(birthDate: Date): boolean {
  * @returns The appropriate SheepCategory based on the sheep's characteristics
  */
 export function determineCategory(
-    gender: Gender, 
-    birthDate: Date, 
-    isPregnant: boolean, 
+    gender: Gender,
+    birthDate: Date,
+    isPregnant: boolean,
     hasGivenBirth: boolean
 ): SheepCategory {
-    const ageInMonths = (new Date().getTime() - new Date(birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30);
+    const ageInMonths =
+        (new Date().getTime() - new Date(birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30);
 
     if (gender === Gender.MALE) {
         if (ageInMonths < 2.5) return SheepCategory.LAMB_MALE;
