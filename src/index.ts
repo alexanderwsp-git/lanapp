@@ -6,35 +6,50 @@ import { AppDataSource } from './config/ormconfig';
 import express from 'express';
 import dotenv from 'dotenv';
 
-import routes from './routes';
+import routes from './routes/index';
 import { errorHandler, limiter, requestLogger } from '@awsp__/utils';
 
 dotenv.config();
 
+const PORT = process.env.PORT || 4000;
+
 const app = express();
-const port = process.env.PORT || 2080;
 
-// Middleware
-app.use(cors());
+const corsOptions = {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Authorization'],
+    credentials: true,
+};
+
 app.use(compression());
-app.use(express.json());
+app.use(cors(corsOptions));
 app.use(requestLogger);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(limiter);
-
-// Routes
 app.use('/api', routes);
-
-// Error handling
 app.use(errorHandler);
 
-// Database connection and server start
-AppDataSource.initialize()
-    .then(() => {
-        console.log('Data Source has been initialized!');
-        app.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
-        });
-    })
-    .catch((error) => console.log('Error during Data Source initialization:', error));
+export { app };
 
-export { app }; 
+if (process.env.NODE_ENV !== 'test') {
+    const startServer = async () => {
+        try {
+            await AppDataSource.initialize();
+            console.log('✅ Database connected!');
+
+            app.listen(PORT, () => {
+                console.log(
+                    `🚀 Server is running on port ${PORT}, TZ: ${process.env.TZ}`
+                );
+            });
+        } catch (error) {
+            console.error('❌ Database connection failed:', error);
+            process.exit(1);
+        }
+    };
+
+    startServer();
+} 
