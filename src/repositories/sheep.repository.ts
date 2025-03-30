@@ -1,6 +1,6 @@
 import { BaseRepository } from './base.repository';
 import { Sheep } from '../entities/sheep.entity';
-import { Gender, SheepStatus } from '@awsp__/utils';
+import { Gender, SheepStatus, RecordType } from '@awsp__/utils';
 
 export class SheepRepository extends BaseRepository<Sheep> {
     constructor() {
@@ -13,6 +13,19 @@ export class SheepRepository extends BaseRepository<Sheep> {
 
     async findByStatus(status: SheepStatus): Promise<Sheep[]> {
         return this.repository.find({ where: { status } as any });
+    }
+
+    async findByRecordType(recordType: RecordType): Promise<Sheep[]> {
+        return this.repository.find({ where: { recordType } as any });
+    }
+
+    async findInQuarantine(): Promise<Sheep[]> {
+        return this.repository.find({ 
+            where: { 
+                status: SheepStatus.QUARANTINE,
+                quarantineEndDate: { $gt: new Date() } 
+            } as any 
+        });
     }
 
     async findBreedingAnimals(): Promise<Sheep[]> {
@@ -42,6 +55,11 @@ export class SheepRepository extends BaseRepository<Sheep> {
     }
 
     async findActive(): Promise<Sheep[]> {
-        return this.repository.find({ where: { isActive: true } as any });
+        return this.repository.find({ 
+            where: { 
+                status: SheepStatus.ACTIVE,
+                quarantineEndDate: { $lt: new Date() } 
+            } as any 
+        });
     }
 } 

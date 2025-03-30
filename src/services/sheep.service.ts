@@ -1,7 +1,8 @@
 import { BaseService } from './base.service';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { Sheep } from '../entities/sheep.entity';
-import { Gender, SheepStatus } from '@awsp__/utils';
+import { Gender, SheepStatus, RecordType } from '@awsp__/utils';
+import { determineCategory, calculateQuarantineEndDate, isInQuarantine } from '../utils/utils';
 
 export class SheepService extends BaseService<Sheep> {
     constructor() {
@@ -16,16 +17,12 @@ export class SheepService extends BaseService<Sheep> {
         return (this.repository as SheepRepository).findByStatus(status);
     }
 
-    async findBreedingAnimals(): Promise<Sheep[]> {
-        return (this.repository as SheepRepository).findBreedingAnimals();
+    async findByRecordType(recordType: RecordType): Promise<Sheep[]> {
+        return (this.repository as SheepRepository).findByRecordType(recordType);
     }
 
-    async findMalton(): Promise<Sheep[]> {
-        return (this.repository as SheepRepository).findMalton();
-    }
-
-    async findBreastfeeding(): Promise<Sheep[]> {
-        return (this.repository as SheepRepository).findBreastfeeding();
+    async findInQuarantine(): Promise<Sheep[]> {
+        return (this.repository as SheepRepository).findInQuarantine();
     }
 
     async findWithParents(id: string): Promise<Sheep | null> {
@@ -36,15 +33,61 @@ export class SheepService extends BaseService<Sheep> {
         return this.update(id, { status }, username);
     }
 
-    async updateBreedingStatus(id: string, isBreedingAnimal: boolean, username: string): Promise<Sheep | null> {
-        return this.update(id, { isBreedingAnimal }, username);
+    async create(data: Partial<Sheep>, username: string): Promise<Sheep> {
+        const sheep = await super.create(data, username);
+        
+        // If the sheep was born on the farm, set quarantine
+        if (sheep.recordType === RecordType.BORN) {
+            const quarantineEndDate = calculateQuarantineEndDate(sheep.birthDate);
+            await this.update(sheep.id, {
+                status: SheepStatus.QUARANTINE,
+                quarantineEndDate
+            }, username);
+        }
+
+        return sheep;
     }
 
-    async updateMaltonStatus(id: string, isMalton: boolean, username: string): Promise<Sheep | null> {
-        return this.update(id, { isMalton }, username);
+    async update(id: string, data: Partial<Sheep>, username: string): Promise<Sheep | null> {
+        const sheep = await super.update(id, data, username);
+        if (!sheep) return null;
+
+        // Update category based on current state
+        const category = determineCategory(
+            sheep.gender,
+            sheep.birthDate,
+            sheep.isPregnant,
+            !!sheep.deliveryDate
+        );
+        
+        // Check if quarantine should be lifted
+        if (sheep.status === SheepStatus.QUARANTINE && !isInQuarantine(sheep.birthDate)) {
+            await super.update(id, {
+                status: SheepStatus.ACTIVE,
+                category
+            }, username);
+        } else {
+            await super.update(id, { category }, username);
+        }
+
+        return sheep;
     }
 
-    async updateBreastfeedingStatus(id: string, isBreastfeeding: boolean, username: string): Promise<Sheep | null> {
-        return this.update(id, { isBreastfeeding }, username);
+    async checkQuarantineStatus(): Promise<void> {
+        const sheepInQuarantine = await this.findInQuarantine();
+        for (const sheep of sheepInQuarantine) {
+            if (!isInQuarantine(sheep.birthDate)) {
+                const category = determineCategory(
+                    sheep.gender,
+                    sheep.birthDate,
+                    sheep.isPregnant,
+                    !!sheep.deliveryDate
+                );
+                await this.update(sheep.id, {
+                    status: SheepStatus.ACTIVE,
+                    category
+                }, 'system');
+            }
+        }
     }
 } 

@@ -3,6 +3,7 @@ import { SheepService } from '../services';
 import { SheepSchema, SheepPartialSchema, IdSchema, created, deleted, failed, found, updated } from '@awsp__/utils';
 import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
 import { verifyToken } from '../middlewares/auth.middleware';
+import { RecordType, SheepStatus } from '@awsp__/utils';
 
 const router = Router();
 const sheepService = new SheepService();
@@ -92,42 +93,38 @@ router.patch(
     })
 );
 
-// Update breeding status
-router.patch(
-    '/:id/breeding-status',
+// Get sheep by record type
+router.get(
+    '/record-type/:type',
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const { isBreedingAnimal } = req.body;
-        const sheep = await sheepService.updateBreedingStatus(req.params.id, isBreedingAnimal, req.user!.username);
-        if (!sheep) return failed(res, 'Sheep not found');
-        updated(res, sheep);
+        const recordType = req.params.type as RecordType;
+        if (!Object.values(RecordType).includes(recordType)) {
+            return failed(res, 'Invalid record type');
+        }
+        const sheep = await sheepService.findByRecordType(recordType);
+        found(res, sheep);
     })
 );
 
-// Update malton status
-router.patch(
-    '/:id/malton-status',
+// Get sheep in quarantine
+router.get(
+    '/quarantine',
     verifyToken,
-    validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const { isMalton } = req.body;
-        const sheep = await sheepService.updateMaltonStatus(req.params.id, isMalton, req.user!.username);
-        if (!sheep) return failed(res, 'Sheep not found');
-        updated(res, sheep);
+        const sheep = await sheepService.findInQuarantine();
+        found(res, sheep);
     })
 );
 
-// Update breastfeeding status
-router.patch(
-    '/:id/breastfeeding-status',
+// Check quarantine status (system endpoint)
+router.post(
+    '/check-quarantine',
     verifyToken,
-    validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const { isBreastfeeding } = req.body;
-        const sheep = await sheepService.updateBreastfeedingStatus(req.params.id, isBreastfeeding, req.user!.username);
-        if (!sheep) return failed(res, 'Sheep not found');
-        updated(res, sheep);
+        await sheepService.checkQuarantineStatus();
+        updated(res, { message: 'Quarantine status check completed' });
     })
 );
 
