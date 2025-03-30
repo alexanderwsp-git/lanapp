@@ -2,24 +2,24 @@ import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 't
 import { BaseEntity } from './base.entity';
 import { Sheep } from './sheep.entity';
 
-@Entity('weight')
+@Entity({ name: 'weight', schema: process.env.DATABASE_SCHEMA || 'public' })
 export class Weight extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column()
-    sheepId: string;
+    sheepId!: string;
 
     @Column()
-    weight: number;
+    weight!: number;
 
     @Column()
-    measurementDate: Date;
+    measurementDate!: Date;
 
     @Column({ nullable: true })
-    notes: string;
+    notes?: string;
 
     @ManyToOne(() => Sheep)
     @JoinColumn()
-    sheep: Sheep;
+    sheep!: Sheep;
 }

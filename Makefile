@@ -1,6 +1,8 @@
 # Use Bash
 SHELL := /bin/bash
 
+run:
+	npm run dev
 # Run the development server
 start-dev:
 	BUILD_TARGET=dev docker-compose up --build -d
@@ -45,6 +47,7 @@ destroy:
 	@echo "Deteniendo db..."
 	docker-compose down
 	@echo "removiendo volumen db..."
+	docker volume rm lanapp_data
 
 dvp:
 	@echo "🔎 Finding unused Docker volumes..."

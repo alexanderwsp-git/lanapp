@@ -4,27 +4,27 @@ import { MatingStatus } from '@awsp__/utils';
 import { Sheep } from './sheep.entity';
 import { PregnancyCheck } from './pregnancy-check.entity';
 
-@Entity('mating')
+@Entity({ name: 'mating', schema: process.env.DATABASE_SCHEMA || 'public' })
 export class Mating extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column()
-    maleId: string;
+    maleId!: string;
 
     @Column()
-    femaleId: string;
+    femaleId!: string;
 
     @ManyToOne(() => Sheep, sheep => sheep.matingsAsMale)
     @JoinColumn({ name: 'maleId' })
-    male: Sheep;
+    male!: Sheep;
 
     @ManyToOne(() => Sheep, sheep => sheep.matingsAsFemale)
     @JoinColumn({ name: 'femaleId' })
-    female: Sheep;
+    female!: Sheep;
 
     @Column({ type: 'date' })
-    matingDate: Date;
+    matingDate!: Date;
 
     @Column({ type: 'date', nullable: true })
     expectedBirthDate?: Date;
@@ -34,8 +34,8 @@ export class Mating extends BaseEntity {
         enum: MatingStatus,
         default: MatingStatus.PENDING,
     })
-    status: MatingStatus;
+    status!: MatingStatus;
 
     @OneToMany(() => PregnancyCheck, check => check.mating)
-    pregnancyChecks: PregnancyCheck[];
+    pregnancyChecks!: PregnancyCheck[];
 }

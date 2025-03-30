@@ -3,28 +3,28 @@ import { BaseEntity } from './base.entity';
 import { MedicineType } from '@awsp__/utils';
 import { MedicineApplication } from './medicine-application.entity';
 
-@Entity('medicine')
+@Entity({ name: 'medicine', schema: process.env.DATABASE_SCHEMA || 'public' })
 export class Medicine extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({
         type: 'enum',
         enum: MedicineType,
     })
-    type: MedicineType;
+    type!: MedicineType;
 
     @Column()
-    name: string;
+    name!: string;
 
     @Column()
-    dosage: string;
+    dosage!: string;
 
     @Column({ nullable: true })
-    description: string;
+    description?: string;
 
     @Column({ nullable: true })
-    notes: string;
+    notes?: string;
 
     @Column({ nullable: true })
     imageUrl?: string;
@@ -42,5 +42,5 @@ export class Medicine extends BaseEntity {
     price?: number;
 
     @OneToMany(() => MedicineApplication, application => application.medicine)
-    applications: MedicineApplication[];
+    applications!: MedicineApplication[];
 }

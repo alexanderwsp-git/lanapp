@@ -1,0 +1,861 @@
+{
+    "info": {
+        "name": "Lanapp API",
+        "description": "API collection for Lanapp - Sheep Management System",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{lanapp.host}}/health",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["health"]
+                        },
+                        "description": "Check if the API is running"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Location",
+            "item": [
+                {
+                    "name": "Create Location",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Main Farm\",\n    \"address\": \"123 Farm Road\",\n    \"imageUrl\": \"https://example.com/farm.jpg\",\n    \"latitude\": 12.34567890,\n    \"longitude\": -98.76543210,\n    \"description\": \"Main farm location\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/location",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["location"]
+                        },
+                        "description": "Create a new location"
+                    }
+                },
+                {
+                    "name": "Get All Locations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/location",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["location"]
+                        },
+                        "description": "Get all locations"
+                    }
+                },
+                {
+                    "name": "Get Location by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/location/{{locationId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["location", "{{locationId}}"]
+                        },
+                        "description": "Get a specific location"
+                    }
+                },
+                {
+                    "name": "Update Location",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Farm Name\",\n    \"description\": \"Updated description\",\n    \"latitude\": 12.34567890,\n    \"longitude\": -98.76543210\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/location/{{locationId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["location", "{{locationId}}"]
+                        },
+                        "description": "Update a specific location"
+                    }
+                },
+                {
+                    "name": "Delete Location",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/location/{{locationId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["location", "{{locationId}}"]
+                        },
+                        "description": "Delete a specific location"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Sheep",
+            "item": [
+                {
+                    "name": "Create Sheep",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tag\": \"SHEEP001\",\n    \"name\": \"Test Sheep\",\n    \"breed\": \"Merino\",\n    \"gender\": \"Female\",\n    \"birthDate\": \"2024-01-01\",\n    \"purchaseDate\": \"2024-01-01\",\n    \"purchasePrice\": 1000,\n    \"locationId\": \"{{locationId}}\",\n    \"notes\": \"Test sheep for API\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/sheep",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["sheep"]
+                        },
+                        "description": "Create a new sheep"
+                    }
+                },
+                {
+                    "name": "Get All Sheep",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/sheep",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["sheep"]
+                        },
+                        "description": "Get all sheep with optional filters"
+                    }
+                },
+                {
+                    "name": "Get Sheep by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/sheep/{{sheepId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["sheep", "{{sheepId}}"]
+                        },
+                        "description": "Get a specific sheep by ID"
+                    }
+                },
+                {
+                    "name": "Update Sheep",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Sheep Name\",\n    \"notes\": \"Updated notes\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/sheep/{{sheepId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["sheep", "{{sheepId}}"]
+                        },
+                        "description": "Update a specific sheep"
+                    }
+                },
+                {
+                    "name": "Delete Sheep",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/sheep/{{sheepId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["sheep", "{{sheepId}}"]
+                        },
+                        "description": "Delete a specific sheep"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Mating",
+            "item": [
+                {
+                    "name": "Create Mating",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"maleId\": \"{{maleSheepId}}\",\n    \"femaleId\": \"{{femaleSheepId}}\",\n    \"matingDate\": \"2024-03-30\",\n    \"expectedBirthDate\": \"2024-09-30\",\n    \"notes\": \"Test mating\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/mating",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["mating"]
+                        },
+                        "description": "Create a new mating record"
+                    }
+                },
+                {
+                    "name": "Get All Mating",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/mating",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["mating"]
+                        },
+                        "description": "Get all mating records"
+                    }
+                },
+                {
+                    "name": "Get Mating by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/mating/{{matingId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["mating", "{{matingId}}"]
+                        },
+                        "description": "Get a specific mating record"
+                    }
+                },
+                {
+                    "name": "Update Mating",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"Confirmed\",\n    \"notes\": \"Updated notes\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/mating/{{matingId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["mating", "{{matingId}}"]
+                        },
+                        "description": "Update a specific mating record"
+                    }
+                },
+                {
+                    "name": "Delete Mating",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/mating/{{matingId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["mating", "{{matingId}}"]
+                        },
+                        "description": "Delete a specific mating record"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Medicine",
+            "item": [
+                {
+                    "name": "Create Medicine",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"Antibiotic\",\n    \"name\": \"Test Medicine\",\n    \"dosage\": \"10ml\",\n    \"description\": \"Test medicine description\",\n    \"manufacturer\": \"Test Manufacturer\",\n    \"batchNumber\": \"BATCH001\",\n    \"expiryDate\": \"2025-12-31\",\n    \"price\": 100\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine"]
+                        },
+                        "description": "Create a new medicine"
+                    }
+                },
+                {
+                    "name": "Get All Medicine",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine"]
+                        },
+                        "description": "Get all medicines"
+                    }
+                },
+                {
+                    "name": "Get Medicine by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine/{{medicineId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine", "{{medicineId}}"]
+                        },
+                        "description": "Get a specific medicine"
+                    }
+                },
+                {
+                    "name": "Update Medicine",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Medicine Name\",\n    \"price\": 150\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine/{{medicineId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine", "{{medicineId}}"]
+                        },
+                        "description": "Update a specific medicine"
+                    }
+                },
+                {
+                    "name": "Delete Medicine",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine/{{medicineId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine", "{{medicineId}}"]
+                        },
+                        "description": "Delete a specific medicine"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Medicine Application",
+            "item": [
+                {
+                    "name": "Create Medicine Application",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"medicineId\": \"{{medicineId}}\",\n    \"sheepId\": \"{{sheepId}}\",\n    \"applicationDate\": \"2024-03-30\",\n    \"nextApplicationDate\": \"2024-04-30\",\n    \"status\": \"Scheduled\",\n    \"notes\": \"Test application\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine-application",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine-application"]
+                        },
+                        "description": "Create a new medicine application"
+                    }
+                },
+                {
+                    "name": "Get All Medicine Applications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine-application",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine-application"]
+                        },
+                        "description": "Get all medicine applications"
+                    }
+                },
+                {
+                    "name": "Get Medicine Application by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine-application/{{medicineApplicationId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine-application", "{{medicineApplicationId}}"]
+                        },
+                        "description": "Get a specific medicine application"
+                    }
+                },
+                {
+                    "name": "Update Medicine Application",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"Completed\",\n    \"notes\": \"Updated notes\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine-application/{{medicineApplicationId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine-application", "{{medicineApplicationId}}"]
+                        },
+                        "description": "Update a specific medicine application"
+                    }
+                },
+                {
+                    "name": "Delete Medicine Application",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/medicine-application/{{medicineApplicationId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["medicine-application", "{{medicineApplicationId}}"]
+                        },
+                        "description": "Delete a specific medicine application"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Pregnancy Check",
+            "item": [
+                {
+                    "name": "Create Pregnancy Check",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"matingId\": \"{{matingId}}\",\n    \"checkDate\": \"2024-04-30\",\n    \"isPregnant\": true,\n    \"notes\": \"Test pregnancy check\",\n    \"nextCheckDate\": \"2024-05-30\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/pregnancy-check",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["pregnancy-check"]
+                        },
+                        "description": "Create a new pregnancy check"
+                    }
+                },
+                {
+                    "name": "Get All Pregnancy Checks",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/pregnancy-check",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["pregnancy-check"]
+                        },
+                        "description": "Get all pregnancy checks"
+                    }
+                },
+                {
+                    "name": "Get Pregnancy Check by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/pregnancy-check/{{pregnancyCheckId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["pregnancy-check", "{{pregnancyCheckId}}"]
+                        },
+                        "description": "Get a specific pregnancy check"
+                    }
+                },
+                {
+                    "name": "Update Pregnancy Check",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"isPregnant\": false,\n    \"notes\": \"Updated notes\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/pregnancy-check/{{pregnancyCheckId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["pregnancy-check", "{{pregnancyCheckId}}"]
+                        },
+                        "description": "Update a specific pregnancy check"
+                    }
+                },
+                {
+                    "name": "Delete Pregnancy Check",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/pregnancy-check/{{pregnancyCheckId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["pregnancy-check", "{{pregnancyCheckId}}"]
+                        },
+                        "description": "Delete a specific pregnancy check"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Weight",
+            "item": [
+                {
+                    "name": "Create Weight Record",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"sheepId\": \"{{sheepId}}\",\n    \"weight\": 50.5,\n    \"measurementDate\": \"2024-03-30\",\n    \"notes\": \"Test weight record\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/weight",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["weight"]
+                        },
+                        "description": "Create a new weight record"
+                    }
+                },
+                {
+                    "name": "Get All Weight Records",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/weight",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["weight"]
+                        },
+                        "description": "Get all weight records"
+                    }
+                },
+                {
+                    "name": "Get Weight Record by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/weight/{{weightId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["weight", "{{weightId}}"]
+                        },
+                        "description": "Get a specific weight record"
+                    }
+                },
+                {
+                    "name": "Update Weight Record",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"weight\": 51.0,\n    \"notes\": \"Updated notes\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{lanapp.host}}/weight/{{weightId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["weight", "{{weightId}}"]
+                        },
+                        "description": "Update a specific weight record"
+                    }
+                },
+                {
+                    "name": "Delete Weight Record",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{lanapp.host}}/weight/{{weightId}}",
+                            "host": ["{{lanapp.host}}"],
+                            "path": ["weight", "{{weightId}}"]
+                        },
+                        "description": "Delete a specific weight record"
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "lanapp.host",
+            "value": "http://localhost:2080",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "your_jwt_token_here",
+            "type": "string"
+        },
+        {
+            "key": "sheepId",
+            "value": "sheep_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "matingId",
+            "value": "mating_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "medicineId",
+            "value": "medicine_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "medicineApplicationId",
+            "value": "medicine_application_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "pregnancyCheckId",
+            "value": "pregnancy_check_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "weightId",
+            "value": "weight_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "locationId",
+            "value": "location_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "maleSheepId",
+            "value": "male_sheep_uuid_here",
+            "type": "string"
+        },
+        {
+            "key": "femaleSheepId",
+            "value": "female_sheep_uuid_here",
+            "type": "string"
+        }
+    ]
+}

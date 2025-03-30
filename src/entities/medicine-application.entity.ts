@@ -4,37 +4,37 @@ import { MedicineStatus } from '@awsp__/utils';
 import { Medicine } from './medicine.entity';
 import { Sheep } from './sheep.entity';
 
-@Entity('medicine_application')
+@Entity({ name: 'medicine_application', schema: process.env.DATABASE_SCHEMA || 'public' })
 export class MedicineApplication extends BaseEntity {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column()
-    medicineId: string;
+    medicineId!: string;
 
     @Column()
-    sheepId: string;
+    sheepId!: string;
 
     @Column()
-    applicationDate: Date;
+    applicationDate!: Date;
 
     @Column({ nullable: true })
-    nextApplicationDate: Date;
+    nextApplicationDate?: Date;
 
     @Column({
         type: 'enum',
         enum: MedicineStatus,
     })
-    status: MedicineStatus;
+    status!: MedicineStatus;
 
     @Column({ nullable: true })
-    notes: string;
+    notes?: string;
 
     @ManyToOne(() => Medicine)
     @JoinColumn()
-    medicine: Medicine;
+    medicine!: Medicine;
 
     @ManyToOne(() => Sheep)
     @JoinColumn()
-    sheep: Sheep;
+    sheep!: Sheep;
 }

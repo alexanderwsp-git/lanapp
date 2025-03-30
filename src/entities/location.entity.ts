@@ -1,14 +1,17 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Sheep } from './sheep.entity';
 
-@Entity('location')
+@Entity({ name: 'location', schema: process.env.DATABASE_SCHEMA || 'public' })
 export class Location extends BaseEntity {
-    @Column()
-    name: string;
+    @PrimaryGeneratedColumn('uuid')
+    id!: string;
 
     @Column()
-    address: string;
+    name!: string;
+
+    @Column()
+    address!: string;
 
     @Column({ nullable: true })
     imageUrl?: string;
@@ -23,8 +26,8 @@ export class Location extends BaseEntity {
     description?: string;
 
     @OneToMany(() => Sheep, sheep => sheep.birthLocation)
-    sheepBornHere: Sheep[];
+    sheepBornHere!: Sheep[];
 
     @OneToMany(() => Sheep, sheep => sheep.currentLocation)
-    sheepCurrentlyHere: Sheep[];
+    sheepCurrentlyHere!: Sheep[];
 }

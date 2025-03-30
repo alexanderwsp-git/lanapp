@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { GetUserCommand, AttributeType } from '@aws-sdk/client-cognito-identity-provider';
 import { failed } from '@awsp__/utils';
-import { cognitoClient } from '@/config/cognito';
+import { cognitoClient } from '../config/cognito';
 
 declare global {
     namespace Express {

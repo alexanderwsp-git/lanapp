@@ -1,21 +1,24 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Mating } from './mating.entity';
 
-@Entity('pregnancy_check')
+@Entity({ name: 'pregnancy_check', schema: process.env.DATABASE_SCHEMA || 'public' })
 export class PregnancyCheck extends BaseEntity {
+    @PrimaryGeneratedColumn('uuid')
+    id!: string;
+
     @Column()
-    matingId: string;
+    matingId!: string;
 
     @ManyToOne(() => Mating, mating => mating.pregnancyChecks)
     @JoinColumn({ name: 'matingId' })
-    mating: Mating;
+    mating!: Mating;
 
     @Column({ type: 'date' })
-    checkDate: Date;
+    checkDate!: Date;
 
     @Column()
-    isPregnant: boolean;
+    isPregnant!: boolean;
 
     @Column({ nullable: true })
     notes?: string;

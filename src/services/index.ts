@@ -5,3 +5,4 @@ export * from './medicine-application.service';
 export * from './mating.service';
 export * from './weight.service';
 export * from './pregnancy-check.service';
+export * from './location.service';

@@ -15,7 +15,7 @@ services:
         ports:
             - '2080:2080'
         volumes:
-            - .:/app
+            - data:/app
         restart: always
         networks:
             - awsp_network
@@ -25,4 +25,4 @@ networks:
         external: true
 
 volumes:
-    postgres_data:
+    data:

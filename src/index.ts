@@ -12,6 +12,7 @@ import { errorHandler, limiter, requestLogger } from '@awsp__/utils';
 dotenv.config();
 
 const PORT = process.env.PORT || 4000;
+const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 const app = express();
 
@@ -29,7 +30,7 @@ app.use(requestLogger);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(limiter);
-app.use('/api', routes);
+app.use(API_PREFIX, routes);
 app.use(errorHandler);
 
 export { app };
