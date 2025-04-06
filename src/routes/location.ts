@@ -25,8 +25,20 @@ router.get(
     '/',
     verifyToken,
     asyncHandler(async (req: Request, res: Response) => {
-        const locations = await locationService.findAll();
-        found(res, locations);
+        // const locations = await locationService.findAll();
+        // found(res, locations);
+        const { page, limit, name, type, status } = req.query;
+
+        const settings =
+            page && limit
+                ? await locationService.getPaginated(Number(page), Number(limit), {
+                      name,
+                      type,
+                      status,
+                  })
+                : await locationService.findAll();
+
+        found(res, settings);
     })
 );
 

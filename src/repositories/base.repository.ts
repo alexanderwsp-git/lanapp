@@ -1,4 +1,4 @@
-import { Repository, FindOptionsWhere, FindOptionsOrder, DeepPartial } from 'typeorm';
+import { Repository, FindOptionsWhere, FindOptionsOrder, DeepPartial, ILike } from 'typeorm';
 import { BaseEntity } from '../entities/base.entity';
 import { AppDataSource } from '../config/ormconfig';
 
@@ -47,5 +47,29 @@ export abstract class BaseRepository<T extends BaseEntity> {
     async delete(id: string): Promise<boolean> {
         const result = await this.repository.delete(id);
         return result.affected !== 0;
+    }
+
+    async getPaginated(page: number = 1, limit: number = 10, filters: any) {
+        const where: any = {};
+
+        if (filters.name) where.name = ILike(`%${filters.name}%`);
+        if (filters.status) where.status = filters.status;
+
+        const [settings, total] = await this.repository.findAndCount({
+            where,
+            take: limit,
+            skip: (page - 1) * limit,
+            order: { createdAt: 'DESC' } as FindOptionsOrder<T>,
+        });
+
+        return {
+            data: settings,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
     }
 }

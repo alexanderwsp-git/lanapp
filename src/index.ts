@@ -12,7 +12,7 @@ import { errorHandler, limiter, requestLogger } from '@awsp__/utils';
 dotenv.config();
 
 const PORT = process.env.PORT || 4000;
-const API_PREFIX = process.env.API_PREFIX || '/api/v1';
+const API_PREFIX = process.env.API_PREFIX || '/api/v1/lanapp';
 
 const app = express();
 

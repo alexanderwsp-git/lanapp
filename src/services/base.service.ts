@@ -35,4 +35,8 @@ export abstract class BaseService<T extends BaseEntity> {
     async findAll(page: number = 1, limit: number = 10): Promise<{ data: T[]; total: number }> {
         return this.repository.findAll(page, limit);
     }
+
+    async getPaginated(page: number = 1, limit: number = 10, filters: any) {
+        return this.repository.getPaginated(page, limit, filters);
+    }
 }

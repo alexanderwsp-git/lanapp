@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { GetUserCommand, AttributeType } from '@aws-sdk/client-cognito-identity-provider';
 import { failed } from '@awsp__/utils';
 import { cognitoClient } from '../config/cognito';
+import { jwtDecode } from 'jwt-decode';
 
 declare global {
     namespace Express {
@@ -26,27 +27,31 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
             return failed(res, 'No token provided');
         }
 
+        // Get username from JWT token
+        const decodedToken = jwtDecode(token) as { username: string };
+        if (!decodedToken.username) {
+            return failed(res, 'Invalid token: missing username');
+        }
+        console.log(`decodedToken`, decodedToken);
+
+        // Get additional user attributes from Cognito
         const command = new GetUserCommand({ AccessToken: token });
         const response = await cognitoClient.send(command);
-
+        console.log(`response`, response.UserAttributes);
         if (!response.UserAttributes) {
             return failed(res, 'Invalid token');
         }
 
-        const username = response.UserAttributes.find(
-            (attr: AttributeType) => attr.Name === 'username'
-        )?.Value;
         const email = response.UserAttributes.find(
             (attr: AttributeType) => attr.Name === 'email'
         )?.Value;
 
-        if (!username || !email) {
-            return failed(res, 'Invalid user data');
-        }
+        if (!email) return failed(res, 'Invalid token: missing email');
 
-        req.user = { username, email };
+        req.user = { username: decodedToken.username, email };
         next();
     } catch (error) {
+        console.log(`error`, error);
         return failed(res, 'Invalid token');
     }
 };
