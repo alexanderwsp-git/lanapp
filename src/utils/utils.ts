@@ -1,4 +1,4 @@
-import { Gender, SheepBreed, SheepCategory, SheepStatus } from '@awsp__/utils';
+import { Gender, SheepBreed, SheepCategory, SheepStatus } from '@alexanderwsp-git/awsp-utils';
 
 /**
  * Calculates the quarantine end date (7 days from birth)

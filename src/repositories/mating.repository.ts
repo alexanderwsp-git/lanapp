@@ -1,6 +1,6 @@
 import { BaseRepository } from './base.repository';
 import { Mating } from '../entities/mating.entity';
-import { MatingStatus } from '@awsp__/utils';
+import { MatingStatus } from '@alexanderwsp-git/awsp-utils';
 
 export class MatingRepository extends BaseRepository<Mating> {
     constructor() {

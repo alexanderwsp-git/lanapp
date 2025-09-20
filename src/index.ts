@@ -7,7 +7,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 
 import routes from './routes/index';
-import { errorHandler, limiter, requestLogger } from '@awsp__/utils';
+import { errorHandler, limiter, requestLogger } from '@alexanderwsp-git/awsp-utils';
 
 dotenv.config();
 

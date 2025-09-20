@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MatingService } from '../services';
-import { MatingSchema, IdSchema, created, failed, found, updated } from '@awsp__/utils';
-import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
+import { MatingSchema, IdSchema, created, failed, found, updated } from '@alexanderwsp-git/awsp-utils';
+import { asyncHandler, validateSchema, validateParams } from '@alexanderwsp-git/awsp-utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();

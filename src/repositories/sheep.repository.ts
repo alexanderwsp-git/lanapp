@@ -1,6 +1,6 @@
 import { BaseRepository } from './base.repository';
 import { Sheep } from '../entities/sheep.entity';
-import { Gender, SheepStatus, RecordType } from '@awsp__/utils';
+import { Gender, SheepStatus, RecordType } from '@alexanderwsp-git/awsp-utils';
 
 export class SheepRepository extends BaseRepository<Sheep> {
     constructor() {

@@ -7,7 +7,7 @@ import {
     SheepBreed,
     SheepCategory,
     RecordType,
-} from '@awsp__/utils';
+} from '@alexanderwsp-git/awsp-utils';
 import { Location } from './location.entity';
 import { Mating } from './mating.entity';
 import { MedicineApplication } from './medicine-application.entity';

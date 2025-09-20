@@ -9,8 +9,8 @@ import {
     failed,
     found,
     updated,
-} from '@awsp__/utils';
-import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
+} from '@alexanderwsp-git/awsp-utils';
+import { asyncHandler, validateSchema, validateParams } from '@alexanderwsp-git/awsp-utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();

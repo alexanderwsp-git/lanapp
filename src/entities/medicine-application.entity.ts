@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { MedicineStatus } from '@awsp__/utils';
+import { MedicineStatus } from '@alexanderwsp-git/awsp-utils';
 import { Medicine } from './medicine.entity';
 import { Sheep } from './sheep.entity';
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ok } from '@awsp__/utils';
+import { ok } from '@alexanderwsp-git/awsp-utils';
 
 const router = Router();
 

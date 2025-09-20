@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { verifyToken } from '../middlewares/auth.middleware';
-import { asyncHandler } from '@awsp__/utils';
-import { found, created, updated, deleted, failed } from '@awsp__/utils';
-import { validateParams, validateSchema } from '@awsp__/utils';
-import { IdSchema, LocationSchema, LocationPartialSchema } from '@awsp__/utils';
+import { asyncHandler } from '@alexanderwsp-git/awsp-utils';
+import { found, created, updated, deleted, failed } from '@alexanderwsp-git/awsp-utils';
+import { validateParams, validateSchema } from '@alexanderwsp-git/awsp-utils';
+import { IdSchema, LocationSchema, LocationPartialSchema } from '@alexanderwsp-git/awsp-utils';
 import { LocationService } from '../services';
 
 const router = Router();

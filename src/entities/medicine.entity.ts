@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { MedicineType } from '@awsp__/utils';
+import { MedicineType } from '@alexanderwsp-git/awsp-utils';
 import { MedicineApplication } from './medicine-application.entity';
 
 @Entity({ name: 'medicine', schema: process.env.DATABASE_SCHEMA || 'public' })

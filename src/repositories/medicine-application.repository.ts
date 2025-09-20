@@ -1,6 +1,6 @@
 import { BaseRepository } from './base.repository';
 import { MedicineApplication } from '../entities/medicine-application.entity';
-import { MedicineStatus } from '@awsp__/utils';
+import { MedicineStatus } from '@alexanderwsp-git/awsp-utils';
 
 export class MedicineApplicationRepository extends BaseRepository<MedicineApplication> {
     constructor() {

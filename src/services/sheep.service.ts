@@ -1,7 +1,7 @@
 import { BaseService } from './base.service';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { Sheep } from '../entities/sheep.entity';
-import { Gender, SheepStatus, RecordType } from '@awsp__/utils';
+import { Gender, SheepStatus, RecordType } from '@alexanderwsp-git/awsp-utils';
 import { determineCategory, isInQuarantine } from '../utils/utils';
 
 export class SheepService extends BaseService<Sheep> {

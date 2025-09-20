@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PregnancyCheckService } from '../services/pregnancy-check.service';
-import { IdSchema, created, failed, found, PregnancyCheckSchema } from '@awsp__/utils';
-import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
+import { IdSchema, created, failed, found, PregnancyCheckSchema } from '@alexanderwsp-git/awsp-utils';
+import { asyncHandler, validateSchema, validateParams } from '@alexanderwsp-git/awsp-utils';
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();

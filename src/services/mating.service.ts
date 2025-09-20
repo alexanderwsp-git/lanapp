@@ -2,7 +2,7 @@ import { BaseService } from './base.service';
 import { MatingRepository } from '../repositories/mating.repository';
 import { Mating } from '../entities/mating.entity';
 import { SheepService } from './sheep.service';
-import { MatingStatus } from '@awsp__/utils';
+import { MatingStatus } from '@alexanderwsp-git/awsp-utils';
 
 export class MatingService extends BaseService<Mating> {
     private sheepService: SheepService;

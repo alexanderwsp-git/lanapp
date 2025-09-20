@@ -9,10 +9,10 @@ import {
     failed,
     found,
     updated,
-} from '@awsp__/utils';
-import { asyncHandler, validateSchema, validateParams } from '@awsp__/utils';
+} from '@alexanderwsp-git/awsp-utils';
+import { asyncHandler, validateSchema, validateParams } from '@alexanderwsp-git/awsp-utils';
 import { verifyToken } from '../middlewares/auth.middleware';
-import { RecordType, SheepStatus } from '@awsp__/utils';
+import { RecordType, SheepStatus } from '@alexanderwsp-git/awsp-utils';
 
 const router = Router();
 const sheepService = new SheepService();

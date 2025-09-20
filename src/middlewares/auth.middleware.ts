@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { GetUserCommand, AttributeType } from '@aws-sdk/client-cognito-identity-provider';
-import { failed } from '@awsp__/utils';
+import { failed } from '@alexanderwsp-git/awsp-utils';
 import { cognitoClient } from '../config/cognito';
 import { jwtDecode } from 'jwt-decode';
 
