@@ -13,5 +13,10 @@
         "build:all": "npm run build:packages && npm run build -w lanapp && npm run build -w auth && npm run build -w lanapp-ui",
         "dev:api": "npm run dev -w lanapp",
         "dev:ui": "npm run dev -w lanapp-ui"
+    },
+    "dependencies": {
+        "@heroicons/react": "^2.2.0",
+        "@sheep/domain": "^0.1.0",
+        "react": "^19.2.7"
     }
 }
