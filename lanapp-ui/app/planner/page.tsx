@@ -5,8 +5,9 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { Field, TextInput, Select } from "@/components/ui/form-fields"
+import { Field, TextInput } from "@/components/ui/form-fields"
 import { Combobox } from "@/components/ui/combobox"
+import { useSheepFilter } from "@/components/ui/sheep-filter"
 import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import { bulkScheduleBreedingCycles } from "@/lib/api/breeding-cycle"
@@ -29,7 +30,6 @@ export default function PlannerPage() {
   const [matingDate, setMatingDate] = useState(today())
   const [vitaselApplied, setVitaselApplied] = useState(false)
   const [notes, setNotes] = useState("")
-  const [locationFilter, setLocationFilter] = useState("")
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const [saving, setSaving] = useState(false)
@@ -61,10 +61,7 @@ export default function PlannerPage() {
     load()
   }, [load])
 
-  const visibleEwes = useMemo(() => {
-    if (!locationFilter) return ewes
-    return ewes.filter((s) => s.currentLocationId === locationFilter)
-  }, [ewes, locationFilter])
+  const { filtered: visibleEwes, controls: filterControls } = useSheepFilter(ewes, locations)
 
   const ramOptions = useMemo(
     () =>
@@ -244,24 +241,14 @@ export default function PlannerPage() {
 
         {/* Ewe selection */}
         <div className="lg:col-span-2">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-gray-600">
-              Selecciona las ovejas que entrarán al ciclo. {selected.size} seleccionada(s).
-            </p>
-            <div className="sm:w-56">
-              <Select
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                aria-label="Filtrar por potrero"
-              >
-                <option value="">Todos los potreros</option>
-                {locations.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </Select>
+          <div className="mb-4 rounded-lg bg-white p-4 shadow">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700">Filtrar ovejas</p>
+              <p className="text-sm text-gray-500">
+                {visibleEwes.length} resultado(s) · {selected.size} seleccionada(s)
+              </p>
             </div>
+            {filterControls}
           </div>
 
           <div className="overflow-hidden rounded-lg bg-white shadow">
