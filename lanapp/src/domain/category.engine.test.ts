@@ -4,8 +4,8 @@ import { determineCategory, ageInDays } from './category.engine';
 describe('category.engine', () => {
     const ref = new Date('2024-07-01');
 
-    it('assigns CORDERO/CORDERA before weaning even past 70 days', () => {
-        const birth = new Date('2024-01-01');
+    it('assigns CORDERO/CORDERA before weaning', () => {
+        const birth = new Date('2024-05-01');
         expect(determineCategory(Gender.MALE, birth, { referenceDate: ref })).toBe(
             SheepCategory.CORDERO
         );
@@ -14,24 +14,24 @@ describe('category.engine', () => {
         );
     });
 
-    it('assigns MALTÓN/MALTONA between weaning and 6 months when weaned', () => {
+    it('assigns MALTÓN/MALTONA between weaning and 6 months', () => {
         const birth = new Date('2024-01-01');
-        expect(
-            determineCategory(Gender.MALE, birth, { referenceDate: ref, isWeaned: true })
-        ).toBe(SheepCategory.CORDERO_DESTETADO);
-        expect(
-            determineCategory(Gender.FEMALE, birth, { referenceDate: ref, isWeaned: true })
-        ).toBe(SheepCategory.CORDERA_DESTETADA);
+        expect(determineCategory(Gender.MALE, birth, { referenceDate: ref })).toBe(
+            SheepCategory.CORDERO_DESTETADO
+        );
+        expect(determineCategory(Gender.FEMALE, birth, { referenceDate: ref })).toBe(
+            SheepCategory.CORDERA_DESTETADA
+        );
     });
 
     it('assigns BORREGO/BORREGA between 6 and 12 months', () => {
         const birth = new Date('2023-10-01');
-        expect(
-            determineCategory(Gender.MALE, birth, { referenceDate: ref, isWeaned: true })
-        ).toBe(SheepCategory.BORREGO);
-        expect(
-            determineCategory(Gender.FEMALE, birth, { referenceDate: ref, isWeaned: true })
-        ).toBe(SheepCategory.BORREGA);
+        expect(determineCategory(Gender.MALE, birth, { referenceDate: ref })).toBe(
+            SheepCategory.BORREGO
+        );
+        expect(determineCategory(Gender.FEMALE, birth, { referenceDate: ref })).toBe(
+            SheepCategory.BORREGA
+        );
     });
 
     it('assigns REPRODUCTOR for selected males at 12+ months', () => {

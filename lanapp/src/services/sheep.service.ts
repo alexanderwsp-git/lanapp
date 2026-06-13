@@ -5,7 +5,7 @@ import { WeaningRecordRepository } from '../repositories/weaning-record.reposito
 import { WeightService } from './weight.service';
 import { Sheep } from '../entities/sheep.entity';
 
-import { CategoryContext, determineCategory, isInQuarantine } from '../utils/utils';
+import { determineCategory, isInQuarantine } from '../utils/utils';
 
 export class SheepService extends BaseService<Sheep> {
     private weaningRecordRepository: WeaningRecordRepository;
@@ -81,7 +81,6 @@ export class SheepService extends BaseService<Sheep> {
         const category = determineCategory(rest.gender!, rest.birthDate!, {
             isPregnant: rest.isPregnant || false,
             isLactating: !!rest.deliveryDate && !rest.isPregnant,
-            isWeaned: false,
         });
 
         const status =
@@ -125,8 +124,10 @@ export class SheepService extends BaseService<Sheep> {
         const sheep = await super.update(id, updateData, username);
         if (!sheep) return null;
 
-        const categoryContext = await this.buildCategoryContext(sheep);
-        const category = determineCategory(sheep.gender, sheep.birthDate, categoryContext);
+        const category = determineCategory(sheep.gender, sheep.birthDate, {
+            isPregnant: sheep.isPregnant,
+            isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+        });
 
         if (sheep.status === SheepStatus.QUARANTINE && !isInQuarantine(sheep.birthDate)) {
             return super.update(
@@ -146,8 +147,10 @@ export class SheepService extends BaseService<Sheep> {
         const sheepInQuarantine = await this.findInQuarantine();
         for (const sheep of sheepInQuarantine) {
             if (!isInQuarantine(sheep.birthDate)) {
-                const categoryContext = await this.buildCategoryContext(sheep);
-                const category = determineCategory(sheep.gender, sheep.birthDate, categoryContext);
+                const category = determineCategory(sheep.gender, sheep.birthDate, {
+                    isPregnant: sheep.isPregnant,
+                    isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+                });
                 await this.update(
                     sheep.id,
                     {

@@ -26,6 +26,7 @@ export const MEDICINE_TYPES = ["Vacuna", "Antibiótico", "Vitamina", "Desparasit
 export const MEDICINE_STATES = ["Programado", "Aplicado", "Cancelado", "Omitido"] as const
 export const BREEDING_RESULTS = ["Pendiente", "Preñada", "Vacía", "Revisar"] as const
 export const BREEDING_CYCLE_STATUSES = ["Activo", "Cancelado"] as const
+export const DIAGNOSIS_TYPES = ["ECO", "Control monta", "FAMACHA"] as const
 export const BREEDS = [
   "Suffolk",
   "Hampshire",
@@ -80,6 +81,12 @@ export function getSheep(id: string) {
   return sheepData.find((s) => s.id === id || s.arete === id)
 }
 
+/** "SA-103 Luna" style label for a sheep id; falls back to the raw id. */
+export function sheepDisplay(id: string) {
+  const s = getSheep(id)
+  return s ? `${s.arete}${s.nombre ? ` ${s.nombre}` : ""}` : id
+}
+
 /* ------------------------------ Weight history ---------------------------- */
 
 export type WeightRecord = { id: string; fecha: string; peso: number; ganancia: number | null }
@@ -108,9 +115,60 @@ export const weightHistory: WeightRecord[] = [
 
 /* --------------------------------- Matings -------------------------------- */
 
-export type MatingRecord = { id: string; fecha: string; pareja: string; estado: (typeof MATING_STATES)[number] }
+export const GESTATION_DAYS = 150
 
-export const matingHistory: MatingRecord[] = [{ id: "m1", fecha: "2026-03-15", pareja: "SA-055 Toro", estado: "Pendiente" }]
+/** Add N days to an ISO date string (YYYY-MM-DD) and return ISO. */
+export function addDays(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T12:00:00`)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split("T")[0]
+}
+
+/**
+ * Mock mating row. Field names mirror the future API (maleId, femaleId, status…)
+ * so engineering can wire endpoints later without renaming state.
+ */
+export type MatingRecord = {
+  id: string
+  maleId: string
+  femaleId: string
+  matingDate: string
+  status: (typeof MATING_STATES)[number]
+  notes?: string
+  ecoSummary?: string
+  partoDate?: string
+  expectedBirthDate?: string
+  nextCheckDate?: string
+}
+
+export const matingHistory: MatingRecord[] = [
+  {
+    id: "m1",
+    maleId: "SA-055",
+    femaleId: "SA-103",
+    matingDate: "2026-03-15",
+    status: "Efectiva",
+    ecoSummary: "Preñada · 2026-04-14",
+    expectedBirthDate: "2026-08-12",
+    notes: "Preñez confirmada por ECO.",
+  },
+  {
+    id: "m2",
+    maleId: "SA-042",
+    femaleId: "SA-001",
+    matingDate: "2026-02-10",
+    status: "Inefectiva",
+    ecoSummary: "Vacía · 2026-03-12",
+    notes: "Repetir con Vitasel.",
+  },
+  {
+    id: "m3",
+    maleId: "SA-055",
+    femaleId: "SA-088",
+    matingDate: "2026-03-16",
+    status: "Pendiente",
+  },
+]
 
 /* ------------------------------ Health / FAMACHA -------------------------- */
 
@@ -177,19 +235,26 @@ export const applicationsData: MedicineApplication[] = [
 
 export type BreedingRecord = {
   id: string
-  oveja: string
-  carnero: string
-  fechaMonta: string
-  resultado: (typeof BREEDING_RESULTS)[number]
-  vitasel: boolean
+  eweId: string
+  ramId?: string
+  cycleName: string
+  matingDate: string
+  vitaselApplied: boolean
+  result: (typeof BREEDING_RESULTS)[number]
+  diagnosisType?: (typeof DIAGNOSIS_TYPES)[number]
+  diagnosisDate?: string
+  notes?: string
   /** Activo rows show in planner; Cancelado = logical delete (audit kept). */
-  estado: (typeof BREEDING_CYCLE_STATUSES)[number]
+  status: (typeof BREEDING_CYCLE_STATUSES)[number]
 }
 
 export const breedingData: BreedingRecord[] = [
-  { id: "b-1", oveja: "SA-103 Luna", carnero: "SA-055 Toro", fechaMonta: "2026-03-15", resultado: "Pendiente", vitasel: true, estado: "Activo" },
-  { id: "b-2", oveja: "SA-088 Estrella", carnero: "SA-055 Toro", fechaMonta: "2026-03-16", resultado: "Preñada", vitasel: false, estado: "Activo" },
-  { id: "b-3", oveja: "SA-001 Blanca", carnero: "SA-042 Negro", fechaMonta: "2026-02-10", resultado: "Vacía", vitasel: true, estado: "Activo" },
+  { id: "b-1", eweId: "SA-103", ramId: "SA-055", cycleName: "2026-A", matingDate: "2026-03-15", vitaselApplied: true, result: "Pendiente", status: "Activo" },
+  { id: "b-2", eweId: "SA-088", ramId: "SA-055", cycleName: "2026-A", matingDate: "2026-03-16", vitaselApplied: false, result: "Preñada", diagnosisType: "ECO", diagnosisDate: "2026-04-15", status: "Activo" },
+  { id: "b-3", eweId: "SA-001", ramId: "SA-042", cycleName: "2026-A", matingDate: "2026-02-10", vitaselApplied: true, result: "Vacía", diagnosisType: "ECO", diagnosisDate: "2026-03-12", status: "Activo" },
+  { id: "b-4", eweId: "SA-077", ramId: "SA-055", cycleName: "2026-A", matingDate: "2026-02-28", vitaselApplied: false, result: "Revisar", diagnosisType: "Control monta", diagnosisDate: "2026-03-25", status: "Activo" },
+  { id: "b-5", eweId: "SA-015", ramId: "SA-042", cycleName: "2026-B", matingDate: "2026-05-02", vitaselApplied: true, result: "Pendiente", status: "Activo" },
+  { id: "b-6", eweId: "SA-022", cycleName: "2026-B", matingDate: "2026-05-03", vitaselApplied: false, result: "Pendiente", status: "Activo" },
 ]
 
 /* ----------------------------- Weaning alerts ----------------------------- */

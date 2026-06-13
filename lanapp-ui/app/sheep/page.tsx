@@ -190,9 +190,6 @@ export default function SheepListPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{s.name ?? "—"}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelGender(s.gender)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{s.breed}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                        {formatDisplayDate(s.birthDate)}
-                      </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelCategory(s.category)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatLastWeight(s)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">

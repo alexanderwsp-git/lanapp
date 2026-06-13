@@ -79,3 +79,4 @@ export function formatLastWeight(sheep: {
   const kg = toKg(sheep.latestWeight) ?? toKg(sheep.weight)
   return kg != null ? `${kg} kg` : "—"
 }
+

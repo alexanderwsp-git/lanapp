@@ -12,13 +12,13 @@ import {
   ArrowRightIcon,
   BellAlertIcon,
 } from "@heroicons/react/24/outline"
-import { sheepData, breedingData, weaningAlerts, statusColor } from "@/lib/mock-data"
+import { sheepData, breedingData, weaningAlerts, statusColor, sheepDisplay } from "@/lib/mock-data"
 
 export default function DashboardPage() {
   const total = sheepData.length
   const prenadas = sheepData.filter((s) => s.categoria.includes("preñada") || s.categoria === "Oveja preñada").length
   const maltonas = sheepData.filter((s) => s.categoria.includes("destetad")).length
-  const proximasMontas = breedingData.filter((b) => b.resultado === "Pendiente")
+  const proximasMontas = breedingData.filter((b) => b.status !== "Cancelado" && b.result === "Pendiente")
 
   return (
     <DashboardLayout>
@@ -67,12 +67,12 @@ export default function DashboardPage() {
                   <CalendarDaysIcon className="h-5 w-5 text-indigo-600" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900">{b.oveja}</p>
-                  <p className="truncate text-xs text-gray-500">Carnero: {b.carnero}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-700">{b.fechaMonta}</p>
-                  <StatusBadge color={statusColor[b.resultado]}>{b.resultado}</StatusBadge>
+                      <p className="truncate text-sm font-medium text-gray-900">{sheepDisplay(b.eweId)}</p>
+                      <p className="truncate text-xs text-gray-500">Carnero: {b.ramId ? sheepDisplay(b.ramId) : "Sin asignar"}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-700">{b.matingDate}</p>
+                      <StatusBadge color={statusColor[b.result]}>{b.result}</StatusBadge>
                 </div>
               </li>
             ))}
