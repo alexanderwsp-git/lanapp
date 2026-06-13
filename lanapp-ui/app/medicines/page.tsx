@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { Combobox } from "@/components/ui/combobox"
+import { useSheepFilter } from "@/components/ui/sheep-filter"
 import { Drawer } from "@/components/ui/drawer"
 import {
   MedicineCreateSchema,
@@ -135,7 +136,6 @@ export default function MedicinesPage() {
   const [bulkMedicineId, setBulkMedicineId] = useState("")
   const [bulkDate, setBulkDate] = useState(today())
   const [bulkNotes, setBulkNotes] = useState("")
-  const [bulkLocationFilter, setBulkLocationFilter] = useState("")
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set())
   const [savingBulk, setSavingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
@@ -278,10 +278,7 @@ export default function MedicinesPage() {
     return s ? (s.name ? `${s.tag} (${s.name})` : s.tag) : id
   }
 
-  const bulkVisibleSheep = useMemo(() => {
-    if (!bulkLocationFilter) return sheep
-    return sheep.filter((s) => s.currentLocationId === bulkLocationFilter)
-  }, [sheep, bulkLocationFilter])
+  const { filtered: bulkVisibleSheep, controls: bulkFilterControls } = useSheepFilter(sheep, locations)
 
   const bulkAllSelected =
     bulkVisibleSheep.length > 0 && bulkVisibleSheep.every((s) => bulkSelected.has(s.id))
@@ -416,7 +413,6 @@ export default function MedicinesPage() {
     setBulkMedicineId("")
     setBulkDate(today())
     setBulkNotes("")
-    setBulkLocationFilter("")
     setBulkSelected(new Set())
     setBulkError(null)
     setBulkResult(null)
@@ -1083,20 +1079,10 @@ export default function MedicinesPage() {
               onChange={(e) => setBulkNotes(e.target.value)}
             />
           </Field>
-          <Field label="Filtrar por potrero" htmlFor="bulk-location">
-            <Select
-              id="bulk-location"
-              value={bulkLocationFilter}
-              onChange={(e) => setBulkLocationFilter(e.target.value)}
-            >
-              <option value="">Todos los potreros</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+            <p className="mb-2 text-sm font-medium text-gray-700">Filtrar ovejas</p>
+            {bulkFilterControls}
+          </div>
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <p className="text-sm font-medium text-gray-700">Ovejas</p>
