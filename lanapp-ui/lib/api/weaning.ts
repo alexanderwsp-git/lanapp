@@ -1,6 +1,16 @@
 import { lanapp } from "./client"
 import type { ApiSheep, BulkResult } from "./types"
 
+export type ApiWeaningRecord = {
+  id: string
+  sheepId: string
+  weaningDate: string
+  weaningWeight: number
+  dailyGain?: number | null
+  lotId?: string | null
+  notes?: string | null
+}
+
 export type BulkWeaningRecordItem = {
   sheepId: string
   weaningWeight: number
@@ -27,12 +37,12 @@ export async function bulkRecordWeaning(payload: BulkWeaningPayload): Promise<Bu
   return res.data
 }
 
-export async function fetchWeaningAlerts(minDays = 75): Promise<ApiSheep[]> {
+export async function fetchWeaningAlerts(minDays = 70): Promise<ApiSheep[]> {
   const res = await lanapp.get<ApiSheep[]>(`weaning-record/alerts?minDays=${minDays}`)
   return res.data
 }
 
-export async function fetchWeaningRecordsBySheep(sheepId: string) {
-  const res = await lanapp.get<unknown[]>(`weaning-record/sheep/${sheepId}`)
+export async function fetchWeaningRecordsBySheep(sheepId: string): Promise<ApiWeaningRecord[]> {
+  const res = await lanapp.get<ApiWeaningRecord[]>(`weaning-record/sheep/${sheepId}`)
   return res.data
 }

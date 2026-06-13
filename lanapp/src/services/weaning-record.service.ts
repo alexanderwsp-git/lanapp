@@ -1,4 +1,4 @@
-import { BulkWeaning, Gender, SheepCategory } from '@sheep/domain';
+import { BulkWeaning, Gender, SheepCategory, SIX_MONTHS_DAYS, WEANING_DAYS } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { WeaningRecordRepository } from '../repositories/weaning-record.repository';
 import { WeaningRecord } from '../entities/weaning-record.entity';
@@ -38,7 +38,24 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
             }
         }
 
-        return this.create({ ...data, dailyGain }, username);
+        const record = await this.create({ ...data, dailyGain }, username);
+
+        const weightNotes = this.buildWeaningWeightNotes(data.lotId, data.notes);
+
+        await this.syncWeaningWeight(
+            data.sheepId!,
+            data.weaningDate!,
+            data.weaningWeight!,
+            username,
+            weightNotes
+        );
+
+        const sheep = await this.sheepService.findOne(data.sheepId!);
+        if (sheep) {
+            await this.applyWeaningCategory(sheep, data.weaningDate!, username);
+        }
+
+        return record;
     }
 
     private async applyWeaningCategory(
@@ -61,6 +78,40 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
               });
 
         await this.sheepService.update(sheep.id, { category }, username);
+    }
+
+    /** Mirror destete weight into the weight time-series (Pesos tab). */
+    private buildWeaningWeightNotes(lotId?: string, notes?: string): string {
+        const parts = ['Peso de destete'];
+        if (lotId?.trim()) parts.push(`lote ${lotId.trim()}`);
+        if (notes?.trim()) parts.push(notes.trim());
+        return parts.join(' · ');
+    }
+
+    /** Mirror destete weight into the weight time-series (Pesos tab). */
+    private async syncWeaningWeight(
+        sheepId: string,
+        weaningDate: Date,
+        weaningWeight: number,
+        username: string,
+        notes?: string
+    ): Promise<void> {
+        const dateKey = new Date(weaningDate).toISOString().slice(0, 10);
+        const existing = await this.weightService.findBySheep(sheepId);
+        const alreadyOnDate = existing.some(
+            w => new Date(w.measurementDate).toISOString().slice(0, 10) === dateKey
+        );
+        if (alreadyOnDate) return;
+
+        await this.weightService.recordWeight(
+            {
+                sheepId,
+                weight: weaningWeight,
+                measurementDate: weaningDate,
+                notes,
+            },
+            username
+        );
     }
 
     async bulkRecordWeaning(data: BulkWeaning, username: string): Promise<BulkResult> {
@@ -131,18 +182,20 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
         return result;
     }
 
-    async getWeaningAlerts(minDays = 75): Promise<Sheep[]> {
+    async getWeaningAlerts(minDays = WEANING_DAYS): Promise<Sheep[]> {
         const { data: allSheep } = await this.sheepService.findAll(1, 10000);
         const repo = this.repository as WeaningRecordRepository;
         const weanedIds = await repo.findSheepIdsWithRecords(allSheep.map(s => s.id));
         const lambCategories = new Set([SheepCategory.CORDERO, SheepCategory.CORDERA]);
 
-        return allSheep.filter(s => {
+        const alerts = allSheep.filter(s => {
             if (weanedIds.has(s.id)) return false;
             if (!lambCategories.has(s.category as SheepCategory)) return false;
             const ageDays =
                 (Date.now() - new Date(s.birthDate).getTime()) / (1000 * 60 * 60 * 24);
             return ageDays >= minDays;
         });
+
+        return this.weightService.attachLatestWeights(alerts);
     }
 }

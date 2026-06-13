@@ -1,7 +1,8 @@
-import { WeaningRecordCreateSchema, BulkWeaningSchema, IdSchema } from '@sheep/domain';
-import { created, failed, found, asyncHandler, validateSchema, validateParams } from '@sheep/server';
+import { WeaningRecordCreateSchema, BulkWeaningSchema, WEANING_DAYS } from '@sheep/domain';
+import { created, found, asyncHandler, validateSchema, validateParams } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import { WeaningRecordService } from '../services/weaning-record.service';
+import { SheepIdParamSchema } from '../schemas/params';
 
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -12,7 +13,7 @@ router.get(
     '/alerts',
     verifyToken,
     asyncHandler(async (req: Request, res: Response) => {
-        const minDays = parseInt(req.query.minDays as string) || 75;
+        const minDays = parseInt(req.query.minDays as string) || WEANING_DAYS;
         const alerts = await weaningRecordService.getWeaningAlerts(minDays);
         found(res, alerts);
     })
@@ -21,7 +22,7 @@ router.get(
 router.get(
     '/sheep/:sheepId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(SheepIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const records = await weaningRecordService.findBySheep(req.params.sheepId);
         found(res, records);

@@ -11,11 +11,10 @@ import { Field, TextInput } from "@/components/ui/form-fields"
 import { fetchWeaningAlerts, bulkRecordWeaning } from "@/lib/api/weaning"
 import type { ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
-import { toDateInputValue } from "@/lib/format"
+import { displayKgValue, toDateInputValue, toKg } from "@/lib/format"
 import { BellAlertIcon, CheckCircleIcon, ScaleIcon } from "@heroicons/react/24/outline"
 
 const WEANING_THRESHOLD = 70
-const ALERT_MIN_DAYS = 75
 
 const today = () => new Date().toISOString().split("T")[0]
 
@@ -34,6 +33,7 @@ export default function WeaningPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [weaningDate, setWeaningDate] = useState(today())
   const [lotId, setLotId] = useState("")
+  const [notas, setNotas] = useState("")
   const [weights, setWeights] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -43,7 +43,7 @@ export default function WeaningPage() {
     setLoading(true)
     setLoadError(null)
     try {
-      const alerts = await fetchWeaningAlerts(ALERT_MIN_DAYS)
+      const alerts = await fetchWeaningAlerts(WEANING_THRESHOLD)
       setRows(alerts)
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "No se pudieron cargar las alertas")
@@ -65,9 +65,11 @@ export default function WeaningPage() {
 
   const allSelected = rows.length > 0 && selected.size === rows.length
 
-  const avgWeight = rows.length
-    ? (rows.reduce((acc, r) => acc + (r.weight ?? 0), 0) / rows.length).toFixed(1)
-    : "0"
+  const avgWeight = useMemo(() => {
+    if (rows.length === 0) return "0"
+    const total = rows.reduce((acc, r) => acc + (toKg(r.latestWeight) ?? toKg(r.weight) ?? 0), 0)
+    return (total / rows.length).toFixed(1)
+  }, [rows])
 
   function toggleAll() {
     setSelected(allSelected ? new Set() : new Set(rows.map((s) => s.id)))
@@ -88,9 +90,14 @@ export default function WeaningPage() {
     if (ids) setSelected(new Set(ids))
     setWeaningDate(today())
     setLotId("")
+    setNotas("")
     setWeights(
       Object.fromEntries(
-        targetIds.map((id) => [id, String(sheepById.get(id)?.weight ?? "")]),
+        targetIds.map((id) => {
+          const sheep = sheepById.get(id)
+          const kg = toKg(sheep?.latestWeight) ?? toKg(sheep?.weight)
+          return [id, kg != null ? String(kg) : ""]
+        }),
       ),
     )
     setFormError(null)
@@ -108,18 +115,25 @@ export default function WeaningPage() {
 
     const records = selectedRows.map((s) => ({
       sheepId: s.id,
-      weaningWeight: Number(weights[s.id]),
+      weaningWeight: Number.parseFloat(weights[s.id]),
     }))
 
-    const invalid = records.find((r) => !Number.isFinite(r.weaningWeight) || r.weaningWeight <= 0)
+    const invalid = records.find(
+      (r) => !Number.isFinite(r.weaningWeight) || r.weaningWeight <= 0,
+    )
     if (invalid) {
-      setFormError("Todos los pesos de destete deben ser mayores a 0")
+      setFormError("Todos los pesos de destete deben ser mayores a 0 (decimales permitidos, ej. 12.3)")
       return
     }
 
     setSaving(true)
     try {
-      const res = await bulkRecordWeaning({ weaningDate, lotId: lotId.trim() || undefined, records })
+      const res = await bulkRecordWeaning({
+        weaningDate,
+        lotId: lotId.trim() || undefined,
+        notes: notas.trim() || undefined,
+        records,
+      })
       setResult(res)
       const succeededIds = new Set(res.succeeded.map((r) => r.sheepId))
       setRows((prev) => prev.filter((s) => !succeededIds.has(s.id)))
@@ -138,7 +152,7 @@ export default function WeaningPage() {
     <DashboardLayout>
       <PageHeader
         title="Alertas de destete"
-        description={`Corderos que superan el umbral de ${WEANING_THRESHOLD} días sin registro de destete`}
+        description={`Corderos con ${WEANING_THRESHOLD}+ días sin registro de destete`}
         action={
           <button
             onClick={() => openDrawer()}
@@ -165,7 +179,7 @@ export default function WeaningPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Alertas activas" value={rows.length} icon={BellAlertIcon} hint="Listos para destetar" />
         <StatCard label="Peso promedio" value={`${avgWeight} kg`} icon={ScaleIcon} hint="De los corderos en alerta" />
-        <StatCard label="Umbral destete" value={`${WEANING_THRESHOLD} días`} icon={CheckCircleIcon} hint={`Alertas desde ${ALERT_MIN_DAYS} días`} />
+        <StatCard label="Umbral destete" value={`${WEANING_THRESHOLD} días`} icon={CheckCircleIcon} hint="Alertas desde el día oficial de destete" />
       </div>
 
       {loadError && (
@@ -200,7 +214,7 @@ export default function WeaningPage() {
                       aria-label="Seleccionar todos"
                     />
                   </th>
-                  {["Arete", "Nombre", "Categoría", "Edad (días)", "Peso (kg)", ""].map((h, i) => (
+                  {["Arete", "Nombre", "Categoría", "Edad (días)", "Último peso (kg)", ""].map((h, i) => (
                     <th
                       key={`${h}-${i}`}
                       className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
@@ -230,7 +244,9 @@ export default function WeaningPage() {
                         <StatusBadge color="indigo">{labelCategory(s.category)}</StatusBadge>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{days}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{s.weight ?? "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                        {displayKgValue(s.latestWeight ?? s.weight)}
+                      </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right">
                         <button
                           onClick={() => openDrawer([s.id])}
@@ -310,8 +326,17 @@ export default function WeaningPage() {
               placeholder="Ej. Lote-3"
             />
           </Field>
+          <Field label="Notas (opcional)" htmlFor="weaning-notas">
+            <TextInput
+              id="weaning-notas"
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              placeholder="Ej. Destete lote A"
+            />
+          </Field>
           <div>
             <p className="mb-1.5 text-sm font-medium text-gray-700">Peso de destete por cordero (kg)</p>
+            <p className="mb-2 text-xs text-gray-500">Decimales permitidos (ej. 12.3)</p>
             <div className="divide-y divide-gray-100 rounded-md border border-gray-200">
               {selectedRows.map((s) => (
                 <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
@@ -322,7 +347,7 @@ export default function WeaningPage() {
                   <input
                     type="number"
                     step="0.1"
-                    min="0"
+                    min="0.1"
                     value={weights[s.id] ?? ""}
                     onChange={(e) => setWeights((prev) => ({ ...prev, [s.id]: e.target.value }))}
                     className="w-24 rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"

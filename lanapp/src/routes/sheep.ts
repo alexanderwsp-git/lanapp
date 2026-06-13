@@ -9,12 +9,13 @@ import {
 } from '@sheep/domain';
 import { created, deleted, failed, found, foundPaginated, updated, asyncHandler, validateSchema, validateParams } from '@sheep/server';
 import { Router, Request, Response } from 'express';
-import { SheepService } from '../services';
+import { SheepService, WeightService } from '../services';
 
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 const sheepService = new SheepService();
+const weightService = new WeightService();
 
 router.get(
     '/',
@@ -29,11 +30,12 @@ router.get(
 
         if (gender || status || category || locationId) {
             const sheep = await sheepService.findFiltered({ gender, status, category, locationId });
-            return found(res, sheep);
+            return found(res, await weightService.attachLatestWeights(sheep));
         }
 
         const result = await sheepService.findAll(page, limit);
-        foundPaginated(res, result, page, limit);
+        const enriched = await weightService.attachLatestWeights(result.data);
+        foundPaginated(res, { ...result, data: enriched }, page, limit);
     })
 );
 
@@ -42,7 +44,7 @@ router.get(
     verifyToken,
     asyncHandler(async (_req: Request, res: Response) => {
         const sheep = await sheepService.findInQuarantine();
-        found(res, sheep);
+        found(res, await weightService.attachLatestWeights(sheep));
     })
 );
 
@@ -55,7 +57,7 @@ router.get(
             return failed(res, 'Invalid record type');
         }
         const sheep = await sheepService.findByRecordType(recordType);
-        found(res, sheep);
+        found(res, await weightService.attachLatestWeights(sheep));
     })
 );
 
@@ -75,7 +77,8 @@ router.get(
     asyncHandler(async (req: Request, res: Response) => {
         const sheep = await sheepService.findWithParents(req.params.id);
         if (!sheep) return failed(res, 'Sheep not found');
-        found(res, sheep);
+        const [enriched] = await weightService.attachLatestWeights([sheep]);
+        found(res, enriched);
     })
 );
 
@@ -86,7 +89,8 @@ router.get(
     asyncHandler(async (req: Request, res: Response) => {
         const sheep = await sheepService.findOne(req.params.id);
         if (!sheep) return failed(res, 'Sheep not found');
-        found(res, sheep);
+        const [enriched] = await weightService.attachLatestWeights([sheep]);
+        found(res, enriched);
     })
 );
 
