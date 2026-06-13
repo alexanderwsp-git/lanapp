@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Gender } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -9,7 +9,8 @@ import { SheepPesosTab } from "@/components/sheep-pesos-tab"
 import { SheepMontasTab } from "@/components/sheep-montas-tab"
 import { SheepFamachaTab } from "@/components/sheep-famacha-tab"
 import type { ApiSheep } from "@/lib/api/types"
-import { toDateInputValue } from "@/lib/format"
+import { fetchWeaningRecordsBySheep, type ApiWeaningRecord } from "@/lib/api/weaning"
+import { formatDisplayDate, formatDailyGain, formatLastWeight } from "@/lib/format"
 import {
   labelCategory,
   labelGender,
@@ -27,22 +28,38 @@ const TABS = [
 
 export function SheepDetail({ sheep }: { sheep: ApiSheep }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("general")
+  const [weaningRecords, setWeaningRecords] = useState<ApiWeaningRecord[]>([])
+  const [weaningLoading, setWeaningLoading] = useState(true)
+
   const statusLabel = labelStatus(sheep.status)
   const locationName = sheep.currentLocation?.name ?? "—"
+
+  useEffect(() => {
+    let cancelled = false
+    setWeaningLoading(true)
+    fetchWeaningRecordsBySheep(sheep.id)
+      .then((records) => {
+        if (!cancelled) setWeaningRecords(records)
+      })
+      .catch(() => {
+        if (!cancelled) setWeaningRecords([])
+      })
+      .finally(() => {
+        if (!cancelled) setWeaningLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [sheep.id])
 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-gray-900">{sheep.name || sheep.tag}</h2>
-              <StatusBadge color={statusColor[statusLabel] ?? statusColor[sheep.status] ?? "gray"}>
-                {statusLabel}
-              </StatusBadge>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-900">{sheep.name || sheep.tag}</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Arete {sheep.tag} · {sheep.breed} · {labelCategory(sheep.category)}
+              Arete {sheep.tag} · {sheep.breed}
             </p>
           </div>
           <Link
@@ -52,11 +69,25 @@ export function SheepDetail({ sheep }: { sheep: ApiSheep }) {
             Editar
           </Link>
         </div>
-        <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Categoría</dt>
+            <dd className="mt-1">
+              <StatusBadge color="indigo">{labelCategory(sheep.category)}</StatusBadge>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Estado</dt>
+            <dd className="mt-1">
+              <StatusBadge color={statusColor[statusLabel] ?? statusColor[sheep.status] ?? "gray"}>
+                {statusLabel}
+              </StatusBadge>
+            </dd>
+          </div>
           {[
             { label: "Sexo", value: labelGender(sheep.gender) },
-            { label: "Peso actual", value: `${Number(sheep.weight)} kg` },
-            { label: "Nacimiento", value: toDateInputValue(sheep.birthDate) || "—" },
+            { label: "Último peso", value: formatLastWeight(sheep) },
+            { label: "Nacimiento", value: formatDisplayDate(sheep.birthDate) },
             { label: "Ubicación", value: locationName },
           ].map((item) => (
             <div key={item.label}>
@@ -88,25 +119,75 @@ export function SheepDetail({ sheep }: { sheep: ApiSheep }) {
 
         <div className="mt-6">
           {tab === "general" && (
-            <div className="rounded-lg bg-white p-6 shadow">
-              <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-                <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400" />
-                Información de registro
-              </h3>
-              <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Tipo de registro</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{labelRecordType(sheep.recordType)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Notas</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{sheep.notes || "Sin notas registradas."}</dd>
-                </div>
-              </dl>
+            <div className="flex flex-col gap-6">
+              <div className="rounded-lg bg-white p-6 shadow">
+                <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                  <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400" />
+                  Información de registro
+                </h3>
+                <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Tipo de registro</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{labelRecordType(sheep.recordType)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">Notas</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{sheep.notes || "Sin notas registradas."}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="rounded-lg bg-white p-6 shadow">
+                <h3 className="text-base font-semibold text-gray-900">Historial de destete</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Registro oficial de destete. El mismo peso también aparece en la pestaña Pesos.
+                </p>
+                {weaningLoading ? (
+                  <p className="mt-4 text-sm text-gray-500">Cargando destetes…</p>
+                ) : weaningRecords.length === 0 ? (
+                  <p className="mt-4 text-sm text-gray-500">Sin registro de destete.</p>
+                ) : (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {["Fecha", "Peso destete (kg)", "Ganancia prom. (g/día)", "Lote", "Notas"].map((h) => (
+                            <th
+                              key={h}
+                              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {weaningRecords.map((r) => (
+                          <tr key={r.id}>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                              {formatDisplayDate(r.weaningDate)}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                              {Number(r.weaningWeight)}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                              {formatDailyGain(r.dailyGain != null ? Number(r.dailyGain) : null)}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                              {r.lotId || "—"}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700">{r.notes || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {tab === "peso" && <SheepPesosTab />}
+          {tab === "peso" && <SheepPesosTab sheepId={sheep.id} />}
 
           {tab === "montas" && (
             <SheepMontasTab sheepId={sheep.id} gender={sheep.gender as Gender} />

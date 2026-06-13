@@ -16,7 +16,7 @@ import {
 import { createSheep, updateSheep, updateSheepStatus } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import type { ApiLocation, ApiSheep } from "@/lib/api/types"
-import { toDateInputValue } from "@/lib/format"
+import { formatLastWeight, toDateInputValue } from "@/lib/format"
 import {
   breedOptions,
   genderOptions,
@@ -98,14 +98,13 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
       gender: form.gender,
       breed: form.breed,
       birthDate: form.birthDate,
-      weight: Number(form.weight),
       recordType: form.recordType,
       currentLocationId: form.currentLocationId || undefined,
       notes: form.notes.trim() || undefined,
     }
 
     if (mode === "new") {
-      const parsed = SheepCreateSchema.safeParse(basePayload)
+      const parsed = SheepCreateSchema.safeParse({ ...basePayload, weight: Number(form.weight) })
       if (!parsed.success) {
         setError(parsed.error.errors[0]?.message ?? "Datos inválidos")
         return
@@ -205,18 +204,30 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
             required
           />
         </Field>
-        <Field label="Peso (kg)" required htmlFor="weight">
-          <TextInput
-            id="weight"
-            type="number"
-            step="0.1"
-            min="0.1"
-            value={form.weight}
-            onChange={(e) => setField("weight", e.target.value)}
-            placeholder="28.5"
-            required
-          />
-        </Field>
+        {mode === "new" ? (
+          <Field label="Peso inicial (kg)" required htmlFor="weight">
+            <TextInput
+              id="weight"
+              type="number"
+              step="0.1"
+              min="0.1"
+              value={form.weight}
+              onChange={(e) => setField("weight", e.target.value)}
+              placeholder="28.5"
+              required
+            />
+          </Field>
+        ) : (
+          <Field label="Último peso (kg)" htmlFor="weight-readonly">
+            <TextInput
+              id="weight-readonly"
+              value={initial ? formatLastWeight(initial).replace(" kg", "") : "—"}
+              readOnly
+              disabled
+              className="bg-gray-50"
+            />
+          </Field>
+        )}
         {mode === "edit" && (
           <Field label="Estado" required htmlFor="status">
             <Select
@@ -271,7 +282,13 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
       </div>
       {mode === "new" && (
         <p className="px-6 text-xs text-gray-500">
-          Categoría y estado los calcula el servidor al guardar.
+          Categoría y estado los calcula el servidor al guardar. El peso inicial se registra como
+          primer pesaje en la pestaña Pesos.
+        </p>
+      )}
+      {mode === "edit" && (
+        <p className="px-6 text-xs text-gray-500">
+          Para actualizar el peso, usa la pestaña Pesos en el detalle de la oveja.
         </p>
       )}
       <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">

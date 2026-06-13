@@ -4,6 +4,8 @@ import type { Medicine, SheepJson } from "@sheep/domain"
 export type ApiSheep = SheepJson & {
   currentLocationId?: string | null
   currentLocation?: { id: string; name: string } | null
+  latestWeight?: number | string | null
+  latestWeightDate?: string | null
 }
 
 export type ApiMedicine = Medicine & {

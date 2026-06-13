@@ -10,7 +10,7 @@ export class Weight extends BaseEntity {
     @Column()
     sheepId!: string;
 
-    @Column()
+    @Column('decimal', { precision: 5, scale: 2 })
     weight!: number;
 
     @Column()

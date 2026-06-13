@@ -18,7 +18,7 @@ import {
   statusOptions,
   statusColor,
 } from "@/lib/labels/sheep"
-import { formatDisplayDate } from "@/lib/format"
+import { formatDisplayDate, formatLastWeight } from "@/lib/format"
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -168,7 +168,7 @@ export default function SheepListPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {["Arete", "Nombre", "Sexo", "Raza", "F. nacimiento", "Categoría", "Peso", "Estado", ""].map((h) => (
+                  {["Arete", "Nombre", "Sexo", "Raza", "F. nacimiento", "Categoría", "Último peso", "Estado", ""].map((h) => (
                     <th
                       key={h}
                       scope="col"
@@ -194,7 +194,7 @@ export default function SheepListPage() {
                         {formatDisplayDate(s.birthDate)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelCategory(s.category)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{Number(s.weight)} kg</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatLastWeight(s)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         <StatusBadge color={statusColor[statusLabel] ?? statusColor[s.status] ?? "gray"}>
                           {statusLabel}

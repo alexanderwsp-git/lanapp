@@ -2,6 +2,7 @@ import { WeightCreateSchema, WeightUpdateSchema, IdSchema } from '@sheep/domain'
 import { created, deleted, failed, found, foundPaginated, updated, asyncHandler, validateSchema, validateParams } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import { WeightService } from '../services';
+import { SheepIdParamSchema } from '../schemas/params';
 
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -22,7 +23,7 @@ router.get(
 router.get(
     '/sheep/:sheepId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(SheepIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const weights = await weightService.findBySheep(req.params.sheepId);
         found(res, weights);
@@ -32,7 +33,7 @@ router.get(
 router.get(
     '/sheep/:sheepId/latest',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(SheepIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const weight = await weightService.findLatestBySheep(req.params.sheepId);
         if (!weight) return failed(res, 'No weight records found for this sheep');

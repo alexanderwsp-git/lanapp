@@ -2,16 +2,19 @@ import { Gender, SheepStatus, RecordType, SheepCategory } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { WeaningRecordRepository } from '../repositories/weaning-record.repository';
+import { WeightService } from './weight.service';
 import { Sheep } from '../entities/sheep.entity';
 
 import { CategoryContext, determineCategory, isInQuarantine } from '../utils/utils';
 
 export class SheepService extends BaseService<Sheep> {
     private weaningRecordRepository: WeaningRecordRepository;
+    private weightService: WeightService;
 
     constructor() {
         super(new SheepRepository());
         this.weaningRecordRepository = new WeaningRecordRepository();
+        this.weightService = new WeightService();
     }
 
     private async buildCategoryContext(
@@ -93,6 +96,16 @@ export class SheepService extends BaseService<Sheep> {
             updatedBy: username,
         });
 
+        await this.weightService.recordWeight(
+            {
+                sheepId: sheep.id,
+                weight: rest.weight!,
+                measurementDate: rest.birthDate!,
+                notes: 'Peso al registro',
+            },
+            username
+        );
+
         return sheep;
     }
 
@@ -101,7 +114,7 @@ export class SheepService extends BaseService<Sheep> {
         data: Partial<Sheep> & { currentLocationId?: string },
         username: string
     ): Promise<Sheep | null> {
-        const { currentLocationId, ...rest } = data;
+        const { currentLocationId, weight: _weight, ...rest } = data;
         const updateData = {
             ...rest,
             ...(currentLocationId !== undefined
