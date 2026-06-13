@@ -25,6 +25,7 @@ export const MATING_STATES = ["Pendiente", "Efectiva", "Inefectiva"] as const
 export const MEDICINE_TYPES = ["Vacuna", "Antibiótico", "Vitamina", "Desparasitante", "Otro"] as const
 export const MEDICINE_STATES = ["Programado", "Aplicado", "Cancelado", "Omitido"] as const
 export const BREEDING_RESULTS = ["Pendiente", "Preñada", "Vacía", "Revisar"] as const
+export const BREEDING_CYCLE_STATUSES = ["Activo", "Cancelado"] as const
 export const BREEDS = [
   "Suffolk",
   "Hampshire",
@@ -181,12 +182,14 @@ export type BreedingRecord = {
   fechaMonta: string
   resultado: (typeof BREEDING_RESULTS)[number]
   vitasel: boolean
+  /** Activo rows show in planner; Cancelado = logical delete (audit kept). */
+  estado: (typeof BREEDING_CYCLE_STATUSES)[number]
 }
 
 export const breedingData: BreedingRecord[] = [
-  { id: "b-1", oveja: "SA-103 Luna", carnero: "SA-055 Toro", fechaMonta: "2026-03-15", resultado: "Pendiente", vitasel: true },
-  { id: "b-2", oveja: "SA-088 Estrella", carnero: "SA-055 Toro", fechaMonta: "2026-03-16", resultado: "Preñada", vitasel: false },
-  { id: "b-3", oveja: "SA-001 Blanca", carnero: "SA-042 Negro", fechaMonta: "2026-02-10", resultado: "Vacía", vitasel: true },
+  { id: "b-1", oveja: "SA-103 Luna", carnero: "SA-055 Toro", fechaMonta: "2026-03-15", resultado: "Pendiente", vitasel: true, estado: "Activo" },
+  { id: "b-2", oveja: "SA-088 Estrella", carnero: "SA-055 Toro", fechaMonta: "2026-03-16", resultado: "Preñada", vitasel: false, estado: "Activo" },
+  { id: "b-3", oveja: "SA-001 Blanca", carnero: "SA-042 Negro", fechaMonta: "2026-02-10", resultado: "Vacía", vitasel: true, estado: "Activo" },
 ]
 
 /* ----------------------------- Weaning alerts ----------------------------- */

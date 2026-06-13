@@ -86,14 +86,33 @@ router.put(
     })
 );
 
+router.post(
+    '/:id/cancel',
+    verifyToken,
+    validateParams(IdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        try {
+            const cycle = await breedingCycleService.cancel(req.params.id, req.user!.username);
+            if (!cycle) return failed(res, 'Breeding cycle not found');
+            updated(res, cycle);
+        } catch (err) {
+            failed(res, err instanceof Error ? err.message : 'No se pudo cancelar el ciclo');
+        }
+    })
+);
+
 router.delete(
     '/:id',
     verifyToken,
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const result = await breedingCycleService.delete(req.params.id);
-        if (!result) return failed(res, 'Breeding cycle not found');
-        deleted(res);
+        try {
+            const cycle = await breedingCycleService.cancel(req.params.id, req.user!.username);
+            if (!cycle) return failed(res, 'Breeding cycle not found');
+            deleted(res);
+        } catch (err) {
+            failed(res, err instanceof Error ? err.message : 'No se pudo cancelar el ciclo');
+        }
     })
 );
 

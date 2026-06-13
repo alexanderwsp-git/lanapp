@@ -316,7 +316,10 @@ If `isPregnant: true` → mating marked Effective, ewe `isPregnant=true`.
 | POST | `/breeding-cycle/bulk` | Many ewes, one cycle — see §3.14 |
 | PATCH | `/breeding-cycle/:id/diagnosis` | `diagnosisType`, `diagnosisDate`, `result?` |
 | PUT | `/breeding-cycle/:id` | partial |
-| DELETE | `/breeding-cycle/:id` | — |
+| POST | `/breeding-cycle/:id/cancel` | Logical cancel — sets `status: Cancelled` (preferred) |
+| DELETE | `/breeding-cycle/:id` | Same as cancel — **not** hard delete |
+
+**Cancel rules:** only before `diagnosisDate` or `actualBirthDate`. Cancelled rows hidden from lists; same ewe + `cycleName` can be re-scheduled. Matings have **no delete** — use `POST /mating/:id/ineffective` instead.
 
 ### 3.10 Weaning
 
@@ -1375,6 +1378,8 @@ Both can coexist; linking them automatically is **not** implemented — operator
 | Parto without ECO | API allows; UI may show warning |
 | Status labels | Always Spanish in UI — never show `Pending` raw |
 | Gestación | ~150 days; optional `expectedBirthDate` on mating create |
+| Planner cancel | `POST …/cancel` or DELETE — logical only; blocked after diagnosis/parto |
+| Montas delete | **No delete** — Marcar inefectiva preserves audit trail |
 
 ### 16.11 Spanish copy reference
 

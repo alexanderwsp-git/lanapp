@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BreedingResult, DiagnosisType } from '../enums/breeding';
+import { BreedingCycleStatus, BreedingResult, DiagnosisType } from '../enums/breeding';
 
 export const BreedingCycleSchema = z.object({
     id: z.string().uuid().optional(),
@@ -10,6 +10,7 @@ export const BreedingCycleSchema = z.object({
     diagnosisType: z.nativeEnum(DiagnosisType).optional(),
     diagnosisDate: z.coerce.date().optional(),
     result: z.nativeEnum(BreedingResult).optional(),
+    status: z.nativeEnum(BreedingCycleStatus).default(BreedingCycleStatus.ACTIVE),
     vitaselApplied: z.boolean().default(false),
     expectedBirthDate: z.coerce.date().optional(),
     actualBirthDate: z.coerce.date().optional(),

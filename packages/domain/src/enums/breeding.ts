@@ -9,3 +9,9 @@ export enum BreedingResult {
     EMPTY = 'Empty',
     RECHECK = 'Recheck',
 }
+
+/** Planner row lifecycle — use Cancelled instead of hard delete (same pattern as medicine). */
+export enum BreedingCycleStatus {
+    ACTIVE = 'Active',
+    CANCELLED = 'Cancelled',
+}

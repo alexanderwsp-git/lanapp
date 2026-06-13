@@ -1,4 +1,4 @@
-import { BreedingResult, DiagnosisType } from '@sheep/domain';
+import { BreedingCycleStatus, BreedingResult, DiagnosisType } from '@sheep/domain';
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 
@@ -29,6 +29,9 @@ export class BreedingCycle extends BaseEntity {
 
     @Column({ type: 'enum', enum: BreedingResult, nullable: true })
     result?: BreedingResult;
+
+    @Column({ type: 'enum', enum: BreedingCycleStatus, default: BreedingCycleStatus.ACTIVE })
+    status!: BreedingCycleStatus;
 
     @Column({ type: 'boolean', default: false })
     vitaselApplied!: boolean;

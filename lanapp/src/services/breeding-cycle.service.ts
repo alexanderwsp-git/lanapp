@@ -1,4 +1,4 @@
-import { BreedingResult, BulkBreedingCycleSchedule, Gender } from '@sheep/domain';
+import { BreedingCycleStatus, BreedingResult, BulkBreedingCycleSchedule, Gender } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { BreedingCycleRepository } from '../repositories/breeding-cycle.repository';
 import { BreedingCycle } from '../entities/breeding-cycle.entity';
@@ -21,6 +21,10 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
         return (this.repository as BreedingCycleRepository).findByCycleName(cycleName);
     }
 
+    async create(data: Partial<BreedingCycle>, username: string): Promise<BreedingCycle> {
+        return super.create({ ...data, status: BreedingCycleStatus.ACTIVE }, username);
+    }
+
     async recordDiagnosis(
         id: string,
         data: {
@@ -31,7 +35,25 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
         },
         username: string
     ): Promise<BreedingCycle | null> {
+        const cycle = await this.findOne(id);
+        if (!cycle || cycle.status === BreedingCycleStatus.CANCELLED) {
+            return null;
+        }
         return this.update(id, data, username);
+    }
+
+    /**
+     * Logical delete for planner rows — keeps audit trail.
+     * Only allowed before diagnosis or birth (planning mistakes).
+     */
+    async cancel(id: string, username: string): Promise<BreedingCycle | null> {
+        const cycle = await this.findOne(id);
+        if (!cycle) return null;
+        if (cycle.status === BreedingCycleStatus.CANCELLED) return cycle;
+        if (cycle.diagnosisDate || cycle.actualBirthDate) {
+            throw new Error('No se puede cancelar un ciclo con diagnóstico o parto registrado');
+        }
+        return this.update(id, { status: BreedingCycleStatus.CANCELLED }, username);
     }
 
     async bulkSchedule(data: BulkBreedingCycleSchedule, username: string): Promise<BulkResult> {
@@ -70,7 +92,7 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
                 continue;
             }
 
-            const existing = await repo.findByEweAndCycle(eweId, data.cycleName);
+            const existing = await repo.findActiveByEweAndCycle(eweId, data.cycleName);
             if (existing) {
                 result.failed.push({
                     sheepId: eweId,
