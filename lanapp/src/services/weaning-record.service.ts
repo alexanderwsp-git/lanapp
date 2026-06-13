@@ -1,4 +1,4 @@
-import { BulkWeaning, Gender, SheepCategory } from '@sheep/domain';
+import { BulkWeaning, Gender, SheepCategory, SIX_MONTHS_DAYS } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { WeaningRecordRepository } from '../repositories/weaning-record.repository';
 import { WeaningRecord } from '../entities/weaning-record.entity';
@@ -7,7 +7,7 @@ import { SheepService } from './sheep.service';
 import { Sheep } from '../entities/sheep.entity';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { BulkResult, emptyBulkResult, resolveSheepIds } from '../utils/bulk-target';
-import { determineCategory } from '../utils/utils';
+import { determineCategory, ageInDays } from '../utils/utils';
 
 export class WeaningRecordService extends BaseService<WeaningRecord> {
     private weightService: WeightService;
@@ -38,7 +38,14 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
             }
         }
 
-        return this.create({ ...data, dailyGain }, username);
+        const record = await this.create({ ...data, dailyGain }, username);
+
+        const sheep = await this.sheepService.findOne(data.sheepId!);
+        if (sheep) {
+            await this.applyWeaningCategory(sheep, data.weaningDate!, username);
+        }
+
+        return record;
     }
 
     private async applyWeaningCategory(
@@ -57,6 +64,7 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
             : determineCategory(sheep.gender, sheep.birthDate, {
                   isPregnant: sheep.isPregnant,
                   isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+                  isWeaned: true,
                   referenceDate: weaningDate,
               });
 
@@ -118,7 +126,6 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
                     },
                     username
                 );
-                await this.applyWeaningCategory(sheep, data.weaningDate, username);
                 result.succeeded.push({ sheepId: item.sheepId, recordId: record.id });
             } catch (err) {
                 result.failed.push({
@@ -135,14 +142,13 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
         const { data: allSheep } = await this.sheepService.findAll(1, 10000);
         const repo = this.repository as WeaningRecordRepository;
         const weanedIds = await repo.findSheepIdsWithRecords(allSheep.map(s => s.id));
-        const lambCategories = new Set([SheepCategory.CORDERO, SheepCategory.CORDERA]);
 
         return allSheep.filter(s => {
             if (weanedIds.has(s.id)) return false;
-            if (!lambCategories.has(s.category as SheepCategory)) return false;
-            const ageDays =
-                (Date.now() - new Date(s.birthDate).getTime()) / (1000 * 60 * 60 * 24);
-            return ageDays >= minDays;
+            const days = ageInDays(s.birthDate);
+            if (days < minDays) return false;
+            if (days >= SIX_MONTHS_DAYS) return false;
+            return true;
         });
     }
 }
