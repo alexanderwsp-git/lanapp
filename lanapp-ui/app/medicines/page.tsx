@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { Combobox } from "@/components/ui/combobox"
+import { Drawer } from "@/components/ui/drawer"
 import {
   MedicineCreateSchema,
   MedicineStatus,
@@ -19,6 +20,7 @@ import {
   type MedicineApplicationCreate,
 } from "@sheep/domain"
 import {
+  bulkScheduleMedicineApplications,
   createMedicine,
   createMedicineApplication,
   deleteMedicine,
@@ -30,7 +32,9 @@ import {
   updateMedicineApplicationStatus,
 } from "@/lib/api/medicine"
 import { fetchSheep } from "@/lib/api/sheep"
-import type { ApiMedicine, ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
+import { fetchLocations } from "@/lib/api/location"
+import type { ApiLocation, ApiMedicine, ApiMedicineApplication, ApiSheep, BulkResult } from "@/lib/api/types"
+import { labelCategory } from "@/lib/labels/sheep"
 import { toDateInputValue } from "@/lib/format"
 import {
   labelMedicineStatus,
@@ -47,6 +51,7 @@ import {
   CheckIcon,
   XMarkIcon,
   ClockIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/outline"
 
 type MedForm = {
@@ -124,6 +129,17 @@ export default function MedicinesPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
+
+  const [locations, setLocations] = useState<ApiLocation[]>([])
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkMedicineId, setBulkMedicineId] = useState("")
+  const [bulkDate, setBulkDate] = useState(today())
+  const [bulkNotes, setBulkNotes] = useState("")
+  const [bulkLocationFilter, setBulkLocationFilter] = useState("")
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set())
+  const [savingBulk, setSavingBulk] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null)
 
   const [applyTarget, setApplyTarget] = useState<ApiMedicineApplication | null>(null)
   const [applyForm, setApplyForm] = useState<ApplyForm>({
@@ -207,15 +223,17 @@ export default function MedicinesPage() {
       setLoadingApps(true)
       setLoadError(null)
       try {
-        const [medsRes, appsRes, sheepRes] = await Promise.all([
+        const [medsRes, appsRes, sheepRes, locsRes] = await Promise.all([
           fetchMedicines(1, 200),
           fetchMedicineApplications(1, 200),
           fetchSheep({ page: 1, limit: 200 }),
+          fetchLocations(200).catch(() => [] as ApiLocation[]),
         ])
         if (cancelled) return
         setMeds(medsRes.items)
         setApps(appsRes.items)
         setSheep(sheepRes.items)
+        setLocations(locsRes)
       } catch (err) {
         if (!cancelled) {
           setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los datos")
@@ -258,6 +276,36 @@ export default function MedicinesPage() {
   function sheepDisplayTag(id: string) {
     const s = sheepById.get(id)
     return s ? (s.name ? `${s.tag} (${s.name})` : s.tag) : id
+  }
+
+  const bulkVisibleSheep = useMemo(() => {
+    if (!bulkLocationFilter) return sheep
+    return sheep.filter((s) => s.currentLocationId === bulkLocationFilter)
+  }, [sheep, bulkLocationFilter])
+
+  const bulkAllSelected =
+    bulkVisibleSheep.length > 0 && bulkVisibleSheep.every((s) => bulkSelected.has(s.id))
+
+  function toggleBulkAll() {
+    setBulkSelected((prev) => {
+      if (bulkVisibleSheep.every((s) => prev.has(s.id))) {
+        const next = new Set(prev)
+        bulkVisibleSheep.forEach((s) => next.delete(s.id))
+        return next
+      }
+      const next = new Set(prev)
+      bulkVisibleSheep.forEach((s) => next.add(s.id))
+      return next
+    })
+  }
+
+  function toggleBulkOne(id: string) {
+    setBulkSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   function openNewMed() {
@@ -361,6 +409,63 @@ export default function MedicinesPage() {
       setScheduleError(err instanceof Error ? err.message : "No se pudo programar")
     } finally {
       setSavingSchedule(false)
+    }
+  }
+
+  function openBulk() {
+    setBulkMedicineId("")
+    setBulkDate(today())
+    setBulkNotes("")
+    setBulkLocationFilter("")
+    setBulkSelected(new Set())
+    setBulkError(null)
+    setBulkResult(null)
+    setBulkOpen(true)
+  }
+
+  async function saveBulk(e: React.FormEvent) {
+    e.preventDefault()
+    setBulkError(null)
+    setBulkResult(null)
+
+    if (!bulkMedicineId) {
+      setBulkError("Selecciona un medicamento")
+      return
+    }
+    if (!bulkDate) {
+      setBulkError("Indica la fecha de aplicación")
+      return
+    }
+    const sheepIds = Array.from(bulkSelected)
+    if (sheepIds.length === 0) {
+      setBulkError("Selecciona al menos una oveja")
+      return
+    }
+
+    setSavingBulk(true)
+    try {
+      const res = await bulkScheduleMedicineApplications({
+        medicineId: bulkMedicineId,
+        applicationDate: bulkDate,
+        notes: bulkNotes.trim() || undefined,
+        sheepIds,
+      })
+      setBulkResult(res)
+      const succeededIds = new Set(res.succeeded.map((r) => r.sheepId))
+      setBulkSelected((prev) => {
+        const next = new Set(prev)
+        succeededIds.forEach((id) => next.delete(id))
+        return next
+      })
+      await loadApps()
+      if (res.failed.length === 0) {
+        setBulkOpen(false)
+        setTab("scheduled")
+      }
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "No se pudo programar en lote")
+    } finally {
+      setSavingBulk(false)
     }
   }
 
@@ -552,14 +657,24 @@ export default function MedicinesPage() {
               Nuevo medicamento
             </button>
           ) : (
-            <button
-              onClick={openSchedule}
-              disabled={meds.length === 0 || sheep.length === 0}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-            >
-              <PlusIcon className="h-5 w-5" aria-hidden="true" />
-              Programar aplicación
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={openBulk}
+                disabled={meds.length === 0 || sheep.length === 0}
+                className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
+              >
+                <UserGroupIcon className="h-5 w-5" aria-hidden="true" />
+                Programar en lote
+              </button>
+              <button
+                onClick={openSchedule}
+                disabled={meds.length === 0 || sheep.length === 0}
+                className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+              >
+                <PlusIcon className="h-5 w-5" aria-hidden="true" />
+                Programar aplicación
+              </button>
+            </div>
           )
         }
       />
@@ -894,6 +1009,134 @@ export default function MedicinesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Bulk schedule drawer — many sheep, one medicine + date */}
+      <Drawer
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Programar en lote"
+        description={`${bulkSelected.size} oveja(s) seleccionada(s)`}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setBulkOpen(false)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="bulk-schedule-form"
+              disabled={savingBulk || !bulkMedicineId || bulkSelected.size === 0}
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+            >
+              {savingBulk && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              Programar ({bulkSelected.size})
+            </button>
+          </>
+        }
+      >
+        <form id="bulk-schedule-form" onSubmit={saveBulk} className="flex flex-col gap-4">
+          {bulkError && (
+            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{bulkError}</div>
+          )}
+          {bulkResult && bulkResult.failed.length > 0 && (
+            <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <p className="font-medium">
+                {bulkResult.succeeded.length} programada(s), {bulkResult.failed.length} con error:
+              </p>
+              <ul className="mt-1 list-disc pl-5">
+                {bulkResult.failed.map((f) => (
+                  <li key={f.sheepId}>
+                    {sheepDisplayTag(f.sheepId)}: {f.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Field label="Medicamento" required htmlFor="bulk-medicine">
+            <Combobox
+              id="bulk-medicine"
+              options={medicineOptions}
+              value={bulkMedicineId}
+              onChange={setBulkMedicineId}
+              placeholder="Seleccionar medicamento"
+            />
+          </Field>
+          <Field label="Fecha programada" required htmlFor="bulk-date">
+            <TextInput
+              id="bulk-date"
+              type="date"
+              value={bulkDate}
+              onChange={(e) => setBulkDate(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Notas" htmlFor="bulk-notes">
+            <Textarea
+              id="bulk-notes"
+              rows={2}
+              value={bulkNotes}
+              onChange={(e) => setBulkNotes(e.target.value)}
+            />
+          </Field>
+          <Field label="Filtrar por potrero" htmlFor="bulk-location">
+            <Select
+              id="bulk-location"
+              value={bulkLocationFilter}
+              onChange={(e) => setBulkLocationFilter(e.target.value)}
+            >
+              <option value="">Todos los potreros</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700">Ovejas</p>
+              <button
+                type="button"
+                onClick={toggleBulkAll}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+              >
+                {bulkAllSelected ? "Quitar todas" : "Seleccionar todas"}
+              </button>
+            </div>
+            <div className="max-h-72 divide-y divide-gray-100 overflow-y-auto rounded-md border border-gray-200">
+              {bulkVisibleSheep.length === 0 ? (
+                <p className="px-3 py-4 text-center text-sm text-gray-500">Sin ovejas para este filtro</p>
+              ) : (
+                bulkVisibleSheep.map((s) => (
+                  <label
+                    key={s.id}
+                    className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={bulkSelected.has(s.id)}
+                      onChange={() => toggleBulkOne(s.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-gray-900">{s.tag}</span>
+                      <span className="block truncate text-xs text-gray-500">
+                        {s.name ? `${s.name} · ` : ""}
+                        {labelCategory(s.category)}
+                      </span>
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+        </form>
+      </Drawer>
 
       {/* Apply modal — confirm + optional next schedule */}
       <Modal

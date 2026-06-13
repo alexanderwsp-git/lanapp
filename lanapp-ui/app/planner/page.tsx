@@ -1,228 +1,331 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
-import { Modal } from "@/components/ui/modal"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { StatusBadge } from "@/components/ui/status-badge"
 import { EmptyState } from "@/components/ui/empty-state"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { Field, TextInput, Select } from "@/components/ui/form-fields"
-import {
-  breedingData,
-  BREEDING_RESULTS,
-  statusColor,
-  sheepData,
-  type BreedingRecord,
-} from "@/lib/mock-data"
-import { PlusIcon, CalendarDaysIcon, TrashIcon, PencilSquareIcon } from "@heroicons/react/24/outline"
+import { Combobox } from "@/components/ui/combobox"
+import { fetchSheep } from "@/lib/api/sheep"
+import { fetchLocations } from "@/lib/api/location"
+import { bulkScheduleBreedingCycles } from "@/lib/api/breeding-cycle"
+import type { ApiSheep, ApiLocation, BulkResult } from "@/lib/api/types"
+import { Gender, SheepStatus } from "@sheep/domain"
+import { labelCategory } from "@/lib/labels/sheep"
+import { CalendarDaysIcon } from "@heroicons/react/24/outline"
 
-const hembras = sheepData.filter((s) => s.sexo === "Hembra")
-const machos = sheepData.filter((s) => s.sexo === "Macho")
-
-const emptyBreeding: BreedingRecord = {
-  id: "",
-  oveja: hembras[0] ? `${hembras[0].arete} ${hembras[0].nombre}` : "",
-  carnero: machos[0] ? `${machos[0].arete} ${machos[0].nombre}` : "",
-  fechaMonta: "",
-  resultado: "Pendiente",
-  vitasel: false,
-}
+const today = () => new Date().toISOString().split("T")[0]
 
 export default function PlannerPage() {
-  const [rows, setRows] = useState<BreedingRecord[]>(breedingData)
-  const [form, setForm] = useState<BreedingRecord>(emptyBreeding)
-  const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState<BreedingRecord | null>(null)
-  const [toDelete, setToDelete] = useState<BreedingRecord | null>(null)
+  const [ewes, setEwes] = useState<ApiSheep[]>([])
+  const [rams, setRams] = useState<ApiSheep[]>([])
+  const [locations, setLocations] = useState<ApiLocation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const [cycleName, setCycleName] = useState("")
+  const [ramId, setRamId] = useState("")
+  const [matingDate, setMatingDate] = useState(today())
+  const [vitaselApplied, setVitaselApplied] = useState(false)
+  const [notes, setNotes] = useState("")
+  const [locationFilter, setLocationFilter] = useState("")
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [result, setResult] = useState<BulkResult | null>(null)
 
-  function openNew() {
-    setEditing(null)
-    setForm(emptyBreeding)
-    setOpen(true)
-  }
-  function openEdit(b: BreedingRecord) {
-    setEditing(b)
-    setForm(b)
-    setOpen(true)
-  }
-  function save(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    setTimeout(() => {
-      if (editing) {
-        setRows((prev) => prev.map((r) => (r.id === editing.id ? { ...form, id: editing.id } : r)))
-      } else {
-        setRows((prev) => [{ ...form, id: `b-${Date.now()}` }, ...prev])
+  const load = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const [females, males, locs] = await Promise.all([
+        fetchSheep({ gender: Gender.FEMALE, status: SheepStatus.ACTIVE, limit: 300 }),
+        fetchSheep({ gender: Gender.MALE, status: SheepStatus.ACTIVE, limit: 300 }),
+        fetchLocations(200).catch(() => [] as ApiLocation[]),
+      ])
+      setEwes(females.items)
+      setRams(males.items)
+      setLocations(locs)
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los datos")
+      setEwes([])
+      setRams([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const visibleEwes = useMemo(() => {
+    if (!locationFilter) return ewes
+    return ewes.filter((s) => s.currentLocationId === locationFilter)
+  }, [ewes, locationFilter])
+
+  const ramOptions = useMemo(
+    () =>
+      rams.map((s) => ({
+        value: s.id,
+        label: s.tag,
+        sublabel: s.name ?? labelCategory(s.category),
+      })),
+    [rams],
+  )
+
+  const allSelected = visibleEwes.length > 0 && visibleEwes.every((s) => selected.has(s.id))
+
+  function toggleAll() {
+    setSelected((prev) => {
+      if (visibleEwes.every((s) => prev.has(s.id))) {
+        const next = new Set(prev)
+        visibleEwes.forEach((s) => next.delete(s.id))
+        return next
       }
-      setSaving(false)
-      setOpen(false)
-    }, 700)
-  }
-  function confirmDelete() {
-    if (!toDelete) return
-    setDeleting(true)
-    setTimeout(() => {
-      setRows((prev) => prev.filter((r) => r.id !== toDelete.id))
-      setDeleting(false)
-      setToDelete(null)
-    }, 700)
+      const next = new Set(prev)
+      visibleEwes.forEach((s) => next.add(s.id))
+      return next
+    })
   }
 
-  const ordered = [...rows].sort((a, b) => b.fechaMonta.localeCompare(a.fechaMonta))
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setFormError(null)
+    setResult(null)
+
+    if (!cycleName.trim()) {
+      setFormError("Indica el nombre del ciclo (ej. 2026-A)")
+      return
+    }
+    if (!matingDate) {
+      setFormError("Indica la fecha de monta")
+      return
+    }
+    const eweIds = Array.from(selected)
+    if (eweIds.length === 0) {
+      setFormError("Selecciona al menos una oveja")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const res = await bulkScheduleBreedingCycles({
+        cycleName: cycleName.trim(),
+        ramId: ramId || undefined,
+        matingDate,
+        vitaselApplied,
+        notes: notes.trim() || undefined,
+        eweIds,
+      })
+      setResult(res)
+      const succeededIds = new Set(res.succeeded.map((r) => r.sheepId))
+      setSelected((prev) => {
+        const next = new Set(prev)
+        succeededIds.forEach((id) => next.delete(id))
+        return next
+      })
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "No se pudo programar el ciclo")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const eweById = useMemo(() => new Map(ewes.map((s) => [s.id, s])), [ewes])
 
   return (
     <DashboardLayout>
       <PageHeader
         title="Planificador de montas"
-        description="Registro y seguimiento de montas del rebaño"
-        action={
-          <button
-            onClick={openNew}
-            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-          >
-            <PlusIcon className="h-5 w-5" aria-hidden="true" />
-            Registrar monta
-          </button>
-        }
+        description="Programa un ciclo reproductivo para varias ovejas a la vez"
       />
 
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        {ordered.length === 0 ? (
-          <EmptyState
-            icon={CalendarDaysIcon}
-            title="Sin montas registradas"
-            description="Registra una monta para iniciar el seguimiento reproductivo."
-            action={
-              <button onClick={openNew} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                Registrar monta
-              </button>
-            }
-          />
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {["Oveja", "Carnero", "Fecha monta", "Vitasel", "Resultado", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {ordered.map((b) => (
-                <tr key={b.id} className="hover:bg-gray-50">
-                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{b.oveja}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{b.carnero}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{b.fechaMonta}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    {b.vitasel ? <StatusBadge color="green">Sí</StatusBadge> : <StatusBadge color="gray">No</StatusBadge>}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <StatusBadge color={statusColor[b.resultado]}>{b.resultado}</StatusBadge>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => openEdit(b)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                        aria-label="Editar monta"
-                      >
-                        <PencilSquareIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => setToDelete(b)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                        aria-label="Eliminar monta"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {loadError && (
+        <div className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {loadError}
+          <button type="button" onClick={load} className="ml-2 font-semibold underline">
+            Reintentar
+          </button>
+        </div>
+      )}
 
-      {/* Breeding modal */}
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={editing ? "Editar monta" : "Registrar monta"}
-        description="Vincula una oveja con un carnero y registra el resultado."
-      >
-        <form onSubmit={save} className="flex flex-col gap-4">
-          <Field label="Oveja" required htmlFor="oveja">
-            <Select id="oveja" value={form.oveja} onChange={(e) => setForm({ ...form, oveja: e.target.value })}>
-              {hembras.map((s) => (
-                <option key={s.id}>{`${s.arete} ${s.nombre}`}</option>
+      {result && (
+        <div
+          className={`mb-4 rounded-md px-4 py-3 text-sm ${
+            result.failed.length === 0 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"
+          }`}
+        >
+          <p>
+            {result.succeeded.length} ciclo(s) programado(s) correctamente
+            {result.failed.length > 0 && ` · ${result.failed.length} omitida(s) o con error`}.
+          </p>
+          {result.failed.length > 0 && (
+            <ul className="mt-1 list-disc pl-5">
+              {result.failed.map((f) => (
+                <li key={f.sheepId}>
+                  {eweById.get(f.sheepId)?.tag ?? f.sheepId}: {f.error}
+                </li>
               ))}
-            </Select>
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Configuration card */}
+        <form onSubmit={submit} className="flex flex-col gap-4 rounded-lg bg-white p-6 shadow lg:col-span-1">
+          <h2 className="text-lg font-semibold text-gray-900">Configuración del ciclo</h2>
+          {formError && (
+            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</div>
+          )}
+          <Field label="Nombre del ciclo" required htmlFor="cycle-name">
+            <TextInput
+              id="cycle-name"
+              value={cycleName}
+              onChange={(e) => setCycleName(e.target.value)}
+              placeholder="2026-A"
+              required
+            />
           </Field>
-          <Field label="Carnero" required htmlFor="carnero">
-            <Select id="carnero" value={form.carnero} onChange={(e) => setForm({ ...form, carnero: e.target.value })}>
-              {machos.map((s) => (
-                <option key={s.id}>{`${s.arete} ${s.nombre}`}</option>
-              ))}
-            </Select>
+          <Field label="Carnero (opcional)" htmlFor="ram">
+            <Combobox
+              id="ram"
+              options={ramOptions}
+              value={ramId}
+              onChange={setRamId}
+              placeholder="Seleccionar carnero"
+              emptyMessage="Sin carneros activos"
+            />
           </Field>
-          <Field label="Fecha de monta" required htmlFor="fecha">
-            <TextInput id="fecha" type="date" value={form.fechaMonta} onChange={(e) => setForm({ ...form, fechaMonta: e.target.value })} required />
-          </Field>
-          <Field label="Resultado" htmlFor="resultado">
-            <Select id="resultado" value={form.resultado} onChange={(e) => setForm({ ...form, resultado: e.target.value as BreedingRecord["resultado"] })}>
-              {BREEDING_RESULTS.map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </Select>
+          <Field label="Fecha de monta" required htmlFor="mating-date">
+            <TextInput
+              id="mating-date"
+              type="date"
+              value={matingDate}
+              onChange={(e) => setMatingDate(e.target.value)}
+              required
+            />
           </Field>
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
               type="checkbox"
-              checked={form.vitasel}
-              onChange={(e) => setForm({ ...form, vitasel: e.target.checked })}
+              checked={vitaselApplied}
+              onChange={(e) => setVitaselApplied(e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
             />
             Aplicó Vitasel
           </label>
-          <div className="mt-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {saving && (
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-              )}
-              {editing ? "Guardar" : "Registrar"}
-            </button>
-          </div>
+          <Field label="Notas" htmlFor="notes">
+            <TextInput id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </Field>
+          <button
+            type="submit"
+            disabled={saving || selected.size === 0}
+            className="mt-2 inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+          >
+            {saving && (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            )}
+            Programar ciclo ({selected.size})
+          </button>
         </form>
-      </Modal>
 
-      <ConfirmDialog
-        open={!!toDelete}
-        title="Eliminar monta"
-        message={`¿Eliminar el registro de monta de ${toDelete?.oveja}?`}
-        loading={deleting}
-        onConfirm={confirmDelete}
-        onClose={() => setToDelete(null)}
-      />
+        {/* Ewe selection */}
+        <div className="lg:col-span-2">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-600">
+              Selecciona las ovejas que entrarán al ciclo. {selected.size} seleccionada(s).
+            </p>
+            <div className="sm:w-56">
+              <Select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                aria-label="Filtrar por potrero"
+              >
+                <option value="">Todos los potreros</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-lg bg-white shadow">
+            {loading ? (
+              <p className="p-8 text-center text-sm text-gray-500">Cargando ovejas...</p>
+            ) : visibleEwes.length === 0 ? (
+              <EmptyState
+                icon={CalendarDaysIcon}
+                title="Sin ovejas disponibles"
+                description="No hay hembras activas para este filtro."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={toggleAll}
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                          aria-label="Seleccionar todas"
+                        />
+                      </th>
+                      {["Arete", "Nombre", "Categoría", "Potrero"].map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {visibleEwes.map((s) => (
+                      <tr key={s.id} className={selected.has(s.id) ? "bg-indigo-50/50" : "hover:bg-gray-50"}>
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(s.id)}
+                            onChange={() => toggleOne(s.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                            aria-label={`Seleccionar ${s.tag}`}
+                          />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{s.tag}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{s.name || "—"}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm">
+                          <StatusBadge color="indigo">{labelCategory(s.category)}</StatusBadge>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                          {s.currentLocation?.name ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </DashboardLayout>
   )
 }
