@@ -1,0 +1,25 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 7
+    },
+    "auditLog": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/.5fa67db0b84583215dc998cc821b03a92171cc02-audit.json",
+    "files": [
+        {
+            "date": 1781038168362,
+            "name": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/app-2026-06-09.log",
+            "hash": "adca0654fe6c28ef544d2e6630c6dcb985cae3924f3dae7c99bb78b5f03c821c"
+        },
+        {
+            "date": 1781049912023,
+            "name": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/app-2026-06-10.log",
+            "hash": "4d2e229f7412cbfb7e2414ba42bfe66501f99e48f692af0484880361c820164b"
+        },
+        {
+            "date": 1781282513901,
+            "name": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/app-2026-06-12.log",
+            "hash": "541cddf0acbe1f3aec4fc6738eb08df9923077871566c9f7f87260aa5dcb6d9b"
+        }
+    ],
+    "hashType": "sha256"
+}

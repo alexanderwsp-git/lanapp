@@ -1,0 +1,26 @@
+{
+    "name": "@sheep/server",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Express middleware and HTTP response helpers for sheep services",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+        "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
+    },
+    "dependencies": {
+        "express": "^4.21.2",
+        "express-rate-limit": "^7.5.0",
+        "winston": "^3.17.0",
+        "winston-daily-rotate-file": "^5.0.0",
+        "zod": "^3.24.1"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.0",
+        "@types/node": "^20.11.19",
+        "prettier": "^3.5.3",
+        "typescript": "^5.7.3"
+    }
+}

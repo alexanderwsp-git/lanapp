@@ -1,0 +1,22 @@
+{
+	"folders": [
+        {
+            "path": "."
+        },
+        {
+            "path": "../api-test"
+        },
+        {
+            "path": "../xperiences"
+        },
+        {
+            "path": "../infra"
+        },
+        {
+            "path": "../typescript"
+        },
+        {
+            "path": "../developer-joi-delivery-nodejs"
+        }
+    ]
+}

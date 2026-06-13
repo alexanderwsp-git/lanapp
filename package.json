@@ -1,0 +1,17 @@
+{
+    "name": "sheep-monorepo",
+    "private": true,
+    "workspaces": [
+        "packages/*",
+        "lanapp",
+        "auth",
+        "lanapp-ui"
+    ],
+    "scripts": {
+        "build:packages": "npm run build -w @sheep/domain && npm run build -w @sheep/server",
+        "build": "npm run build:packages && npm run build -w lanapp && npm run build -w auth",
+        "build:all": "npm run build:packages && npm run build -w lanapp && npm run build -w auth && npm run build -w lanapp-ui",
+        "dev:api": "npm run dev -w lanapp",
+        "dev:ui": "npm run dev -w lanapp-ui"
+    }
+}

@@ -1,0 +1,42 @@
+import { MatingStatus } from '@sheep/domain';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { BaseEntity } from './base.entity';
+
+import { Sheep } from './sheep.entity';
+import { PregnancyCheck } from './pregnancy-check.entity';
+
+@Entity({ name: 'mating', schema: process.env.DATABASE_SCHEMA || 'public' })
+export class Mating extends BaseEntity {
+    @PrimaryGeneratedColumn('uuid')
+    id!: string;
+
+    @Column()
+    maleId!: string;
+
+    @Column()
+    femaleId!: string;
+
+    @ManyToOne(() => Sheep, sheep => sheep.matingsAsMale)
+    @JoinColumn({ name: 'maleId' })
+    male!: Sheep;
+
+    @ManyToOne(() => Sheep, sheep => sheep.matingsAsFemale)
+    @JoinColumn({ name: 'femaleId' })
+    female!: Sheep;
+
+    @Column({ type: 'date' })
+    matingDate!: Date;
+
+    @Column({ type: 'date', nullable: true })
+    expectedBirthDate?: Date;
+
+    @Column({
+        type: 'enum',
+        enum: MatingStatus,
+        default: MatingStatus.PENDING,
+    })
+    status!: MatingStatus;
+
+    @OneToMany(() => PregnancyCheck, check => check.mating)
+    pregnancyChecks!: PregnancyCheck[];
+}

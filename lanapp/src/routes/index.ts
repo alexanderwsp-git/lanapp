@@ -1,0 +1,36 @@
+import { Router } from 'express';
+import health from './health';
+import sheep from './sheep';
+import medicine from './medicine';
+import medicineApplication from './medicine-application';
+import mating from './mating';
+import weight from './weight';
+import pregnancyCheckRoutes from './pregnancy-check';
+import location from './location';
+import healthCheck from './health-check';
+import breedingCycle from './breeding-cycle';
+import weaningRecord from './weaning-record';
+import saleEvaluation from './sale-evaluation';
+import upload from './upload';
+import reports from './reports';
+import importRoutes from './import';
+
+const router = Router();
+
+router.use('/health', health);
+router.use('/sheep', sheep);
+router.use('/medicine', medicine);
+router.use('/medicine-application', medicineApplication);
+router.use('/mating', mating);
+router.use('/weight', weight);
+router.use('/pregnancy-check', pregnancyCheckRoutes);
+router.use('/location', location);
+router.use('/health-check', healthCheck);
+router.use('/breeding-cycle', breedingCycle);
+router.use('/weaning-record', weaningRecord);
+router.use('/sale-evaluation', saleEvaluation);
+router.use('/upload', upload);
+router.use('/reports', reports);
+router.use('/import', importRoutes);
+
+export default router;
