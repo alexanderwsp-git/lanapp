@@ -1,28 +1,13 @@
 import { Gender, SheepStatus, RecordType, SheepCategory } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { SheepRepository } from '../repositories/sheep.repository';
-import { WeaningRecordRepository } from '../repositories/weaning-record.repository';
 import { Sheep } from '../entities/sheep.entity';
 
-import { CategoryContext, determineCategory, isInQuarantine } from '../utils/utils';
+import { determineCategory, isInQuarantine } from '../utils/utils';
 
 export class SheepService extends BaseService<Sheep> {
-    private weaningRecordRepository: WeaningRecordRepository;
-
     constructor() {
         super(new SheepRepository());
-        this.weaningRecordRepository = new WeaningRecordRepository();
-    }
-
-    private async buildCategoryContext(
-        sheep: Pick<Sheep, 'id' | 'gender' | 'birthDate' | 'isPregnant' | 'deliveryDate'>
-    ): Promise<CategoryContext> {
-        const records = await this.weaningRecordRepository.findBySheep(sheep.id);
-        return {
-            isPregnant: sheep.isPregnant,
-            isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
-            isWeaned: records.length > 0,
-        };
     }
 
     async findByGender(gender: Gender): Promise<Sheep[]> {
@@ -78,7 +63,6 @@ export class SheepService extends BaseService<Sheep> {
         const category = determineCategory(rest.gender!, rest.birthDate!, {
             isPregnant: rest.isPregnant || false,
             isLactating: !!rest.deliveryDate && !rest.isPregnant,
-            isWeaned: false,
         });
 
         const status =
@@ -112,8 +96,10 @@ export class SheepService extends BaseService<Sheep> {
         const sheep = await super.update(id, updateData, username);
         if (!sheep) return null;
 
-        const categoryContext = await this.buildCategoryContext(sheep);
-        const category = determineCategory(sheep.gender, sheep.birthDate, categoryContext);
+        const category = determineCategory(sheep.gender, sheep.birthDate, {
+            isPregnant: sheep.isPregnant,
+            isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+        });
 
         if (sheep.status === SheepStatus.QUARANTINE && !isInQuarantine(sheep.birthDate)) {
             return super.update(
@@ -133,8 +119,10 @@ export class SheepService extends BaseService<Sheep> {
         const sheepInQuarantine = await this.findInQuarantine();
         for (const sheep of sheepInQuarantine) {
             if (!isInQuarantine(sheep.birthDate)) {
-                const categoryContext = await this.buildCategoryContext(sheep);
-                const category = determineCategory(sheep.gender, sheep.birthDate, categoryContext);
+                const category = determineCategory(sheep.gender, sheep.birthDate, {
+                    isPregnant: sheep.isPregnant,
+                    isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+                });
                 await this.update(
                     sheep.id,
                     {

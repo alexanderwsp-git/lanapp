@@ -3,14 +3,13 @@ import {
     SheepCategory,
     SIX_MONTHS_DAYS,
     TWELVE_MONTHS_DAYS,
+    WEANING_DAYS,
 } from '@sheep/domain';
 
 export interface CategoryContext {
     isPregnant?: boolean;
     isLactating?: boolean;
     isBreedingRam?: boolean;
-    /** True when a weaning_record exists — destete is event-driven, not age-only. */
-    isWeaned?: boolean;
     referenceDate?: Date;
 }
 
@@ -31,17 +30,15 @@ export function determineCategory(
     const days = ageInDays(birthDate, referenceDate);
 
     if (gender === Gender.MALE) {
-        if (days < SIX_MONTHS_DAYS) {
-            return context.isWeaned ? SheepCategory.CORDERO_DESTETADO : SheepCategory.CORDERO;
-        }
+        if (days < WEANING_DAYS) return SheepCategory.CORDERO;
+        if (days < SIX_MONTHS_DAYS) return SheepCategory.CORDERO_DESTETADO;
         if (days < TWELVE_MONTHS_DAYS) return SheepCategory.BORREGO;
         if (context.isBreedingRam) return SheepCategory.REPRODUCTOR;
         return SheepCategory.BORREGO;
     }
 
-    if (days < SIX_MONTHS_DAYS) {
-        return context.isWeaned ? SheepCategory.CORDERA_DESTETADA : SheepCategory.CORDERA;
-    }
+    if (days < WEANING_DAYS) return SheepCategory.CORDERA;
+    if (days < SIX_MONTHS_DAYS) return SheepCategory.CORDERA_DESTETADA;
 
     if (days < TWELVE_MONTHS_DAYS) {
         if (context.isPregnant) return SheepCategory.BORREGA_PRENADA;

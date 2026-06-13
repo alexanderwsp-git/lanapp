@@ -18,7 +18,6 @@ import {
   statusOptions,
   statusColor,
 } from "@/lib/labels/sheep"
-import { formatDisplayDate } from "@/lib/format"
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -168,7 +167,7 @@ export default function SheepListPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {["Arete", "Nombre", "Sexo", "Raza", "F. nacimiento", "Categoría", "Peso", "Estado", ""].map((h) => (
+                  {["Arete", "Nombre", "Sexo", "Raza", "Categoría", "Peso", "Estado", ""].map((h) => (
                     <th
                       key={h}
                       scope="col"
@@ -190,9 +189,6 @@ export default function SheepListPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{s.name ?? "—"}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelGender(s.gender)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{s.breed}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                        {formatDisplayDate(s.birthDate)}
-                      </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelCategory(s.category)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{Number(s.weight)} kg</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
