@@ -1,7 +1,7 @@
 import { Gender, SheepBreed, SheepCategory, SheepStatus } from '@sheep/domain';
-import { determineCategory, CategoryContext, ageInDays } from '../domain/category.engine';
+import { determineCategory, CategoryContext } from '../domain/category.engine';
 
-export { determineCategory, CategoryContext, ageInDays };
+export { determineCategory, CategoryContext };
 
 /**
  * Calculates the quarantine end date (7 days from birth)
