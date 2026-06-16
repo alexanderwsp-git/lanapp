@@ -11,3 +11,4 @@ export * from './breeding-cycle.service';
 export * from './weaning-record.service';
 export * from './sale-evaluation.service';
 export * from './import.service';
+export * from './farm-parameters.service';

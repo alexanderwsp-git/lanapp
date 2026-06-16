@@ -5,6 +5,29 @@ export function toDateInputValue(value: string | Date | undefined | null): strin
   return s.slice(0, 10)
 }
 
+/** Age in whole days from birth to reference date (matches backend category engine). */
+export function ageInDays(
+  birthDate: string | Date,
+  referenceDate: Date = new Date(),
+): number {
+  const birth = new Date(birthDate)
+  return Math.floor((referenceDate.getTime() - birth.getTime()) / 86_400_000)
+}
+
+export function formatAgeDays(birthDate: string | Date | undefined | null): string {
+  if (!birthDate) return "—"
+  const days = ageInDays(birthDate)
+  if (days < 0) return "—"
+  return `${days} d`
+}
+
+/** Shift an ISO date (YYYY-MM-DD) by whole days. */
+export function shiftDateIso(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
 /** ISO date → localized short date for tables (e.g. 12 jun 2026). */
 export function formatDisplayDate(value: string | Date | undefined | null): string {
   if (!value) return "—"

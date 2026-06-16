@@ -1,4 +1,4 @@
-import { HealthCheckCreateSchema, HealthCheckUpdateSchema, IdSchema } from '@sheep/domain';
+import { HealthCheckCreateSchema, HealthCheckUpdateSchema, IdSchema, SheepIdParamSchema } from '@sheep/domain';
 import { created, deleted, failed, found, foundPaginated, updated, asyncHandler, validateSchema, validateParams } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import { HealthCheckService } from '../services/health-check.service';
@@ -27,7 +27,7 @@ router.get(
 router.get(
     '/sheep/:sheepId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(SheepIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const checks = await healthCheckService.findBySheep(req.params.sheepId);
         found(res, checks);

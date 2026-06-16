@@ -56,7 +56,15 @@ export default function SheepDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {!loading && !error && sheep && <SheepDetail sheep={sheep} />}
+      {!loading && !error && sheep && (
+        <SheepDetail
+          sheep={sheep}
+          onRefresh={async () => {
+            const data = await fetchSheepById(id)
+            setSheep(data)
+          }}
+        />
+      )}
     </DashboardLayout>
   )
 }

@@ -2,6 +2,7 @@ import {
     BreedingCycleCreateSchema,
     BreedingCycleUpdateSchema,
     BulkBreedingCycleScheduleSchema,
+    BreedingDiagnosisSchema,
     IdSchema,
 } from '@sheep/domain';
 import { created, deleted, failed, found, foundPaginated, updated, asyncHandler, validateSchema, validateParams } from '@sheep/server';
@@ -63,14 +64,37 @@ router.patch(
     '/:id/diagnosis',
     verifyToken,
     validateParams(IdSchema),
+    validateSchema(BreedingDiagnosisSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const cycle = await breedingCycleService.recordDiagnosis(
-            req.params.id,
-            req.body,
-            req.user!.username
-        );
-        if (!cycle) return failed(res, 'Breeding cycle not found');
-        updated(res, cycle);
+        try {
+            const cycle = await breedingCycleService.recordDiagnosis(
+                req.params.id,
+                req.body,
+                req.user!.username
+            );
+            if (!cycle) return failed(res, 'Breeding cycle not found');
+            updated(res, cycle);
+        } catch (err) {
+            failed(res, err instanceof Error ? err.message : 'No se pudo registrar el diagnóstico');
+        }
+    })
+);
+
+router.post(
+    '/:id/confirm-mating',
+    verifyToken,
+    validateParams(IdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        try {
+            const cycle = await breedingCycleService.confirmMating(
+                req.params.id,
+                req.user!.username
+            );
+            if (!cycle) return failed(res, 'Breeding cycle not found');
+            updated(res, cycle);
+        } catch (err) {
+            failed(res, err instanceof Error ? err.message : 'No se pudo confirmar la monta');
+        }
     })
 );
 

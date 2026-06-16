@@ -8,23 +8,25 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, TextInput } from "@/components/ui/form-fields"
+import { WeaningRecentPanel } from "@/components/weaning-recent-panel"
 import { fetchWeaningAlerts, bulkRecordWeaning } from "@/lib/api/weaning"
 import type { ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
-import { displayKgValue, toDateInputValue, toKg } from "@/lib/format"
+import { displayKgValue, formatDisplayDate, formatAgeDays, toKg } from "@/lib/format"
 import { BellAlertIcon, CheckCircleIcon, ScaleIcon } from "@heroicons/react/24/outline"
 
 const WEANING_THRESHOLD = 70
 
+const TABS = [
+  { id: "pendientes", label: "Pendientes" },
+  { id: "recientes", label: "Destetados recientes" },
+] as const
+
 const today = () => new Date().toISOString().split("T")[0]
 
-function ageInDays(birthDate: string): number {
-  const birth = new Date(birthDate)
-  const diff = Date.now() - birth.getTime()
-  return Math.max(0, Math.floor(diff / 86_400_000))
-}
-
 export default function WeaningPage() {
+  const [view, setView] = useState<(typeof TABS)[number]["id"]>("pendientes")
+  const [recentRefreshKey, setRecentRefreshKey] = useState(0)
   const [rows, setRows] = useState<ApiSheep[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -138,6 +140,9 @@ export default function WeaningPage() {
       const succeededIds = new Set(res.succeeded.map((r) => r.sheepId))
       setRows((prev) => prev.filter((s) => !succeededIds.has(s.id)))
       setSelected(new Set())
+      if (res.succeeded.length > 0) {
+        setRecentRefreshKey((k) => k + 1)
+      }
       if (res.failed.length === 0) {
         setDrawerOpen(false)
       }
@@ -151,20 +156,51 @@ export default function WeaningPage() {
   return (
     <DashboardLayout>
       <PageHeader
-        title="Alertas de destete"
-        description={`Corderos con ${WEANING_THRESHOLD}+ días sin registro de destete`}
+        title="Destete"
+        description={
+          view === "pendientes"
+            ? `Corderos con ${WEANING_THRESHOLD}+ días sin registro de destete`
+            : "Historial de destetes por rango de fechas"
+        }
         action={
-          <button
-            onClick={() => openDrawer()}
-            disabled={selected.size === 0}
-            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-          >
-            <CheckCircleIcon className="h-5 w-5" aria-hidden="true" />
-            Destetar seleccionados ({selected.size})
-          </button>
+          view === "pendientes" ? (
+            <button
+              onClick={() => openDrawer()}
+              disabled={selected.size === 0}
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+            >
+              <CheckCircleIcon className="h-5 w-5" aria-hidden="true" />
+              Destetar seleccionados ({selected.size})
+            </button>
+          ) : undefined
         }
       />
 
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-6" aria-label="Vistas de destete">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setView(t.id)}
+              className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium ${
+                view === t.id
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {view === "recientes" ? (
+        <div className="mt-6">
+          <WeaningRecentPanel refreshKey={recentRefreshKey} />
+        </div>
+      ) : (
+        <>
       {result && (
         <div
           className={`mb-4 rounded-md px-4 py-3 text-sm ${
@@ -214,7 +250,7 @@ export default function WeaningPage() {
                       aria-label="Seleccionar todos"
                     />
                   </th>
-                  {["Arete", "Nombre", "Categoría", "Edad (días)", "Último peso (kg)", ""].map((h, i) => (
+                  {["Arete", "Nombre", "F. nacimiento", "Categoría", "Edad (días)", "Último peso (kg)", ""].map((h, i) => (
                     <th
                       key={`${h}-${i}`}
                       className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
@@ -225,9 +261,7 @@ export default function WeaningPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {rows.map((s) => {
-                  const days = ageInDays(s.birthDate)
-                  return (
+                {rows.map((s) => (
                     <tr key={s.id} className={selected.has(s.id) ? "bg-indigo-50/50" : "hover:bg-gray-50"}>
                       <td className="px-4 py-3">
                         <input
@@ -240,10 +274,13 @@ export default function WeaningPage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{s.tag}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{s.name || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                        {formatDisplayDate(s.birthDate)}
+                      </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         <StatusBadge color="indigo">{labelCategory(s.category)}</StatusBadge>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{days}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{formatAgeDays(s.birthDate)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
                         {displayKgValue(s.latestWeight ?? s.weight)}
                       </td>
@@ -257,8 +294,7 @@ export default function WeaningPage() {
                         </button>
                       </td>
                     </tr>
-                  )
-                })}
+                ))}
               </tbody>
             </table>
           </div>
@@ -360,6 +396,8 @@ export default function WeaningPage() {
           </div>
         </form>
       </Drawer>
+        </>
+      )}
     </DashboardLayout>
   )
 }

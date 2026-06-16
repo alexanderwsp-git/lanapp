@@ -65,4 +65,6 @@ export type ApiLocation = {
   name: string
   address: string
   description?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }

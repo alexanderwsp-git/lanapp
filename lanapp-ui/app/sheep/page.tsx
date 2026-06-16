@@ -18,7 +18,7 @@ import {
   statusOptions,
   statusColor,
 } from "@/lib/labels/sheep"
-import { formatDisplayDate, formatLastWeight } from "@/lib/format"
+import { formatDisplayDate, formatAgeDays, formatLastWeight } from "@/lib/format"
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -168,7 +168,7 @@ export default function SheepListPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {["Arete", "Nombre", "Sexo", "Raza", "F. nacimiento", "Categoría", "Último peso", "Estado", ""].map((h) => (
+                  {["Arete", "Nombre", "Sexo", "Raza", "F. nacimiento", "Edad", "Categoría", "Último peso", "Estado", ""].map((h) => (
                     <th
                       key={h}
                       scope="col"
@@ -190,6 +190,12 @@ export default function SheepListPage() {
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{s.name ?? "—"}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelGender(s.gender)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{s.breed}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                        {formatDisplayDate(s.birthDate)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                        {formatAgeDays(s.birthDate)}
+                      </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelCategory(s.category)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatLastWeight(s)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">

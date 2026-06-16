@@ -38,6 +38,7 @@ type FormState = {
   status: SheepStatus
   currentLocationId: string
   notes: string
+  isBreedingRam: boolean
 }
 
 function emptyForm(): FormState {
@@ -52,6 +53,7 @@ function emptyForm(): FormState {
     status: SheepStatus.ACTIVE,
     currentLocationId: "",
     notes: "",
+    isBreedingRam: false,
   }
 }
 
@@ -67,6 +69,7 @@ function formFromSheep(sheep: ApiSheep): FormState {
     status: sheep.status,
     currentLocationId: sheep.currentLocationId ?? sheep.currentLocation?.id ?? "",
     notes: sheep.notes ?? "",
+    isBreedingRam: sheep.isBreedingRam ?? false,
   }
 }
 
@@ -101,6 +104,7 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
       recordType: form.recordType,
       currentLocationId: form.currentLocationId || undefined,
       notes: form.notes.trim() || undefined,
+      ...(form.gender === Gender.MALE ? { isBreedingRam: form.isBreedingRam } : {}),
     }
 
     if (mode === "new") {
@@ -279,6 +283,24 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
             placeholder="Observaciones..."
           />
         </Field>
+        {mode === "edit" && form.gender === Gender.MALE && (
+          <div className="sm:col-span-2">
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={form.isBreedingRam}
+                onChange={(e) => setField("isBreedingRam", e.target.checked)}
+                className="mt-0.5 rounded border-gray-300"
+              />
+              <span>
+                <span className="font-medium">Marcar como reproductor</span>
+                <span className="mt-0.5 block text-xs text-gray-500">
+                  Carnero seleccionado para monta. Aplica categoría Reproductor cuando tenga ≥12 meses.
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
       </div>
       {mode === "new" && (
         <p className="px-6 text-xs text-gray-500">

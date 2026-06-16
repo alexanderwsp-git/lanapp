@@ -1,9 +1,10 @@
-import { MatingStatus, BulkMatingSchedule, Gender } from '@sheep/domain';
+import { MatingStatus, BulkMatingSchedule } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { MatingRepository } from '../repositories/mating.repository';
 import { Mating } from '../entities/mating.entity';
 import { SheepService } from './sheep.service';
 import { BulkResult, emptyBulkResult } from '../utils/bulk-target';
+import { eweBreedingEligibility, ramBreedingEligibility } from '../utils/breeding-eligibility';
 
 export class MatingService extends BaseService<Mating> {
     private sheepService: SheepService;
@@ -23,6 +24,17 @@ export class MatingService extends BaseService<Mating> {
         },
         username: string
     ): Promise<Mating> {
+        const [male, female] = await Promise.all([
+            this.sheepService.findOne(data.maleId),
+            this.sheepService.findOne(data.femaleId),
+        ]);
+        if (!male) throw new Error('Carnero no encontrado');
+        if (!female) throw new Error('Oveja no encontrada');
+        const ramError = ramBreedingEligibility(male);
+        if (ramError) throw new Error(ramError);
+        const eweError = eweBreedingEligibility(female);
+        if (eweError) throw new Error(eweError);
+
         const mating = await this.create(
             {
                 ...data,
@@ -103,9 +115,10 @@ export class MatingService extends BaseService<Mating> {
             }
             return result;
         }
-        if (male.gender !== Gender.MALE) {
+        const ramError = ramBreedingEligibility(male);
+        if (ramError) {
             for (const femaleId of uniqueFemaleIds) {
-                result.failed.push({ sheepId: femaleId, error: 'El carnero seleccionado no es macho' });
+                result.failed.push({ sheepId: femaleId, error: ramError });
             }
             return result;
         }
@@ -118,8 +131,9 @@ export class MatingService extends BaseService<Mating> {
                 result.failed.push({ sheepId: femaleId, error: 'Oveja no encontrada' });
                 continue;
             }
-            if (female.gender !== Gender.FEMALE) {
-                result.failed.push({ sheepId: femaleId, error: 'La oveja no es hembra' });
+            const eweError = eweBreedingEligibility(female);
+            if (eweError) {
+                result.failed.push({ sheepId: femaleId, error: eweError });
                 continue;
             }
             try {

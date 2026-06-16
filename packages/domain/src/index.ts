@@ -3,6 +3,8 @@ export * from './enums/sheep';
 export * from './enums/mating';
 export * from './enums/medicine';
 export * from './enums/breeding';
+export * from './mating-lifecycle';
+export * from './reproduction-parameters';
 
 export * from './schemas/sheep';
 export {
@@ -28,8 +30,10 @@ export * from './schemas/pregnancy-check';
 export {
     PregnancyCheckCreateSchema,
     DeliveryRecordSchema,
+    BreedingDiagnosisSchema,
     type PregnancyCheckCreate,
     type DeliveryRecord,
+    type BreedingDiagnosis,
 } from './schemas/pregnancy-check';
 export * from './schemas/location';
 export {
@@ -60,7 +64,12 @@ export {
     type BreedingCycleUpdate,
 } from './schemas/breeding-cycle';
 export * from './schemas/weaning-record';
-export { WeaningRecordCreateSchema, type WeaningRecordCreate } from './schemas/weaning-record';
+export {
+    WeaningRecordCreateSchema,
+    WeaningRecordListQuerySchema,
+    type WeaningRecordCreate,
+    type WeaningRecordListQuery,
+} from './schemas/weaning-record';
 export * from './schemas/sale-evaluation';
 export * from './schemas/bulk';
 export {

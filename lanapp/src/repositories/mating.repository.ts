@@ -22,6 +22,8 @@ export class MatingRepository extends BaseRepository<Mating> {
     async findBySheep(sheepId: string): Promise<Mating[]> {
         return this.repository.find({
             where: [{ maleId: sheepId } as any, { femaleId: sheepId } as any],
+            relations: ['male', 'female'],
+            order: { matingDate: 'DESC' } as any,
         });
     }
 

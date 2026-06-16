@@ -1,5 +1,10 @@
 import { Weight } from '../entities/weight.entity';
 
+/** Calendar day in UTC (matches date-only API payloads like "2026-06-12"). */
+export function toDateKey(date: Date | string): string {
+    return new Date(date).toISOString().slice(0, 10);
+}
+
 /**
  * Average daily weight gain (g/day) between the current weigh-in and the previous one.
  * Farm practice is periodic pesajes (weekly/monthly), not daily — this is not "gain since yesterday".

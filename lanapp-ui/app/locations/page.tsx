@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
@@ -8,51 +8,115 @@ import { Modal } from "@/components/ui/modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
-import { ubicacionesData, type Ubicacion } from "@/lib/mock-data"
+import {
+  createLocation,
+  deleteLocation,
+  fetchLocations,
+  updateLocation,
+} from "@/lib/api/location"
+import type { ApiLocation } from "@/lib/api/types"
 import { PlusIcon, MapPinIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline"
 
-const empty = { id: "", nombre: "", direccion: "", latitud: "", longitud: "", descripcion: "" }
+type FormState = {
+  name: string
+  address: string
+  latitude: string
+  longitude: string
+  description: string
+}
+
+const emptyForm = (): FormState => ({
+  name: "",
+  address: "",
+  latitude: "",
+  longitude: "",
+  description: "",
+})
 
 export default function LocationsPage() {
-  const [rows, setRows] = useState<Ubicacion[]>(ubicacionesData)
-  const [editing, setEditing] = useState<Ubicacion | null>(null)
+  const [rows, setRows] = useState<ApiLocation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<ApiLocation | null>(null)
   const [formOpen, setFormOpen] = useState(false)
-  const [toDelete, setToDelete] = useState<Ubicacion | null>(null)
+  const [toDelete, setToDelete] = useState<ApiLocation | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [form, setForm] = useState<Ubicacion>(empty)
+  const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      setRows(await fetchLocations(200))
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "No se pudieron cargar las ubicaciones")
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   function openNew() {
     setEditing(null)
-    setForm(empty)
+    setForm(emptyForm())
     setFormOpen(true)
   }
-  function openEdit(u: Ubicacion) {
+
+  function openEdit(u: ApiLocation) {
     setEditing(u)
-    setForm(u)
+    setForm({
+      name: u.name,
+      address: u.address,
+      latitude: u.latitude != null ? String(u.latitude) : "",
+      longitude: u.longitude != null ? String(u.longitude) : "",
+      description: u.description ?? "",
+    })
     setFormOpen(true)
   }
-  function save(e: React.FormEvent) {
+
+  async function save(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    setTimeout(() => {
-      if (editing) {
-        setRows((prev) => prev.map((r) => (r.id === editing.id ? { ...form, id: editing.id } : r)))
-      } else {
-        setRows((prev) => [...prev, { ...form, id: `loc-${Date.now()}` }])
+    try {
+      const payload = {
+        name: form.name.trim(),
+        address: form.address.trim() || "—",
+        description: form.description.trim() || undefined,
+        latitude: form.latitude ? Number(form.latitude) : undefined,
+        longitude: form.longitude ? Number(form.longitude) : undefined,
       }
-      setSaving(false)
+      if (editing) {
+        await updateLocation(editing.id, payload)
+      } else {
+        await createLocation(payload)
+      }
       setFormOpen(false)
-    }, 700)
+      await load()
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "No se pudo guardar")
+    } finally {
+      setSaving(false)
+    }
   }
-  function confirmDelete() {
+
+  async function confirmDelete() {
     if (!toDelete) return
     setDeleting(true)
-    setTimeout(() => {
-      setRows((prev) => prev.filter((r) => r.id !== toDelete.id))
-      setDeleting(false)
+    try {
+      await deleteLocation(toDelete.id)
       setToDelete(null)
-    }, 700)
+      await load()
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "No se pudo eliminar")
+      setToDelete(null)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -71,7 +135,18 @@ export default function LocationsPage() {
         }
       />
 
-      {rows.length === 0 ? (
+      {loadError && (
+        <div className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {loadError}
+          <button type="button" onClick={load} className="ml-2 font-semibold underline">
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-gray-500">Cargando ubicaciones…</p>
+      ) : rows.length === 0 ? (
         <div className="rounded-lg bg-white shadow">
           <EmptyState
             icon={MapPinIcon}
@@ -98,38 +173,39 @@ export default function LocationsPage() {
                   </div>
                   <div>
                     <Link href={`/locations/${u.id}`} className="text-sm font-semibold text-gray-900 hover:text-indigo-600">
-                      {u.nombre}
+                      {u.name}
                     </Link>
-                    <p className="text-xs text-gray-500">{u.direccion}</p>
+                    <p className="text-xs text-gray-500">{u.address}</p>
                   </div>
                 </div>
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(u)}
                     className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                    aria-label={`Editar ${u.nombre}`}
+                    aria-label={`Editar ${u.name}`}
                   >
                     <PencilSquareIcon className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setToDelete(u)}
                     className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                    aria-label={`Eliminar ${u.nombre}`}
+                    aria-label={`Eliminar ${u.name}`}
                   >
                     <TrashIcon className="h-5 w-5" />
                   </button>
                 </div>
               </div>
-              <p className="mt-4 line-clamp-2 text-sm text-gray-600">{u.descripcion || "Sin descripción."}</p>
-              <p className="mt-3 text-xs text-gray-400">
-                Lat {u.latitud} · Lng {u.longitud}
-              </p>
+              <p className="mt-4 line-clamp-2 text-sm text-gray-600">{u.description || "Sin descripción."}</p>
+              {(u.latitude != null || u.longitude != null) && (
+                <p className="mt-3 text-xs text-gray-400">
+                  Lat {u.latitude ?? "—"} · Lng {u.longitude ?? "—"}
+                </p>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Create / edit modal */}
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -140,24 +216,28 @@ export default function LocationsPage() {
           <Field label="Nombre" required htmlFor="nombre">
             <TextInput
               id="nombre"
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
             />
           </Field>
           <Field label="Dirección" htmlFor="direccion">
-            <TextInput id="direccion" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
+            <TextInput
+              id="direccion"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Latitud" htmlFor="lat">
-              <TextInput id="lat" value={form.latitud} onChange={(e) => setForm({ ...form, latitud: e.target.value })} />
+              <TextInput id="lat" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} />
             </Field>
             <Field label="Longitud" htmlFor="lng">
-              <TextInput id="lng" value={form.longitud} onChange={(e) => setForm({ ...form, longitud: e.target.value })} />
+              <TextInput id="lng" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} />
             </Field>
           </div>
           <Field label="Descripción" htmlFor="desc">
-            <Textarea id="desc" rows={3} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+            <Textarea id="desc" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
           <div className="mt-2 flex justify-end gap-3">
             <button
@@ -172,13 +252,7 @@ export default function LocationsPage() {
               disabled={saving}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
             >
-              {saving && (
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-              )}
-              {editing ? "Guardar" : "Crear"}
+              {saving ? "Guardando…" : editing ? "Guardar" : "Crear"}
             </button>
           </div>
         </form>
@@ -187,7 +261,7 @@ export default function LocationsPage() {
       <ConfirmDialog
         open={!!toDelete}
         title="Eliminar ubicación"
-        message={`¿Eliminar "${toDelete?.nombre}"? Las ovejas asignadas quedarán sin ubicación.`}
+        message={`¿Eliminar "${toDelete?.name}"? Las ovejas asignadas quedarán sin ubicación.`}
         loading={deleting}
         onConfirm={confirmDelete}
         onClose={() => setToDelete(null)}

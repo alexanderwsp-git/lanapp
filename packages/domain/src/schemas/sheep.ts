@@ -19,6 +19,10 @@ export const SheepSchema = z.object({
     fatherId: z.string().uuid().optional(),
     imageUrl: z.string().url().optional(),
     isPregnant: z.boolean().optional(),
+    isBreedingRam: z.boolean().optional(),
+    lastMountedDate: z.coerce.date().optional(),
+    pregnancyConfirmedAt: z.coerce.date().optional(),
+    deliveryDate: z.coerce.date().optional(),
     notes: z.string().optional(),
 });
 
@@ -44,6 +48,7 @@ export const SheepCreateSchema = z.object({
 export type SheepCreate = z.infer<typeof SheepCreateSchema>;
 
 export const SheepUpdateSchema = SheepCreateSchema.partial().extend({
+    isBreedingRam: z.boolean().optional(),
     notes: z.string().optional(),
 });
 
@@ -53,6 +58,9 @@ export type SheepUpdate = z.infer<typeof SheepUpdateSchema>;
 export const SheepJsonSchema = SheepSchema.extend({
     birthDate: z.string(),
     quarantineEndDate: z.string().optional(),
+    lastMountedDate: z.string().optional(),
+    pregnancyConfirmedAt: z.string().optional(),
+    deliveryDate: z.string().optional(),
 });
 
 export type SheepJson = z.infer<typeof SheepJsonSchema>;
