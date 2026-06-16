@@ -48,12 +48,12 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 COPY --from=builder /app/lanapp-ui/.next/standalone ./
-COPY --from=builder /app/lanapp-ui/.next/static ./webapp/lanapp-ui/.next/static
-COPY --from=builder /app/lanapp-ui/public ./webapp/lanapp-ui/public
+COPY --from=builder /app/lanapp-ui/.next/static ./lanapp-ui/.next/static
+COPY --from=builder /app/lanapp-ui/public ./lanapp-ui/public
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||3000)+'/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
-CMD ["node", "webapp/lanapp-ui/server.js"]
+CMD ["node", "lanapp-ui/server.js"]
