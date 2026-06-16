@@ -1,4 +1,4 @@
-# Lanapp UI (Next.js) — linux/amd64 for ECS Fargate.
+# Lanapp UI (Next.js) for ECS Fargate.
 #
 # Build from the webapp monorepo root:
 #   docker buildx build --platform linux/amd64 -f lanapp-ui/Dockerfile -t mexp-lanapp-front .
@@ -9,9 +9,8 @@
 
 ARG NODE_VERSION=20-bookworm-slim
 ARG LANAPP_SERVICE_URL=https://lanapp-api.myxperiences.org
-ARG AUTH_SERVICE_URL=https://lanapp-api.myxperiences.org
 
-FROM --platform=linux/amd64 node:${NODE_VERSION} AS deps
+FROM node:${NODE_VERSION} AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -23,13 +22,11 @@ COPY packages/server/package.json packages/server/
 
 RUN npm ci --workspace=lanapp-ui --include-workspace-root
 
-FROM --platform=linux/amd64 node:${NODE_VERSION} AS builder
+FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
 
 ARG LANAPP_SERVICE_URL
-ARG AUTH_SERVICE_URL
 ENV LANAPP_SERVICE_URL=$LANAPP_SERVICE_URL
-ENV AUTH_SERVICE_URL=$AUTH_SERVICE_URL
 ENV NEXT_PUBLIC_API_PREFIX=/api/v1
 
 COPY --from=deps /app ./
@@ -40,7 +37,7 @@ RUN npm install --workspace=lanapp-ui --include-workspace-root --prefer-offline 
  && npm run build -w @sheep/domain \
  && npm run build -w lanapp-ui -- --webpack
 
-FROM --platform=linux/amd64 node:${NODE_VERSION} AS runner
+FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

@@ -13,7 +13,6 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-991795763909}"
 ECR_REPO="${ECR_REPO:-mexp-lanapp-front}"
 LANAPP_SERVICE_URL="${LANAPP_SERVICE_URL:-https://lanapp-api.myxperiences.org}"
-AUTH_SERVICE_URL="${AUTH_SERVICE_URL:-https://lanapp-api.myxperiences.org}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -38,7 +37,6 @@ docker buildx build \
   --platform linux/amd64 \
   -f lanapp-ui/Dockerfile \
   --build-arg "LANAPP_SERVICE_URL=${LANAPP_SERVICE_URL}" \
-  --build-arg "AUTH_SERVICE_URL=${AUTH_SERVICE_URL}" \
   -t "${IMAGE_URI}" \
   --push \
   .
