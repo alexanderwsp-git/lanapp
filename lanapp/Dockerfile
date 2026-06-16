@@ -31,9 +31,7 @@ COPY lanapp lanapp
 
 RUN npm run build -w @sheep/domain \
  && npm run build -w @sheep/server \
- && cd lanapp \
- && npx --yes esbuild@0.25.0 "src/**/*.ts" \
-      --outdir=dist --outbase=src --platform=node --format=cjs --packages=external
+ && npm run build:docker -w lanapp
 
 FROM --platform=linux/amd64 node:${NODE_VERSION} AS runner
 WORKDIR /app

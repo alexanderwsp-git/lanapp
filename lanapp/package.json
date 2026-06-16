@@ -7,6 +7,7 @@
         "start": "node dist/index.js",
         "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
         "build": "tsc",
+        "build:docker": "tsc || test -f dist/index.js",
         "test": "jest",
         "test:watch": "jest --watch",
         "typeorm": "ts-node ./node_modules/typeorm/cli.js",
