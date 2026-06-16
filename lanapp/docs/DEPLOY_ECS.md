@@ -4,17 +4,17 @@ Deploy the lanapp backend to AWS ECS Fargate on the shared infrastructure in [`i
 
 ## Architecture (already provisioned)
 
-| Resource | Name / value |
-|----------|----------------|
-| ECS cluster | `mexp-apps-shared-cluster` |
-| ECR repository | `mexp-lanapp-back` |
-| ALB host | `lanapp-api.myxperiences.org` |
-| Target group | `mexp-lanapp-back-tg` (port **3000**) |
-| Health check | `GET /api/v1/lanapp/health` → 200 |
-| RDS PostgreSQL | `lanappdb`, user `user_lanapp`, schema `lanapp` |
-| S3 bucket | `mexp-imagenes-lanapp-unique-id` |
-| Container SG | `mexp-ecs-containers-sg` (ingress 3000 from ALB only) |
-| DB SG | `mexp-rds-database-sg` (ingress 5432 from container SG) |
+| Resource       | Name / value                                            |
+| -------------- | ------------------------------------------------------- |
+| ECS cluster    | `mexp-apps-shared-cluster`                              |
+| ECR repository | `mexp-lanapp-back`                                      |
+| ALB host       | `lanapp-api.myxperiences.org`                           |
+| Target group   | `mexp-lanapp-back-tg` (port **3000**)                   |
+| Health check   | `GET /api/v1/lanapp/health` → 200                       |
+| RDS PostgreSQL | `lanappdb`, user `user_lanapp`, schema `lanapp`         |
+| S3 bucket      | `mexp-imagenes-lanapp-unique-id`                        |
+| Container SG   | `mexp-ecs-containers-sg` (ingress 3000 from ALB only)   |
+| DB SG          | `mexp-rds-database-sg` (ingress 5432 from container SG) |
 
 Subnets: `mexp-public-subnet-1a`, `mexp-public-subnet-1b` (public, `assignPublicIp: ENABLED` for Fargate).
 
@@ -50,17 +50,39 @@ docker buildx build \
   .
 ```
 
-Local smoke test (no push):
+Local smoke test with Postgres (recommended):
 
 ```bash
-docker buildx build --platform linux/amd64 -f lanapp/Dockerfile -t lanapp-api:local --load .
-docker run --rm -p 3000:3000 \
-  -e DATABASE_URL=postgres://... \
-  -e DATABASE_SCHEMA=lanapp \
-  -e SKIP_AUTH=true \
-  lanapp-api:local
+cd webapp/lanapp
+docker compose up --build
 curl http://localhost:3000/api/v1/lanapp/health
 ```
+
+Containers talk over the compose network using the service name `postgres:5432` — not `localhost:5434` and not `lanapp_postgres`.
+
+To run a pre-built ECR image against the same Postgres:
+
+```bash
+cd webapp/lanapp
+docker compose up -d postgres
+docker run --rm -p 3000:3000 \
+  --network lanapp_default \
+  -e PORT=3000 \
+  -e NODE_ENV=development \
+  -e DATABASE_URL=postgres://user:password@postgres:5432/webapp \
+  -e DATABASE_SCHEMA=lanapp \
+  -e SKIP_AUTH=true \
+  991795763909.dkr.ecr.us-east-1.amazonaws.com/mexp-lanapp-back:<tag>
+```
+
+(`lanapp_default` is the default compose network name when the project folder is `lanapp`.)
+
+docker run --rm -p 3000:3000 \
+ -e DATABASE_URL="postgres://user:password@host.docker.internal:5434/webapp" \
+ -e DATABASE_SCHEMA=lanapp \
+ -e API_PREFIX=/api/v1/lanapp \
+ -e SKIP_AUTH=true \
+ 991795763909.dkr.ecr.us-east-1.amazonaws.com/mexp-lanapp-back:e669fdd
 
 ## Environment variables
 
@@ -71,15 +93,15 @@ The container reads **environment variables at startup** (`process.env`). There 
 
 ### Production (ECS task definition)
 
-| Variable | Example | Notes |
-|----------|---------|-------|
-| `PORT` | `3000` | Must match the ALB target group |
-| `NODE_ENV` | `production` | |
-| `DATABASE_URL` | `postgres://user_lanapp:…@….rds.amazonaws.com:5432/lanappdb` | Postgres connection string |
-| `DATABASE_SCHEMA` | `lanapp` | |
-| `AWS_S3_BUCKET` | `mexp-imagenes-lanapp-unique-id` | Photo uploads |
-| `AUTH0_DOMAIN` | `your-tenant.auth0.com` | JWT validation |
-| `AUTH0_AUDIENCE` | `https://api.lanapp.sheep` | JWT validation |
+| Variable          | Example                                                      | Notes                           |
+| ----------------- | ------------------------------------------------------------ | ------------------------------- |
+| `PORT`            | `3000`                                                       | Must match the ALB target group |
+| `NODE_ENV`        | `production`                                                 |                                 |
+| `DATABASE_URL`    | `postgres://user_lanapp:…@….rds.amazonaws.com:5432/lanappdb` | Postgres connection string      |
+| `DATABASE_SCHEMA` | `lanapp`                                                     |                                 |
+| `AWS_S3_BUCKET`   | `mexp-imagenes-lanapp-unique-id`                             | Photo uploads                   |
+| `AUTH0_DOMAIN`    | `your-tenant.auth0.com`                                      | JWT validation                  |
+| `AUTH0_AUDIENCE`  | `https://api.lanapp.sheep`                                   | JWT validation                  |
 
 Copy-paste template: [`.env.ecs.example`](../.env.ecs.example).
 
@@ -87,13 +109,13 @@ In the ECS console / task definition JSON, put non-sensitive values in `environm
 
 ### Local development
 
-| Variable | Example |
-|----------|---------|
-| `PORT` | `4001` |
-| `NODE_ENV` | `development` |
-| `DATABASE_URL` | `postgres://…@localhost:5434/webapp` |
-| `DATABASE_SCHEMA` | `lanapp` |
-| `SKIP_AUTH` | `true` |
+| Variable          | Example                              |
+| ----------------- | ------------------------------------ |
+| `PORT`            | `4001`                               |
+| `NODE_ENV`        | `development`                        |
+| `DATABASE_URL`    | `postgres://…@localhost:5434/webapp` |
+| `DATABASE_SCHEMA` | `lanapp`                             |
+| `SKIP_AUTH`       | `true`                               |
 
 Template: [`.env.example`](../.env.example). Use `SKIP_AUTH` locally instead of Auth0.
 
@@ -166,12 +188,12 @@ curl -s https://lanapp-api.myxperiences.org/api/v1/lanapp/health
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-|---------|----------------|
-| Task stops immediately | Wrong `DATABASE_URL`, RDS SG, or failed migrations |
-| Target unhealthy | `PORT` ≠ 3000, app not listening, or health path mismatch |
-| 401 on API routes | Missing Auth0 env vars or `SKIP_AUTH` not set locally only |
-| S3 upload errors | Task role missing S3 permissions on lanapp bucket |
+| Symptom                              | Likely cause                                                  |
+| ------------------------------------ | ------------------------------------------------------------- |
+| Task stops immediately               | Wrong `DATABASE_URL`, RDS SG, or failed migrations            |
+| Target unhealthy                     | `PORT` ≠ 3000, app not listening, or health path mismatch     |
+| 401 on API routes                    | Missing Auth0 env vars or `SKIP_AUTH` not set locally only    |
+| S3 upload errors                     | Task role missing S3 permissions on lanapp bucket             |
 | `Cannot find module '@sheep/domain'` | Image built from `lanapp/` only — rebuild from `webapp/` root |
 
 ## Related
