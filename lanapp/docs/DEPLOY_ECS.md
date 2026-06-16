@@ -99,9 +99,9 @@ The container reads **environment variables at startup** (`process.env`). There 
 | `NODE_ENV`        | `production`                                                 |                                 |
 | `DATABASE_URL`    | `postgres://user_lanapp:…@….rds.amazonaws.com:5432/lanappdb` | Postgres connection string      |
 | `DATABASE_SCHEMA` | `lanapp`                                                     |                                 |
+| `DATABASE_SSL`    | `true`                                                       | RDS requires TLS                |
 | `AWS_S3_BUCKET`   | `mexp-imagenes-lanapp-unique-id`                             | Photo uploads                   |
-| `AUTH0_DOMAIN`    | `your-tenant.auth0.com`                                      | JWT validation                  |
-| `AUTH0_AUDIENCE`  | `https://api.lanapp.sheep`                                   | JWT validation                  |
+| `SKIP_AUTH`       | `true`                                                       | Until auth service + Auth0      |
 
 Copy-paste template: [`.env.ecs.example`](../.env.ecs.example).
 
