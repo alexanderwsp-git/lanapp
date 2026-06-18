@@ -1,40 +1,116 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { AuthLayout } from "@/components/auth-layout"
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
+import { login, setNewPassword as completeNewPassword } from "@/lib/auth/client"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams.get("next") || "/dashboard"
+
   const [passwordFocused, setPasswordFocused] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const [newPasswordMode, setNewPasswordMode] = useState<{
+    username: string
+    session: string
+  } | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    const form = new FormData(e.currentTarget)
+    const username = String(form.get("usuario") || "").trim()
+    const password = String(form.get("password") || "")
+
+    try {
+      const result = await login(username, password)
+      if (result.type === "new_password") {
+        setNewPasswordMode({ username: result.username, session: result.session })
+        return
+      }
+      router.push(next)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleNewPassword(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!newPasswordMode) return
+    setError(null)
+    setLoading(true)
+    try {
+      await completeNewPassword(newPasswordMode.username, newPassword, newPasswordMode.session)
+      router.push(next)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo establecer la contraseña")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (newPasswordMode) {
+    return (
+      <AuthLayout>
+        <h1 className="text-2xl font-semibold text-gray-900">Nueva contraseña</h1>
+        <p className="mt-1 text-sm text-gray-500">Debes cambiar tu contraseña temporal</p>
+        <form className="mt-8 flex flex-col gap-5" onSubmit={handleNewPassword}>
+          <div>
+            <label htmlFor="new-password" className="block text-sm font-medium text-gray-700">
+              Nueva contraseña
+            </label>
+            <input
+              id="new-password"
+              type="password"
+              required
+              minLength={8}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+          >
+            {loading ? "Guardando…" : "Guardar y continuar"}
+          </button>
+        </form>
+      </AuthLayout>
+    )
+  }
 
   return (
     <AuthLayout covered={passwordFocused && !showPassword}>
       <h1 className="text-2xl font-semibold text-gray-900">Iniciar sesión</h1>
       <p className="mt-1 text-sm text-gray-500">Bienvenido de vuelta a Lanapp</p>
 
-      <form
-        className="mt-8 flex flex-col gap-5"
-        onSubmit={(e) => {
-          e.preventDefault()
-          router.push("/dashboard")
-        }}
-      >
+      <form className="mt-8 flex flex-col gap-5" onSubmit={handleLogin}>
         <div>
           <label htmlFor="usuario" className="block text-sm font-medium text-gray-700">
-            Usuario
+            Email
           </label>
           <input
             id="usuario"
             name="usuario"
-            type="text"
+            type="email"
             required
             autoComplete="username"
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
-            placeholder="tu_usuario"
+            placeholder="tu@correo.com"
           />
         </div>
 
@@ -64,33 +140,34 @@ export default function LoginPage() {
               ) : (
                 <EyeIcon className="h-5 w-5" aria-hidden="true" />
               )}
-              <span className="sr-only">Mostrar contraseña</span>
             </button>
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-          />
-          Recordarme
-        </label>
+        <div className="flex items-center justify-between text-sm">
+          <Link href="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"
-          className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          disabled={loading}
+          className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
         >
-          Iniciar sesión
+          {loading ? "Ingresando…" : "Iniciar sesión"}
         </button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-gray-500">
-        ¿No tienes cuenta?{" "}
-        <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-500">
-          Regístrate
-        </Link>
-      </p>
     </AuthLayout>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<AuthLayout><p className="text-sm text-gray-500">Cargando…</p></AuthLayout>}>
+      <LoginForm />
+    </Suspense>
   )
 }

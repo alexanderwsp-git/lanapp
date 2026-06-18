@@ -7,7 +7,7 @@ import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
-import { BREEDS } from "@/lib/mock-data"
+import { BREEDS } from "@/mocks/labels"
 import { ReproductionParametersForm } from "@/components/reproduction-parameters-form"
 import { PlusIcon, PencilSquareIcon, TrashIcon, TagIcon } from "@heroicons/react/24/outline"
 

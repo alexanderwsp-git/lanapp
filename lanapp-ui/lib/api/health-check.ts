@@ -1,4 +1,6 @@
-import { lanapp } from "./client"
+import * as mock from "@/mocks/handlers/health-weight"
+import * as real from "./real/health-check"
+import { resolveApi } from "./resolve"
 
 export type HealthCheckCreatePayload = {
   sheepId: string
@@ -17,12 +19,4 @@ export type ApiHealthCheck = {
   notes?: string | null
 }
 
-export async function fetchHealthChecksBySheep(sheepId: string): Promise<ApiHealthCheck[]> {
-  const res = await lanapp.get<ApiHealthCheck[]>(`health-check/sheep/${sheepId}`)
-  return res.data
-}
-
-export async function createHealthCheck(payload: HealthCheckCreatePayload): Promise<ApiHealthCheck> {
-  const res = await lanapp.post<ApiHealthCheck>("health-check", payload)
-  return res.data
-}
+export const { fetchHealthChecksBySheep, createHealthCheck } = resolveApi(real, mock)

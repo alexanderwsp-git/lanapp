@@ -1,72 +1,116 @@
 import { failed } from '@sheep/server';
-import { Request, Response, NextFunction, RequestHandler } from 'express';
-import { auth } from 'express-oauth2-jwt-bearer';
+import { CognitoJwtVerifier } from 'aws-jwt-verify';
+import { Request, Response, NextFunction } from 'express';
+
+const skipAuth = process.env.SKIP_AUTH === 'true';
+const APP_GROUP_PREFIX = process.env.COGNITO_APP_GROUP_PREFIX || 'lanapp_';
+
+export type AuthUser = {
+    username: string;
+    email: string;
+    roles: string[];
+    groups: string[];
+};
 
 declare global {
     namespace Express {
         interface Request {
-            user?: {
-                username: string;
-                email: string;
-                roles: string[];
-            };
+            user?: AuthUser;
         }
     }
 }
 
-const skipAuth = process.env.SKIP_AUTH === 'true';
-
-function createJwtCheck(): RequestHandler | null {
-    if (!process.env.AUTH0_AUDIENCE) {
+function createVerifier() {
+    const userPoolId = process.env.COGNITO_USER_POOL_ID;
+    const clientId = process.env.COGNITO_CLIENT_ID;
+    if (!userPoolId || !clientId) {
         return null;
     }
 
-    return auth({
-        audience: process.env.AUTH0_AUDIENCE,
-        issuerBaseURL:
-            process.env.AUTH0_ISSUER_BASE_URL || `https://${process.env.AUTH0_DOMAIN}`,
+    return CognitoJwtVerifier.create({
+        userPoolId,
+        tokenUse: 'access',
+        clientId,
     });
 }
 
-const jwtCheck = createJwtCheck();
+const verifier = createVerifier();
 
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+function mapGroupsToRoles(groups: string[]): string[] {
+    const roles = groups
+        .filter((g) => g.startsWith(APP_GROUP_PREFIX))
+        .map((g) => g.slice(APP_GROUP_PREFIX.length));
+
+    if (groups.includes('platform_admin') && !roles.includes('admin')) {
+        roles.push('admin');
+    }
+
+    return roles;
+}
+
+function extractBearerToken(req: Request): string | null {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+        return null;
+    }
+    return header.slice(7).trim();
+}
+
+export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     if (skipAuth) {
         req.user = {
             username: 'dev-user',
             email: 'dev@localhost',
             roles: ['admin'],
+            groups: ['lanapp_admin'],
         };
         return next();
     }
 
-    if (!jwtCheck) {
-        return failed(res, 'Auth0 is not configured (set AUTH0_AUDIENCE or SKIP_AUTH=true)');
+    if (!verifier) {
+        return failed(
+            res,
+            'Cognito is not configured (set COGNITO_USER_POOL_ID + COGNITO_CLIENT_ID or SKIP_AUTH=true)'
+        );
     }
 
-    jwtCheck(req, res, (err?: unknown) => {
-        if (err) {
-            return failed(res, 'Invalid token');
-        }
+    const token = extractBearerToken(req);
+    if (!token) {
+        return failed(res, 'Missing or invalid Authorization header');
+    }
 
-        const payload = (req as Request & { auth?: { payload?: Record<string, unknown> } }).auth
-            ?.payload;
-        if (!payload) {
-            return failed(res, 'Invalid token');
-        }
-
-        const email = (payload.email as string) || (payload['https://lanapp/email'] as string) || '';
+    try {
+        const payload = await verifier.verify(token);
+        const groups = (payload['cognito:groups'] as string[] | undefined) ?? [];
+        const email = (payload.email as string) || '';
         const username =
-            (payload.nickname as string) ||
-            (payload.preferred_username as string) ||
+            (payload.username as string) ||
+            (payload['cognito:username'] as string) ||
             (payload.sub as string);
 
-        const roles =
-            (payload['https://lanapp/roles'] as string[]) ||
-            (payload['https://lanapp.io/roles'] as string[]) ||
-            [];
-
-        req.user = { username, email, roles };
+        req.user = {
+            username,
+            email,
+            groups,
+            roles: mapGroupsToRoles(groups),
+        };
         next();
-    });
+    } catch {
+        return failed(res, 'Invalid token');
+    }
 };
+
+export const requireRoles =
+    (...allowed: string[]) =>
+    (req: Request, res: Response, next: NextFunction) => {
+        const userRoles = req.user?.roles ?? [];
+        if (!allowed.some((role) => userRoles.includes(role))) {
+            return res.status(403).json({
+                success: false,
+                message: 'Forbidden',
+                data: null,
+                error: 'Forbidden',
+            });
+        }
+        next();
+    };

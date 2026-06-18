@@ -1,7 +1,7 @@
 import { ReproductionParametersSchema } from '@sheep/domain';
 import { asyncHandler, found, updated, validateSchema } from '@sheep/server';
 import { Router, Request, Response } from 'express';
-import { verifyToken } from '../middlewares/auth.middleware';
+import { verifyToken, requireRoles } from '../middlewares/auth.middleware';
 import { FarmParametersService } from '../services/farm-parameters.service';
 
 const router = Router();
@@ -19,6 +19,7 @@ router.get(
 router.put(
     '/',
     verifyToken,
+    requireRoles('admin'),
     validateSchema(ReproductionParametersSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const params = await farmParametersService.updateParameters(
