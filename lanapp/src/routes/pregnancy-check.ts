@@ -1,4 +1,4 @@
-import { IdSchema, PregnancyCheckCreateSchema, DeliveryRecordSchema } from '@sheep/domain';
+import { MatingIdParamSchema, PregnancyCheckCreateSchema, DeliveryRecordSchema } from '@sheep/domain';
 import { created, failed, found, asyncHandler, validateSchema, validateParams } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import { PregnancyCheckService } from '../services/pregnancy-check.service';
@@ -23,7 +23,7 @@ router.post(
 router.get(
     '/mating/:matingId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(MatingIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const checks = await pregnancyCheckService.getCheckHistory(req.params.matingId);
         found(res, checks);
@@ -34,7 +34,7 @@ router.get(
 router.get(
     '/mating/:matingId/latest',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(MatingIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const check = await pregnancyCheckService.getLatestCheck(req.params.matingId);
         if (!check) return failed(res, 'No pregnancy checks found');
@@ -46,7 +46,7 @@ router.get(
 router.post(
     '/mating/:matingId/delivery',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(MatingIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const { deliveryDate, notes } = DeliveryRecordSchema.parse(req.body);
         const check = await pregnancyCheckService.recordDelivery(

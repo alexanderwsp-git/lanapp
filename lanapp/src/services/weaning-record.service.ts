@@ -1,4 +1,4 @@
-import { BulkWeaning, Gender, SheepCategory, SIX_MONTHS_DAYS, WEANING_DAYS } from '@sheep/domain';
+import { BulkWeaning, Gender, SheepCategory, SIX_MONTHS_DAYS, WEANING_DAYS, WeaningRecordListQuery } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { WeaningRecordRepository } from '../repositories/weaning-record.repository';
 import { WeaningRecord } from '../entities/weaning-record.entity';
@@ -8,6 +8,23 @@ import { Sheep } from '../entities/sheep.entity';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { BulkResult, emptyBulkResult, resolveSheepIds } from '../utils/bulk-target';
 import { determineCategory } from '../utils/utils';
+
+const DEFAULT_RECENT_WEANING_DAYS = 10;
+
+export type RecentWeaningRecord = {
+    id: string;
+    sheepId: string;
+    weaningDate: Date;
+    weaningWeight: number;
+    dailyGain?: number;
+    lotId?: string;
+    notes?: string;
+    tag: string;
+    name?: string;
+    category: string;
+    birthDate: Date;
+    gender: string;
+};
 
 export class WeaningRecordService extends BaseService<WeaningRecord> {
     private weightService: WeightService;
@@ -21,6 +38,34 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
 
     async findBySheep(sheepId: string): Promise<WeaningRecord[]> {
         return (this.repository as WeaningRecordRepository).findBySheep(sheepId);
+    }
+
+    async findRecent(query: WeaningRecordListQuery = {}): Promise<RecentWeaningRecord[]> {
+        const windowDays = query.days ?? DEFAULT_RECENT_WEANING_DAYS;
+        const toDate = query.toDate ?? new Date();
+        const fromDate =
+            query.fromDate ??
+            new Date(toDate.getTime() - windowDays * 24 * 60 * 60 * 1000);
+
+        const records = await (this.repository as WeaningRecordRepository).findByDateRange(
+            fromDate,
+            toDate
+        );
+
+        return records.map(record => ({
+            id: record.id,
+            sheepId: record.sheepId,
+            weaningDate: record.weaningDate,
+            weaningWeight: Number(record.weaningWeight),
+            dailyGain: record.dailyGain != null ? Number(record.dailyGain) : undefined,
+            lotId: record.lotId,
+            notes: record.notes,
+            tag: record.sheep?.tag ?? '',
+            name: record.sheep?.name,
+            category: record.sheep?.category ?? '',
+            birthDate: record.sheep?.birthDate ?? record.weaningDate,
+            gender: record.sheep?.gender ?? '',
+        }));
     }
 
     async recordWeaning(data: Partial<WeaningRecord>, username: string): Promise<WeaningRecord> {
@@ -53,6 +98,16 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
         const sheep = await this.sheepService.findOne(data.sheepId!);
         if (sheep) {
             await this.applyWeaningCategory(sheep, data.weaningDate!, username);
+            if (sheep.motherId) {
+                const mother = await this.sheepService.findOne(sheep.motherId);
+                if (mother?.deliveryDate) {
+                    await this.sheepService.update(
+                        sheep.motherId,
+                        { deliveryDate: null },
+                        username
+                    );
+                }
+            }
         }
 
         return record;
@@ -74,6 +129,7 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
             : determineCategory(sheep.gender, sheep.birthDate, {
                   isPregnant: sheep.isPregnant,
                   isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+                  isWeaned: true,
                   referenceDate: weaningDate,
               });
 
@@ -96,14 +152,7 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
         username: string,
         notes?: string
     ): Promise<void> {
-        const dateKey = new Date(weaningDate).toISOString().slice(0, 10);
-        const existing = await this.weightService.findBySheep(sheepId);
-        const alreadyOnDate = existing.some(
-            w => new Date(w.measurementDate).toISOString().slice(0, 10) === dateKey
-        );
-        if (alreadyOnDate) return;
-
-        await this.weightService.recordWeight(
+        await this.weightService.upsertWeightOnDate(
             {
                 sheepId,
                 weight: weaningWeight,
@@ -169,7 +218,6 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
                     },
                     username
                 );
-                await this.applyWeaningCategory(sheep, data.weaningDate, username);
                 result.succeeded.push({ sheepId: item.sheepId, recordId: record.id });
             } catch (err) {
                 result.failed.push({

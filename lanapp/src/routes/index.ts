@@ -14,6 +14,7 @@ import saleEvaluation from './sale-evaluation';
 import upload from './upload';
 import reports from './reports';
 import importRoutes from './import';
+import farmParameters from './farm-parameters';
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use('/sale-evaluation', saleEvaluation);
 router.use('/upload', upload);
 router.use('/reports', reports);
 router.use('/import', importRoutes);
+router.use('/farm-parameters', farmParameters);
 
 export default router;

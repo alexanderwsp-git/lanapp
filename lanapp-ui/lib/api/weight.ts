@@ -1,4 +1,6 @@
-import { lanapp } from "./client"
+import * as mock from "@/mocks/handlers/health-weight"
+import * as real from "./real/weight"
+import { resolveApi } from "./resolve"
 
 export type ApiWeight = {
   id: string
@@ -19,21 +21,4 @@ export type WeightCreatePayload = {
 
 export type WeightUpdatePayload = Partial<WeightCreatePayload>
 
-export async function fetchWeightsBySheep(sheepId: string): Promise<ApiWeight[]> {
-  const res = await lanapp.get<ApiWeight[]>(`weight/sheep/${sheepId}`)
-  return res.data
-}
-
-export async function createWeight(payload: WeightCreatePayload): Promise<ApiWeight> {
-  const res = await lanapp.post<ApiWeight>("weight", payload)
-  return res.data
-}
-
-export async function updateWeight(id: string, payload: WeightUpdatePayload): Promise<ApiWeight> {
-  const res = await lanapp.put<ApiWeight>(`weight/${id}`, payload)
-  return res.data
-}
-
-export async function deleteWeight(id: string): Promise<void> {
-  await lanapp.delete<null>(`weight/${id}`)
-}
+export const { fetchWeightsBySheep, createWeight, updateWeight, deleteWeight } = resolveApi(real, mock)

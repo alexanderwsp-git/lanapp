@@ -30,6 +30,13 @@ export class BreedingCycleRepository extends BaseRepository<BreedingCycle> {
         });
     }
 
+    async findActiveByMatingId(matingId: string): Promise<BreedingCycle | null> {
+        return this.repository.findOne({
+            where: { matingId, status: BreedingCycleStatus.ACTIVE },
+            relations: ['ewe', 'ram'],
+        });
+    }
+
     async findAll(page: number = 1, limit: number = 10): Promise<{ data: BreedingCycle[]; total: number }> {
         const [data, total] = await this.repository.findAndCount({
             where: { status: BreedingCycleStatus.ACTIVE },

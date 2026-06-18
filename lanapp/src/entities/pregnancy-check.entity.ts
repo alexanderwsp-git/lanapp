@@ -1,3 +1,4 @@
+import { DiagnosisType, PregnancyCheckKind } from '@sheep/domain';
 import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Mating } from './mating.entity';
@@ -19,6 +20,12 @@ export class PregnancyCheck extends BaseEntity {
 
     @Column()
     isPregnant!: boolean;
+
+    @Column({ type: 'enum', enum: DiagnosisType, nullable: true })
+    checkType?: DiagnosisType;
+
+    @Column({ type: 'enum', enum: PregnancyCheckKind, default: PregnancyCheckKind.DIAGNOSIS })
+    kind!: PregnancyCheckKind;
 
     @Column({ nullable: true })
     notes?: string;

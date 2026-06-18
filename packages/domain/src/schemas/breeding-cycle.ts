@@ -6,6 +6,7 @@ export const BreedingCycleSchema = z.object({
     eweId: z.string().uuid(),
     cycleName: z.string(),
     ramId: z.string().uuid().optional(),
+    matingId: z.string().uuid().optional(),
     matingDate: z.coerce.date(),
     diagnosisType: z.nativeEnum(DiagnosisType).optional(),
     diagnosisDate: z.coerce.date().optional(),

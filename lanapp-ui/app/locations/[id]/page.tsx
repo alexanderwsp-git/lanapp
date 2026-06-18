@@ -1,22 +1,75 @@
-import { notFound } from "next/navigation"
+"use client"
+
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
+import { SheepCategory } from "@sheep/domain"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { EmptyState } from "@/components/ui/empty-state"
-import { getUbicacion, sheepData, statusColor } from "@/lib/mock-data"
+import { fetchLocationById } from "@/lib/api/location"
+import { fetchSheep } from "@/lib/api/sheep"
+import type { ApiLocation, ApiSheep } from "@/lib/api/types"
+import { labelCategory, labelStatus, statusColor } from "@/lib/labels/sheep"
 import { MapPinIcon, Squares2X2Icon } from "@heroicons/react/24/outline"
 
-export default async function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const u = getUbicacion(id)
-  if (!u) notFound()
+export default function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const [location, setLocation] = useState<ApiLocation | null>(null)
+  const [assigned, setAssigned] = useState<ApiSheep[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const assigned = sheepData.filter((s) => s.ubicacion === u.nombre)
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    Promise.all([fetchLocationById(id), fetchSheep({ locationId: id, limit: 200 })])
+      .then(([loc, sheepResult]) => {
+        if (!cancelled) {
+          setLocation(loc)
+          setAssigned(sheepResult.items)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setLocation(null)
+          setAssigned([])
+          setError(err instanceof Error ? err.message : "No se pudo cargar la ubicación")
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <p className="text-sm text-gray-500">Cargando ubicación…</p>
+      </DashboardLayout>
+    )
+  }
+
+  if (error || !location) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error ?? "Ubicación no encontrada"}
+          <Link href="/locations" className="ml-2 font-semibold underline">
+            Volver
+          </Link>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>
-      <Breadcrumb items={[{ label: "Ubicaciones", href: "/locations" }, { label: u.nombre }]} />
+      <Breadcrumb items={[{ label: "Ubicaciones", href: "/locations" }, { label: location.name }]} />
 
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="flex items-center gap-4">
@@ -24,16 +77,16 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
             <MapPinIcon className="h-6 w-6 text-indigo-600" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{u.nombre}</h1>
-            <p className="text-sm text-gray-500">{u.direccion}</p>
+            <h1 className="text-xl font-bold text-gray-900">{location.name}</h1>
+            <p className="text-sm text-gray-500">{location.address}</p>
           </div>
         </div>
         <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { label: "Latitud", value: u.latitud },
-            { label: "Longitud", value: u.longitud },
-            { label: "Ovejas asignadas", value: assigned.length.toString() },
-            { label: "Descripción", value: u.descripcion || "—" },
+            { label: "Latitud", value: location.latitude != null ? String(location.latitude) : "—" },
+            { label: "Longitud", value: location.longitude != null ? String(location.longitude) : "—" },
+            { label: "Ovejas asignadas", value: String(assigned.length) },
+            { label: "Descripción", value: location.description || "—" },
           ].map((item) => (
             <div key={item.label}>
               <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{item.label}</dt>
@@ -59,18 +112,23 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {assigned.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-indigo-600">
-                    <Link href={`/sheep/${s.id}`}>{s.arete}</Link>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{s.nombre}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{s.categoria}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <StatusBadge color={statusColor[s.estado]}>{s.estado}</StatusBadge>
-                  </td>
-                </tr>
-              ))}
+              {assigned.map((s) => {
+                const statusLabel = labelStatus(s.status)
+                return (
+                  <tr key={s.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-indigo-600">
+                      <Link href={`/sheep/${s.id}`}>{s.tag}</Link>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{s.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{labelCategory(s.category as SheepCategory)}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <StatusBadge color={statusColor[statusLabel] ?? statusColor[s.status] ?? "gray"}>
+                        {statusLabel}
+                      </StatusBadge>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}

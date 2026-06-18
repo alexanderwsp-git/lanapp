@@ -2,7 +2,7 @@ import { created, found, asyncHandler } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 
-import { verifyToken } from '../middlewares/auth.middleware';
+import { verifyToken, requireRoles } from '../middlewares/auth.middleware';
 import { ImportService } from '../services/import.service';
 
 const router = Router();
@@ -12,6 +12,7 @@ const importService = new ImportService();
 router.post(
     '/inventory/preview',
     verifyToken,
+    requireRoles('admin'),
     upload.single('file'),
     asyncHandler(async (req: Request, res: Response) => {
         if (!req.file) {
@@ -26,6 +27,7 @@ router.post(
 router.post(
     '/inventory',
     verifyToken,
+    requireRoles('admin'),
     upload.single('file'),
     asyncHandler(async (req: Request, res: Response) => {
         if (!req.file) {
@@ -40,6 +42,7 @@ router.post(
 router.post(
     '/famacha',
     verifyToken,
+    requireRoles('admin'),
     upload.single('file'),
     asyncHandler(async (req: Request, res: Response) => {
         if (!req.file) {

@@ -24,6 +24,21 @@
             "date": 1781364568031,
             "name": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/app-2026-06-13.log",
             "hash": "255ecb9ce60fced4e59ed7a11e6f050bcc7a954ca83093e36d701c61638dc42e"
+        },
+        {
+            "date": 1781491370116,
+            "name": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/app-2026-06-14.log",
+            "hash": "1e5ee571837696cc243fbb4309e01d9a383cbe615966291a5d2b17a62e5d2b2f"
+        },
+        {
+            "date": 1781491396074,
+            "name": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/app-2026-06-15.log",
+            "hash": "ad07a56ab964d7bf53ced35f9ebf3280ec966b69da9ca7abe80da8d74283c74f"
+        },
+        {
+            "date": 1781625716117,
+            "name": "/Users/alexander/Documents/awsp/me/repos/webapp/packages/server/logs/app-2026-06-16.log",
+            "hash": "8f3e864f4553f7026fa0cade88d2ce7587266e340c819bd45b5de820784c8150"
         }
     ],
     "hashType": "sha256"

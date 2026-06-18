@@ -7,7 +7,8 @@ import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
-import { BREEDS } from "@/lib/mock-data"
+import { BREEDS } from "@/mocks/labels"
+import { ReproductionParametersForm } from "@/components/reproduction-parameters-form"
 import { PlusIcon, PencilSquareIcon, TrashIcon, TagIcon } from "@heroicons/react/24/outline"
 
 const labelClass = "block text-sm font-medium text-gray-700"
@@ -103,6 +104,14 @@ export default function SettingsPage() {
                 <option value="EUR">EUR — Euro</option>
               </select>
             </div>
+          </div>
+        </section>
+
+        {/* Reproducción */}
+        <section className="rounded-lg bg-white p-6 shadow">
+          <h2 className="text-base font-semibold text-gray-900">Reproducción</h2>
+          <div className="mt-4">
+            <ReproductionParametersForm />
           </div>
         </section>
 

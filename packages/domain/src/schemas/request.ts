@@ -12,6 +12,14 @@ export const MatingIdParamSchema = z.object({
     matingId: z.string().uuid('Invalid mating ID format'),
 });
 
+export const MaleIdParamSchema = z.object({
+    maleId: z.string().uuid('Invalid male ID format'),
+});
+
+export const FemaleIdParamSchema = z.object({
+    femaleId: z.string().uuid('Invalid female ID format'),
+});
+
 export const QuerySchema = z.object({
     page: z.string().regex(/^\d+$/, 'Page must be a number').optional(),
     limit: z.string().regex(/^\d+$/, 'Limit must be a number').optional(),

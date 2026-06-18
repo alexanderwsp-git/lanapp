@@ -1,5 +1,7 @@
-import { lanapp } from "./client"
-import type { ApiSheep, BulkResult } from "./types"
+import type { ApiSheep } from "./types"
+import * as mock from "@/mocks/handlers/breeding-weaning"
+import * as real from "./real/weaning"
+import { resolveApi } from "./resolve"
 
 export type ApiWeaningRecord = {
   id: string
@@ -9,6 +11,20 @@ export type ApiWeaningRecord = {
   dailyGain?: number | null
   lotId?: string | null
   notes?: string | null
+}
+
+export type ApiRecentWeaningRecord = ApiWeaningRecord & {
+  tag: string
+  name?: string | null
+  category: string
+  birthDate: string
+  gender: string
+}
+
+export type WeaningRecentQuery = {
+  fromDate?: string
+  toDate?: string
+  days?: number
 }
 
 export type BulkWeaningRecordItem = {
@@ -32,17 +48,9 @@ export type BulkWeaningPayload = {
   defaultWeight?: number
 }
 
-export async function bulkRecordWeaning(payload: BulkWeaningPayload): Promise<BulkResult> {
-  const res = await lanapp.post<BulkResult>("weaning-record/bulk", payload)
-  return res.data
-}
-
-export async function fetchWeaningAlerts(minDays = 70): Promise<ApiSheep[]> {
-  const res = await lanapp.get<ApiSheep[]>(`weaning-record/alerts?minDays=${minDays}`)
-  return res.data
-}
-
-export async function fetchWeaningRecordsBySheep(sheepId: string): Promise<ApiWeaningRecord[]> {
-  const res = await lanapp.get<ApiWeaningRecord[]>(`weaning-record/sheep/${sheepId}`)
-  return res.data
-}
+export const {
+  bulkRecordWeaning,
+  fetchWeaningAlerts,
+  fetchRecentWeanings,
+  fetchWeaningRecordsBySheep,
+} = resolveApi(real, mock)

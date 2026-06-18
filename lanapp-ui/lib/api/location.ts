@@ -1,7 +1,11 @@
-import { lanapp } from "./client"
-import type { ApiLocation, Paginated } from "./types"
+import * as mock from "@/mocks/handlers/location"
+import * as real from "./real/location"
+import { resolveApi } from "./resolve"
 
-export async function fetchLocations(limit = 100): Promise<ApiLocation[]> {
-  const res = await lanapp.get<Paginated<ApiLocation>>(`location?page=1&limit=${limit}`)
-  return res.data.items
-}
+export const {
+  fetchLocations,
+  fetchLocationById,
+  createLocation,
+  updateLocation,
+  deleteLocation,
+} = resolveApi(real, mock)

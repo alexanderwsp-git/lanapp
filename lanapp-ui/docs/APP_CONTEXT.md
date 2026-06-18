@@ -321,6 +321,15 @@ If `isPregnant: true` → mating marked Effective, ewe `isPregnant=true`.
 
 **Cancel rules:** only before `diagnosisDate` or `actualBirthDate`. Cancelled rows hidden from lists; same ewe + `cycleName` can be re-scheduled. Matings have **no delete** — use `POST /mating/:id/ineffective` instead.
 
+### 3.9.1 Farm reproduction parameters
+
+| Method | Path | Body |
+|--------|------|------|
+| GET | `/farm-parameters` | — returns `gestationDays`, `ecoCheckMinDays`, `ecoCheckMaxDays`, `heatCycleDays`, `weaningDays` |
+| PUT | `/farm-parameters` | same fields (validated via `ReproductionParametersSchema`) |
+
+Defaults: gestation **147**, ECO window **30–45**, heat cycle **15**, weaning **70**.
+
 ### 3.10 Weaning
 
 | Method | Path | Notes |
@@ -804,7 +813,19 @@ Examples: Cordero, Cordera destetada (maltona), Borrego, Oveja preñada, Oveja v
 | Recheck | Revisar |
 | (pending) | Pendiente |
 
-### FAMACHA score
+### Diagnosis type (`DiagnosisType` on pregnancy check / planner)
+
+**Forms (Montas + Planificador):** **ECO** and **FAMACHA** only.
+
+| API value | UI label | Purpose |
+|-----------|----------|---------|
+| `ECO` | ECO | Ecógrafo — pregnancy confirmation ~30–45 days post-monta |
+| `FAMACHA` | FAMACHA | Manual pregnancy check (no equipment), follow-up after Preñada |
+| `Control Monta` | FAMACHA | Legacy enum — displayed as FAMACHA in history |
+
+**Same name, two records:** Montas diagnóstico **FAMACHA** = manual preñez check. Tab **FAMACHA** = anemia score 1–5 (`POST /health-check`).
+
+### FAMACHA score (health tab only)
 
 Integer **1–5**. UI helper: *"1 = rojo oscuro (anémico), 5 = rosa/blanco (sano)"*.
 
@@ -1112,7 +1133,7 @@ Read docs/APP_CONTEXT.md §15.
 | Use case | ID | When | Outcome |
 |----------|-----|------|---------|
 | Record mating | **UC-30** | Ewe in heat (~15-day cycle) | `mating` row, female `lastMountedDate` updated |
-| Pregnancy diagnosis (ECO) | **UC-31** | ~30 days post-mating | Pregnant / Empty / Recheck |
+| Pregnancy diagnosis (ECO) | **UC-31** | **30–45 days** post-mating (configurable) | Pregnant / Empty / Recheck |
 | Re-mate empty ewe | **UC-32** | ECO empty | Vitasel + second ram (planner / manual) |
 | Record delivery | **UC-33** | Birth | Ewe `isPregnant=false`, `deliveryDate` set |
 | Breeding cycle planning | Planner | Season batch e.g. `2026-A` | `breeding_cycle` entity (separate from per-sheep mating list) |
@@ -1121,10 +1142,26 @@ Read docs/APP_CONTEXT.md §15.
 
 | Surface | Route | Entity | Purpose |
 |---------|-------|--------|---------|
-| **Sheep detail → Montas** | `/sheep/:id` | `mating` + `pregnancy_check` | Operational: record monta for this animal, ECO, parto |
-| **Planificador** | `/planner` | `breeding_cycle` | Cycle-wide list: ewe, ram, vitasel, diagnosis |
+| **Sheep detail → Montas** | `/sheep/:id` | `mating` + `pregnancy_check` | **Source of truth:** monta, ECO, parto per ewe |
+| **Planificador** | `/planner` | `breeding_cycle` | Season scope tag (`cycleName`); bulk schedule + confirm monta |
 
-A monta on sheep detail creates a **`mating`** record. The planner tracks **`breeding_cycle`** rows (often same farm event, different API). See §16.8.
+See [`docs/MONTAS_LIFECYCLE.md`](../../docs/MONTAS_LIFECYCLE.md) for the canonical operator flow.
+
+### 16.1.1 Farm reproduction parameters
+
+**API:** `GET/PUT /farm-parameters`  
+**Schema:** `packages/domain/src/reproduction-parameters.ts`  
+**UI:** Configuración → Reproducción
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `gestationDays` | 147 | Expected parto after monta |
+| `ecoCheckMinDays` | 30 | Earliest suggested ECO |
+| `ecoCheckMaxDays` | 45 | Latest suggested ECO window |
+| `heatCycleDays` | 15 | Remate guidance after Vacía |
+| `weaningDays` | 70 | Weaning alerts |
+
+Montas tab uses these for suggested ECO window, expected parto, and soft date warnings. Diagnosis types: **ECO** and **FAMACHA** (manual). Health tab FAMACHA = anemia score — see §labels.
 
 ### 16.2 Data model — Mating
 
@@ -1137,7 +1174,7 @@ A monta on sheep detail creates a **`mating`** record. The planner tracks **`bre
 | `maleId` | UUID | Carnero | **R** | Must be male sheep UUID |
 | `femaleId` | UUID | Oveja | **R** | Must be female sheep UUID |
 | `matingDate` | date | Fecha monta | **R** | |
-| `expectedBirthDate` | date | Parto esperado | O | Optional on create; gestation ~150 d |
+| `expectedBirthDate` | date | Parto esperado | O | Default `matingDate + gestationDays` (147); see `/farm-parameters` |
 | `status` | `MatingStatus` | Estado | server | Default `Pending` |
 | `notes` | string | Notas | O | Not in current detail UI |
 
@@ -1352,7 +1389,9 @@ stateDiagram-v2
 | Farm term | UI / system |
 |-----------|-------------|
 | Monta | `POST /mating` |
-| ECO | `POST /pregnancy-check` |
+| ECO (ecógrafo) | Montas diagnóstico → `checkType: ECO` |
+| Control manual de preñez | Montas diagnóstico → `checkType: FAMACHA` |
+| FAMACHA puntaje (anemia) | Tab FAMACHA → `POST /health-check` |
 | Vitasel | `breeding_cycle.vitaselApplied` or medicine application |
 | Parto | `POST …/delivery` |
 | Segunda monta | New mating after ineffective / empty |
@@ -1377,7 +1416,7 @@ Both can coexist; linking them automatically is **not** implemented — operator
 | ECO vacía | Must support `isPregnant: false` for UC-32 (Vitasel / remate) |
 | Parto without ECO | API allows; UI may show warning |
 | Status labels | Always Spanish in UI — never show `Pending` raw |
-| Gestación | ~150 days; optional `expectedBirthDate` on mating create |
+| Gestación | Default **147 days** (`gestationDays` via `/farm-parameters`); optional `expectedBirthDate` on mating create |
 | Planner cancel | `POST …/cancel` or DELETE — logical only; blocked after diagnosis/parto |
 | Montas delete | **No delete** — Marcar inefectiva preserves audit trail |
 
@@ -1448,7 +1487,7 @@ Both can coexist; linking them automatically is **not** implemented — operator
 
 - Filter `cycleName` input (e.g. `2026-A`)
 - Table: oveja, carnero, fecha monta, resultado, vitasel, acciones
-- Modals: Nuevo ciclo (§3.9 fields), Diagnóstico (ECO/Control monta/FAMACHA, fecha, resultado)
+- Modals: Nuevo ciclo (§3.9 fields), Diagnóstico (ECO / FAMACHA)
 - **Bulk (v0):** multi-select ewes (or filter by potrero) → `bulkScheduleBreedingCycles({ cycleName, ramId, matingDate, eweIds })` — show `BulkResult`
 - Link to `/weaning`
 

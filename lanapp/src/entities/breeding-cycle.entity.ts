@@ -18,6 +18,9 @@ export class BreedingCycle extends BaseEntity {
     @Column({ nullable: true })
     ramId?: string;
 
+    @Column({ nullable: true })
+    matingId?: string;
+
     @Column({ type: 'date' })
     matingDate!: Date;
 

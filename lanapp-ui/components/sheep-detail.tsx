@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Gender } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { ClipboardDocumentListIcon } from "@heroicons/react/24/outline"
 import { SheepPesosTab } from "@/components/sheep-pesos-tab"
@@ -10,7 +9,8 @@ import { SheepMontasTab } from "@/components/sheep-montas-tab"
 import { SheepFamachaTab } from "@/components/sheep-famacha-tab"
 import type { ApiSheep } from "@/lib/api/types"
 import { fetchWeaningRecordsBySheep, type ApiWeaningRecord } from "@/lib/api/weaning"
-import { formatDisplayDate, formatDailyGain, formatLastWeight } from "@/lib/format"
+import { formatDisplayDate, formatAgeDays, formatDailyGain, formatLastWeight } from "@/lib/format"
+import { reproductorStatus } from "@/lib/reproductor-status"
 import {
   labelCategory,
   labelGender,
@@ -26,13 +26,14 @@ const TABS = [
   { id: "famacha", label: "FAMACHA" },
 ] as const
 
-export function SheepDetail({ sheep }: { sheep: ApiSheep }) {
+export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?: () => void | Promise<void> }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("general")
   const [weaningRecords, setWeaningRecords] = useState<ApiWeaningRecord[]>([])
   const [weaningLoading, setWeaningLoading] = useState(true)
 
   const statusLabel = labelStatus(sheep.status)
   const locationName = sheep.currentLocation?.name ?? "—"
+  const repro = reproductorStatus(sheep)
 
   useEffect(() => {
     let cancelled = false
@@ -88,6 +89,7 @@ export function SheepDetail({ sheep }: { sheep: ApiSheep }) {
             { label: "Sexo", value: labelGender(sheep.gender) },
             { label: "Último peso", value: formatLastWeight(sheep) },
             { label: "Nacimiento", value: formatDisplayDate(sheep.birthDate) },
+            { label: "Edad", value: formatAgeDays(sheep.birthDate) },
             { label: "Ubicación", value: locationName },
           ].map((item) => (
             <div key={item.label}>
@@ -96,6 +98,26 @@ export function SheepDetail({ sheep }: { sheep: ApiSheep }) {
             </div>
           ))}
         </dl>
+        {sheep.isPregnant && (
+          <div className="mt-4 rounded-md bg-pink-50 px-4 py-3 text-sm font-medium text-pink-700">
+            Oveja preñada
+            {sheep.pregnancyConfirmedAt
+              ? ` · confirmada ${formatDisplayDate(sheep.pregnancyConfirmedAt)}`
+              : ""}
+          </div>
+        )}
+        {repro && (
+          <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-400">Reproductor</span>
+              <StatusBadge color={repro.badgeColor}>{repro.label}</StatusBadge>
+              {sheep.isBreedingRam && (
+                <span className="text-xs text-gray-500">Flag activo en Editar</span>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-gray-600">{repro.hint}</p>
+          </div>
+        )}
       </div>
 
       <div>
@@ -190,10 +212,10 @@ export function SheepDetail({ sheep }: { sheep: ApiSheep }) {
           {tab === "peso" && <SheepPesosTab sheepId={sheep.id} />}
 
           {tab === "montas" && (
-            <SheepMontasTab sheepId={sheep.id} gender={sheep.gender as Gender} />
+            <SheepMontasTab sheep={sheep} onUpdated={onRefresh} />
           )}
 
-          {tab === "famacha" && <SheepFamachaTab />}
+          {tab === "famacha" && <SheepFamachaTab sheepId={sheep.id} />}
         </div>
       </div>
     </div>

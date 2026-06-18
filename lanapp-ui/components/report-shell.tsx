@@ -1,15 +1,58 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { reportConfig, statusColor, type ReportType } from "@/lib/mock-data"
+import { fetchReport, type ReportType } from "@/lib/api/reports"
+import { statusColor } from "@/mocks/labels"
 import { ArrowDownTrayIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline"
 
-// Columns whose values should render as colored badges.
 const badgeKeys = new Set(["resultado", "alerta"])
 
 export function ReportShell({ reportType, description }: { reportType: ReportType; description?: string }) {
-  const cfg = reportConfig[reportType]
+  const [cfg, setCfg] = useState<Awaited<ReturnType<typeof fetchReport>> | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetchReport(reportType)
+      .then((data) => {
+        if (!cancelled) setCfg(data)
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setCfg(null)
+          setError(err instanceof Error ? err.message : "No se pudo cargar el reporte")
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [reportType])
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <p className="text-sm text-gray-500">Cargando reporte…</p>
+      </DashboardLayout>
+    )
+  }
+
+  if (error || !cfg) {
+    return (
+      <DashboardLayout>
+        <EmptyState icon={DocumentChartBarIcon} title="Error" description={error ?? "Reporte no disponible"} />
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout>

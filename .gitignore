@@ -18,3 +18,5 @@ packages/*/dist/
 
 # OS
 Thumbs.db
+
+logs/

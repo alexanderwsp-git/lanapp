@@ -1,16 +1,23 @@
-import { BreedingCycleStatus, BreedingResult, BulkBreedingCycleSchedule, Gender } from '@sheep/domain';
+import { BreedingCycleStatus, BreedingResult, BulkBreedingCycleSchedule } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { BreedingCycleRepository } from '../repositories/breeding-cycle.repository';
 import { BreedingCycle } from '../entities/breeding-cycle.entity';
 import { SheepService } from './sheep.service';
+import { MatingService } from './mating.service';
+import { PregnancyCheckService } from './pregnancy-check.service';
 import { BulkResult, emptyBulkResult } from '../utils/bulk-target';
+import { eweBreedingEligibility, ramBreedingEligibility } from '../utils/breeding-eligibility';
 
 export class BreedingCycleService extends BaseService<BreedingCycle> {
     private sheepService: SheepService;
+    private matingService: MatingService;
+    private pregnancyCheckService: PregnancyCheckService;
 
     constructor() {
         super(new BreedingCycleRepository());
         this.sheepService = new SheepService();
+        this.matingService = new MatingService();
+        this.pregnancyCheckService = new PregnancyCheckService();
     }
 
     async findByEwe(eweId: string): Promise<BreedingCycle[]> {
@@ -22,6 +29,24 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
     }
 
     async create(data: Partial<BreedingCycle>, username: string): Promise<BreedingCycle> {
+        const ewe = await this.sheepService.findOne(data.eweId!);
+        if (!ewe) throw new Error('Oveja no encontrada');
+        const eweError = eweBreedingEligibility(ewe);
+        if (eweError) throw new Error(eweError);
+
+        if (data.ramId) {
+            const ram = await this.sheepService.findOne(data.ramId);
+            if (!ram) throw new Error('Carnero no encontrado');
+            const ramError = ramBreedingEligibility(ram);
+            if (ramError) throw new Error(ramError);
+        }
+
+        const repo = this.repository as BreedingCycleRepository;
+        const existing = await repo.findActiveByEweAndCycle(data.eweId!, data.cycleName!);
+        if (existing) {
+            throw new Error(`Ya existe un ciclo "${data.cycleName}" para esta oveja`);
+        }
+
         return super.create({ ...data, status: BreedingCycleStatus.ACTIVE }, username);
     }
 
@@ -32,14 +57,68 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
             diagnosisDate: Date;
             result: BreedingResult;
             vitaselApplied?: boolean;
+            notes?: string;
+            nextCheckDate?: Date;
         },
         username: string
     ): Promise<BreedingCycle | null> {
+        let cycle = await this.findOne(id);
+        if (!cycle || cycle.status === BreedingCycleStatus.CANCELLED) {
+            return null;
+        }
+
+        if (!cycle.matingId) {
+            if (!cycle.ramId) {
+                throw new Error('Asigna un reproductor y confirma la monta antes del diagnóstico');
+            }
+            cycle = (await this.confirmMating(id, username))!;
+        }
+
+        await this.pregnancyCheckService.recordDiagnosisForMating(
+            cycle.matingId!,
+            {
+                diagnosisType: data.diagnosisType!,
+                diagnosisDate: data.diagnosisDate,
+                result: data.result,
+                notes: data.notes,
+                nextCheckDate: data.nextCheckDate,
+                vitaselApplied: data.vitaselApplied ?? cycle.vitaselApplied,
+            },
+            username
+        );
+
+        return this.findOne(id);
+    }
+
+    /**
+     * Records the operational mating (Montas tab) for a planned cycle row.
+     * Idempotent when matingId is already set.
+     */
+    async confirmMating(id: string, username: string): Promise<BreedingCycle | null> {
         const cycle = await this.findOne(id);
         if (!cycle || cycle.status === BreedingCycleStatus.CANCELLED) {
             return null;
         }
-        return this.update(id, data, username);
+        if (cycle.matingId) {
+            return cycle;
+        }
+        if (!cycle.ramId) {
+            throw new Error('Asigna un reproductor antes de confirmar la monta');
+        }
+
+        const mating = await this.matingService.recordMating(
+            {
+                maleId: cycle.ramId,
+                femaleId: cycle.eweId,
+                matingDate: cycle.matingDate,
+                notes: cycle.notes
+                    ? `Ciclo ${cycle.cycleName}: ${cycle.notes}`
+                    : `Ciclo ${cycle.cycleName}`,
+            },
+            username
+        );
+
+        return this.update(id, { matingId: mating.id }, username);
     }
 
     /**
@@ -73,9 +152,10 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
                 }
                 return result;
             }
-            if (ram.gender !== Gender.MALE) {
+            const ramError = ramBreedingEligibility(ram);
+            if (ramError) {
                 for (const eweId of uniqueEweIds) {
-                    result.failed.push({ sheepId: eweId, error: 'El carnero seleccionado no es macho' });
+                    result.failed.push({ sheepId: eweId, error: ramError });
                 }
                 return result;
             }
@@ -87,8 +167,9 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
                 result.failed.push({ sheepId: eweId, error: 'Oveja no encontrada' });
                 continue;
             }
-            if (ewe.gender !== Gender.FEMALE) {
-                result.failed.push({ sheepId: eweId, error: 'La oveja no es hembra' });
+            const eweError = eweBreedingEligibility(ewe);
+            if (eweError) {
+                result.failed.push({ sheepId: eweId, error: eweError });
                 continue;
             }
 

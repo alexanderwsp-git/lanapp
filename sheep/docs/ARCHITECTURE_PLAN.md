@@ -274,7 +274,7 @@ flowchart TB
 | ID | Use case | Trigger | Outcome |
 |----|----------|---------|---------|
 | UC-30 | Record mating | Ewe in heat (~15-day cycle) | Mating linked to ram and cycle |
-| UC-31 | Pregnancy diagnosis (ECO) | ~30 days post-mating | Pregnant / Empty / Recheck |
+| UC-31 | Pregnancy diagnosis (ECO) | ~30 days post-mating | Pregnant / Empty / Recheck via **ECO** or **FAMACHA** (manual) |
 | UC-32 | Re-mate empty ewe | ECO = empty | Vitasel + second ram |
 | UC-33 | Record delivery | Birth occurs | Lambs linked; ewe → **OVEJA LACTANCIA** |
 | UC-34 | AI insemination program | Embryo transfer schedule | Hormone protocol tracked (Phase 5) |
@@ -1230,7 +1230,9 @@ Follows implementation order in **Section 2.9**.
 | **Monorepo** | **Evolve `webapp/`** | Reuse lanapp + web-app; add sheep-ai only; ~10 weeks saved vs greenfield |
 | Build strategy | Evolve monorepo | ~80% backend already exists |
 | **Category model** | **Official status flow image** | `PHOTO-2022-09-07` — canonical Spanish categories |
-| **Weaning age** | **70 days** (image) | Overrides 75-day reference in Word doc; configurable |
+| **Weaning age** | **70 days** (image) | Overrides 75-day reference in Word doc; configurable via `/farm-parameters` |
+| **Gestation length** | **147 days** | ECO window **30–45 days** post-monta; configurable via `/farm-parameters` |
+| **Heat cycle** | **~15 days** | Remate guidance after Vacía; configurable via `/farm-parameters` |
 | **Slaughter rules** | FAENADO males ≤12 mo; FAENADA females post-weaning | Per status flow image |
 
 ---

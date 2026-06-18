@@ -2,7 +2,7 @@ import { BaseService } from './base.service';
 import { WeightRepository } from '../repositories/weight.repository';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { Weight } from '../entities/weight.entity';
-import { calculateDailyGain } from '../utils/weight.utils';
+import { calculateDailyGain, toDateKey } from '../utils/weight.utils';
 
 export type SheepWithLatestWeight<T> = T & {
     latestWeight: number | null;
@@ -24,6 +24,48 @@ export class WeightService extends BaseService<Weight> {
 
     async findWithDetails(id: string): Promise<Weight | null> {
         return (this.repository as WeightRepository).findWithDetails(id);
+    }
+
+    /** Create a pesaje, or replace the row on the same calendar day (e.g. destete on birth date). */
+    async upsertWeightOnDate(
+        data: {
+            sheepId: string;
+            weight: number;
+            measurementDate: Date;
+            notes?: string;
+        },
+        username: string
+    ): Promise<Weight> {
+        const dateKey = toDateKey(data.measurementDate);
+        const existing = await this.findBySheep(data.sheepId);
+        const onDate = existing.find(w => toDateKey(w.measurementDate) === dateKey);
+
+        if (onDate) {
+            const previous = await (this.repository as WeightRepository).findPreviousBeforeDate(
+                data.sheepId,
+                data.measurementDate
+            );
+            const dailyGain = calculateDailyGain(
+                data.weight,
+                data.measurementDate,
+                previous
+            );
+            const updated = await this.update(
+                onDate.id,
+                { weight: data.weight, notes: data.notes, dailyGain },
+                username
+            );
+            const latest = await this.findLatestBySheep(data.sheepId);
+            if (latest?.id === onDate.id) {
+                await new SheepRepository().update(data.sheepId, {
+                    weight: data.weight,
+                    updatedBy: username,
+                });
+            }
+            return updated!;
+        }
+
+        return this.recordWeight(data, username);
     }
 
     async recordWeight(data: Partial<Weight>, username: string): Promise<Weight> {

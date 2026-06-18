@@ -74,6 +74,10 @@ export class Sheep extends BaseEntity {
     @Column({ type: 'boolean', default: false })
     isPregnant!: boolean;
 
+    /** Manual flag: selected breeding ram → category REPRODUCTOR at ≥12 months. */
+    @Column({ type: 'boolean', default: false })
+    isBreedingRam!: boolean;
+
     @Column({ type: 'date', nullable: true })
     pregnancyConfirmedAt?: Date;
 

@@ -14,14 +14,20 @@ describe('category.engine', () => {
         );
     });
 
-    it('assigns MALTÓN/MALTONA between weaning and 6 months', () => {
+    it('assigns MALTÓN/MALTONA between weaning and 6 months only after weaning record', () => {
         const birth = new Date('2024-01-01');
         expect(determineCategory(Gender.MALE, birth, { referenceDate: ref })).toBe(
-            SheepCategory.CORDERO_DESTETADO
+            SheepCategory.CORDERO
         );
         expect(determineCategory(Gender.FEMALE, birth, { referenceDate: ref })).toBe(
-            SheepCategory.CORDERA_DESTETADA
+            SheepCategory.CORDERA
         );
+        expect(
+            determineCategory(Gender.MALE, birth, { referenceDate: ref, isWeaned: true })
+        ).toBe(SheepCategory.CORDERO_DESTETADO);
+        expect(
+            determineCategory(Gender.FEMALE, birth, { referenceDate: ref, isWeaned: true })
+        ).toBe(SheepCategory.CORDERA_DESTETADA);
     });
 
     it('assigns BORREGO/BORREGA between 6 and 12 months', () => {

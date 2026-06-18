@@ -1,0 +1,78 @@
+import {
+  BreedingCycleStatus,
+  BreedingResult,
+  DiagnosisType,
+} from "@sheep/domain"
+import type { ApiBreedingCycle } from "@/lib/api/breeding-cycle"
+import { IDS } from "../ids"
+import { addDays } from "../utils"
+
+export const seedBreedingCycles: ApiBreedingCycle[] = [
+  {
+    id: IDS.breedingCycles.b1,
+    eweId: IDS.sheep.luna,
+    ramId: IDS.sheep.toro,
+    matingId: IDS.matings.m1,
+    cycleName: "2026-A",
+    matingDate: "2026-03-15T00:00:00.000Z",
+    vitaselApplied: true,
+    status: BreedingCycleStatus.ACTIVE,
+    expectedBirthDate: addDays("2026-03-15", 147),
+    notes: "",
+  },
+  {
+    id: IDS.breedingCycles.b2,
+    eweId: IDS.sheep.estrella,
+    ramId: IDS.sheep.toro,
+    cycleName: "2026-A",
+    matingDate: "2026-03-16T00:00:00.000Z",
+    diagnosisType: DiagnosisType.ECO,
+    diagnosisDate: "2026-04-15T00:00:00.000Z",
+    result: BreedingResult.PREGNANT,
+    vitaselApplied: false,
+    status: BreedingCycleStatus.ACTIVE,
+    expectedBirthDate: addDays("2026-03-16", 147),
+  },
+  {
+    id: IDS.breedingCycles.b3,
+    eweId: IDS.sheep.blanca,
+    ramId: IDS.sheep.negro,
+    matingId: IDS.matings.m2,
+    cycleName: "2026-A",
+    matingDate: "2026-02-10T00:00:00.000Z",
+    diagnosisType: DiagnosisType.ECO,
+    diagnosisDate: "2026-03-12T00:00:00.000Z",
+    result: BreedingResult.EMPTY,
+    vitaselApplied: true,
+    status: BreedingCycleStatus.ACTIVE,
+  },
+  {
+    id: IDS.breedingCycles.b4,
+    eweId: IDS.sheep.rosa,
+    ramId: IDS.sheep.toro,
+    cycleName: "2026-A",
+    matingDate: "2026-02-28T00:00:00.000Z",
+    diagnosisType: DiagnosisType.CONTROL_MONTA,
+    diagnosisDate: "2026-03-25T00:00:00.000Z",
+    result: BreedingResult.RECHECK,
+    vitaselApplied: false,
+    status: BreedingCycleStatus.ACTIVE,
+  },
+  {
+    id: IDS.breedingCycles.b5,
+    eweId: IDS.sheep.manchas,
+    ramId: IDS.sheep.negro,
+    cycleName: "2026-B",
+    matingDate: "2026-05-02T00:00:00.000Z",
+    vitaselApplied: true,
+    status: BreedingCycleStatus.ACTIVE,
+  },
+  {
+    id: IDS.breedingCycles.b6,
+    eweId: IDS.sheep.oreja,
+    cycleName: "2026-B",
+    matingDate: "2026-05-03T00:00:00.000Z",
+    vitaselApplied: false,
+    status: BreedingCycleStatus.ACTIVE,
+  },
+]

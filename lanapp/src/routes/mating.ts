@@ -1,4 +1,4 @@
-import { MatingCreateSchema, BulkMatingScheduleSchema, IdSchema } from '@sheep/domain';
+import { MatingCreateSchema, BulkMatingScheduleSchema, IdSchema, MaleIdParamSchema, FemaleIdParamSchema, SheepIdParamSchema } from '@sheep/domain';
 import {
     created,
     failed,
@@ -40,7 +40,7 @@ router.get(
 router.get(
     '/male/:maleId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(MaleIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const matings = await matingService.findByMale(req.params.maleId);
         found(res, matings);
@@ -50,7 +50,7 @@ router.get(
 router.get(
     '/female/:femaleId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(FemaleIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const matings = await matingService.findByFemale(req.params.femaleId);
         found(res, matings);
@@ -60,7 +60,7 @@ router.get(
 router.get(
     '/sheep/:sheepId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(SheepIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const matings = await matingService.findBySheep(req.params.sheepId);
         found(res, matings);

@@ -15,3 +15,9 @@ export enum BreedingCycleStatus {
     ACTIVE = 'Active',
     CANCELLED = 'Cancelled',
 }
+
+/** Distinguish diagnosis checks from birth (parto) events in history. */
+export enum PregnancyCheckKind {
+    DIAGNOSIS = 'Diagnosis',
+    DELIVERY = 'Delivery',
+}

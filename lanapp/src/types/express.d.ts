@@ -1,9 +1,9 @@
-import { User } from '../entities/user.entity';
+import type { AuthUser } from '../middlewares/auth.middleware';
 
 declare global {
     namespace Express {
         interface Request {
-            user?: User;
+            user?: AuthUser;
         }
     }
 }
