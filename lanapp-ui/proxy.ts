@@ -13,7 +13,7 @@ const PUBLIC_PATHS = [
 
 const PUBLIC_API = ['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/auth/set-password'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (SKIP) {
     return NextResponse.next();
   }

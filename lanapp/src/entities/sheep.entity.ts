@@ -82,7 +82,7 @@ export class Sheep extends BaseEntity {
     pregnancyConfirmedAt?: Date;
 
     @Column({ type: 'date', nullable: true })
-    deliveryDate?: Date;
+    deliveryDate?: Date | null;
 
     @Column({ nullable: true })
     motherId?: string;
