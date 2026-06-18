@@ -2,6 +2,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 /** @type {import('next').NextConfig} */
+// dev restart trigger: ensure NEXT_PUBLIC_* env vars are inlined from .env.local
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const monorepoRoot = path.resolve(__dirname, "..")
 

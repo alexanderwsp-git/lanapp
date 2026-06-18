@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 
 import { getBearerToken, jsonError, jsonOk } from '@/lib/auth/api-response';
-import { devSessionUser, getUserFromAccessToken, isSkipAuthEnabled } from '@/lib/auth/session';
+import { devSessionUser, isSkipAuthEnabled } from '@/lib/auth/session';
+import { getUserFromAccessToken } from '@/lib/auth/session-server';
 
 export async function GET(request: NextRequest) {
   if (isSkipAuthEnabled()) {

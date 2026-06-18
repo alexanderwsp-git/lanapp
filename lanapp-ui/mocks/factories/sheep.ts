@@ -63,7 +63,7 @@ export function buildSheep(
   const gender = overrides.gender ?? faker.helpers.enumValue(Gender)
   const birthDate = overrides.birthDate
     ? new Date(overrides.birthDate)
-    : faker.date.past({ years: faker.number.int({ min: 0, max: 4 }) })
+    : faker.date.past({ years: faker.number.int({ min: 1, max: 4 }) })
   const birthIso = birthDate.toISOString()
   const ageDays = daysBetween(birthIso.slice(0, 10), new Date().toISOString().slice(0, 10))
   const category = overrides.category ?? categoryFor(gender, ageDays)

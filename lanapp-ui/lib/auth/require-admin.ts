@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 
 import { getBearerToken } from './api-response';
-import { devSessionUser, getUserFromAccessToken, isSkipAuthEnabled } from './session';
+import { devSessionUser, isSkipAuthEnabled } from './session';
+import { getUserFromAccessToken } from './session-server';
 
 export async function requireAdmin(request: NextRequest) {
   if (isSkipAuthEnabled()) {
