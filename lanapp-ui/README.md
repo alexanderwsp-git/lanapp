@@ -10,10 +10,12 @@
 
 ```bash
 cd ..   # webapp/
-npm install && npm run build:packages
-npm run dev:api    # :4001 — separate terminal
-npm run dev:ui     # :3000
+make setup         # first time: install + build packages
+make api           # :4001 — separate terminal
+make ui            # :3000
 ```
+
+Or without Make: `npm install && npm run build:packages`, then `npm run dev:api` / `npm run dev:ui`. See [`../Makefile`](../Makefile) for `build`, `kill-ui`, `kill-api`, etc.
 
 `@sheep/domain` resolves via npm workspaces — **no vendored copy** in this folder.
 

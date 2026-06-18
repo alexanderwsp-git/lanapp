@@ -41,7 +41,7 @@
         "@sheep/domain": "*",
         "@sheep/server": "*",
         "@aws-sdk/client-cognito-identity-provider": "^3.734.0",
-        "@types/express": "^5.0.0",
+        "@types/express": "^4.17.21",
         "@types/jsonwebtoken": "^9.0.8",
         "aws-sdk": "^2.1692.0",
         "compression": "^1.7.5",
