@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
-import { Modal } from "@/components/ui/modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -859,14 +858,36 @@ export default function MedicinesPage() {
         </div>
       </div>
 
-      {/* Catalog modal */}
-      <Modal
+      {/* Catalog drawer */}
+      <Drawer
         open={medOpen}
         onClose={() => setMedOpen(false)}
         title={editingMed ? "Editar medicamento" : "Nuevo medicamento"}
         description="Registra un fármaco o vacuna en el inventario."
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setMedOpen(false)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="medicine-form"
+              disabled={savingMed}
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+            >
+              {savingMed && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              {editingMed ? "Guardar" : "Crear"}
+            </button>
+          </>
+        }
       >
-        <form onSubmit={saveMed} className="flex flex-col gap-4">
+        <form id="medicine-form" onSubmit={saveMed} className="flex flex-col gap-4">
           {medError && (
             <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{medError}</div>
           )}
@@ -916,36 +937,39 @@ export default function MedicinesPage() {
               onChange={(e) => setMedForm({ ...medForm, notes: e.target.value })}
             />
           </Field>
-          <div className="mt-2 flex justify-end gap-3">
+        </form>
+      </Drawer>
+
+      {/* Schedule drawer — planned date only */}
+      <Drawer
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        title="Programar aplicación"
+        description="Crea una dosis pendiente. Aún no se ha aplicado — marca Aplicado cuando la realices."
+        footer={
+          <>
             <button
               type="button"
-              onClick={() => setMedOpen(false)}
+              onClick={() => setScheduleOpen(false)}
               className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={savingMed}
+              form="schedule-form"
+              disabled={savingSchedule || !scheduleForm.medicineId || !scheduleForm.sheepId}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
             >
-              {savingMed && (
+              {savingSchedule && (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               )}
-              {editingMed ? "Guardar" : "Crear"}
+              Programar
             </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Schedule modal — planned date only */}
-      <Modal
-        open={scheduleOpen}
-        onClose={() => setScheduleOpen(false)}
-        title="Programar aplicación"
-        description="Crea una dosis pendiente. Aún no se ha aplicado — marca Aplicado cuando la realices."
+          </>
+        }
       >
-        <form onSubmit={saveSchedule} className="flex flex-col gap-4">
+        <form id="schedule-form" onSubmit={saveSchedule} className="flex flex-col gap-4">
           {scheduleError && (
             <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{scheduleError}</div>
           )}
@@ -984,27 +1008,8 @@ export default function MedicinesPage() {
               onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
             />
           </Field>
-          <div className="mt-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setScheduleOpen(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={savingSchedule || !scheduleForm.medicineId || !scheduleForm.sheepId}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {savingSchedule && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Programar
-            </button>
-          </div>
         </form>
-      </Modal>
+      </Drawer>
 
       {/* Bulk schedule drawer — many sheep, one medicine + date */}
       <Drawer
@@ -1124,8 +1129,8 @@ export default function MedicinesPage() {
         </form>
       </Drawer>
 
-      {/* Apply modal — confirm + optional next schedule */}
-      <Modal
+      {/* Apply drawer — confirm + optional next schedule */}
+      <Drawer
         open={!!applyTarget}
         onClose={() => setApplyTarget(null)}
         title="Registrar aplicación"
@@ -1134,8 +1139,30 @@ export default function MedicinesPage() {
             ? `${medDisplayName(applyTarget.medicineId)} → ${sheepDisplayTag(applyTarget.sheepId)}`
             : undefined
         }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setApplyTarget(null)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="apply-form"
+              disabled={savingApply}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60"
+            >
+              {savingApply && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              Confirmar aplicado
+            </button>
+          </>
+        }
       >
-        <form onSubmit={confirmApply} className="flex flex-col gap-4">
+        <form id="apply-form" onSubmit={confirmApply} className="flex flex-col gap-4">
           {applyError && (
             <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{applyError}</div>
           )}
@@ -1190,27 +1217,8 @@ export default function MedicinesPage() {
               placeholder="Ej. dosis aplicada, reacción, lote, observaciones del campo..."
             />
           </Field>
-          <div className="mt-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setApplyTarget(null)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={savingApply}
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60"
-            >
-              {savingApply && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Confirmar aplicado
-            </button>
-          </div>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmDialog
         open={!!medToDelete}

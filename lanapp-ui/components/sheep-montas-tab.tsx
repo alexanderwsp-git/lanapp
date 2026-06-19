@@ -15,7 +15,7 @@ import {
 } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Modal } from "@/components/ui/modal"
+import { Drawer } from "@/components/ui/drawer"
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox"
 import { Field, Select, TextInput, Textarea } from "@/components/ui/form-fields"
 import {
@@ -553,7 +553,7 @@ export function SheepMontasTab({
         )}
       </div>
 
-      <Modal
+      <Drawer
         open={ecoFor !== null}
         onClose={() => setEcoFor(null)}
         title="Registrar diagnóstico"
@@ -689,9 +689,9 @@ export function SheepMontasTab({
             />
           </Field>
         </form>
-      </Modal>
+      </Drawer>
 
-      <Modal
+      <Drawer
         open={partoFor !== null}
         onClose={() => setPartoFor(null)}
         title="Registrar parto"
@@ -740,7 +740,7 @@ export function SheepMontasTab({
             Registra cada cría manualmente en Nueva oveja con la misma fecha de nacimiento.
           </p>
         </form>
-      </Modal>
+      </Drawer>
     </div>
   )
 }

@@ -10,6 +10,7 @@ export function Drawer({
   description,
   children,
   footer,
+  size = "md",
 }: {
   open: boolean
   onClose: () => void
@@ -17,6 +18,7 @@ export function Drawer({
   description?: string
   children?: ReactNode
   footer?: ReactNode
+  size?: "md" | "lg"
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -28,6 +30,8 @@ export function Drawer({
 
   if (!open) return null
 
+  const sizeClass = size === "lg" ? "max-w-2xl" : "max-w-md"
+
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-gray-900/50 transition-opacity" onClick={onClose} aria-hidden="true" />
@@ -35,7 +39,7 @@ export function Drawer({
         <div
           role="dialog"
           aria-modal="true"
-          className="flex w-screen max-w-md flex-col bg-white shadow-xl"
+          className={`flex w-screen ${sizeClass} flex-col bg-white shadow-xl`}
         >
           <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
             <div>

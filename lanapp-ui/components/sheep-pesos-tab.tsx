@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { WeightProgressChart } from "@/components/ui/weight-progress-chart"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Modal } from "@/components/ui/modal"
+import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import {
@@ -277,7 +277,7 @@ export function SheepPesosTab({ sheepId }: SheepPesosTabProps) {
         )}
       </div>
 
-      <Modal
+      <Drawer
         open={editing !== null}
         onClose={() => setEditing(null)}
         title="Editar peso"
@@ -336,7 +336,7 @@ export function SheepPesosTab({ sheepId }: SheepPesosTabProps) {
             />
           </Field>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmDialog
         open={toDelete !== null}

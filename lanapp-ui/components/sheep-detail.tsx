@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
+import { PencilSquareIcon } from "@heroicons/react/24/outline"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { ClipboardDocumentListIcon } from "@heroicons/react/24/outline"
 import { SheepPesosTab } from "@/components/sheep-pesos-tab"
 import { SheepMontasTab } from "@/components/sheep-montas-tab"
 import { SheepFamachaTab } from "@/components/sheep-famacha-tab"
+import { SheepFormDrawer } from "@/components/sheep-form-drawer"
 import type { ApiSheep } from "@/lib/api/types"
 import { fetchWeaningRecordsBySheep, type ApiWeaningRecord } from "@/lib/api/weaning"
 import { formatDisplayDate, formatAgeDays, formatDailyGain, formatLastWeight } from "@/lib/format"
@@ -30,6 +31,16 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("general")
   const [weaningRecords, setWeaningRecords] = useState<ApiWeaningRecord[]>([])
   const [weaningLoading, setWeaningLoading] = useState(true)
+  const [editOpen, setEditOpen] = useState(false)
+
+  // Support deep-link redirects from the legacy /sheep/[id]/edit route.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("edit") === "1") {
+      setEditOpen(true)
+      window.history.replaceState(null, "", `/sheep/${sheep.id}`)
+    }
+  }, [sheep.id])
 
   const statusLabel = labelStatus(sheep.status)
   const locationName = sheep.currentLocation?.name ?? "—"

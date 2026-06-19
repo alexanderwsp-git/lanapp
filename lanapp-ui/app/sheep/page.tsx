@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { SheepFormDrawer } from "@/components/sheep-form-drawer"
 import { EmptyState } from "@/components/ui/empty-state"
 import { deleteSheep, fetchSheep } from "@/lib/api/sheep"
 import type { ApiSheep } from "@/lib/api/types"
@@ -38,6 +39,30 @@ export default function SheepListPage() {
   const [status, setStatus] = useState<SheepStatus | "">("")
   const [toDelete, setToDelete] = useState<ApiSheep | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState<"new" | "edit">("new")
+  const [editTarget, setEditTarget] = useState<ApiSheep | undefined>(undefined)
+
+  function openNew() {
+    setEditTarget(undefined)
+    setFormMode("new")
+    setFormOpen(true)
+  }
+
+  function openEdit(s: ApiSheep) {
+    setEditTarget(s)
+    setFormMode("edit")
+    setFormOpen(true)
+  }
+
+  // Support deep-link redirects from the legacy /sheep/new route.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("new") === "1") {
+      openNew()
+      window.history.replaceState(null, "", "/sheep")
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -94,13 +119,14 @@ export default function SheepListPage() {
         title="Ovejas"
         description="Inventario del rebaño de Granja San Alfonso"
         action={
-          <Link
-            href="/sheep/new"
+          <button
+            type="button"
+            onClick={openNew}
             className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
           >
             <PlusIcon className="h-5 w-5" aria-hidden="true" />
             Nueva oveja
-          </Link>
+          </button>
         }
       />
 
@@ -162,6 +188,17 @@ export default function SheepListPage() {
                 ? "No hay ovejas registradas. Agrega la primera."
                 : "No se encontraron ovejas con los filtros aplicados."
             }
+            action={
+              rows.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={openNew}
+                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                >
+                  Nueva oveja
+                </button>
+              ) : undefined
+            }
           />
         ) : (
           <div className="overflow-x-auto">
@@ -212,13 +249,14 @@ export default function SheepListPage() {
                           >
                             <EyeIcon className="h-5 w-5" />
                           </Link>
-                          <Link
-                            href={`/sheep/${s.id}/edit`}
+                          <button
+                            type="button"
+                            onClick={() => openEdit(s)}
                             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                             aria-label={`Editar ${s.tag}`}
                           >
                             <PencilSquareIcon className="h-5 w-5" />
-                          </Link>
+                          </button>
                           <button
                             onClick={() => setToDelete(s)}
                             className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
@@ -249,6 +287,14 @@ export default function SheepListPage() {
         loading={deleting}
         onConfirm={confirmDelete}
         onClose={() => setToDelete(null)}
+      />
+
+      <SheepFormDrawer
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        mode={formMode}
+        initial={editTarget}
+        onSaved={() => load()}
       />
     </DashboardLayout>
   )

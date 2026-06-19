@@ -6,8 +6,8 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { Modal } from "@/components/ui/modal"
 import { Drawer } from "@/components/ui/drawer"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { useSheepFilter } from "@/components/ui/sheep-filter"
@@ -72,6 +72,8 @@ export default function PlannerPage() {
   const [diagHistory, setDiagHistory] = useState<ApiPregnancyCheck[]>([])
   const [diagSaving, setDiagSaving] = useState(false)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [toCancel, setToCancel] = useState<ApiBreedingCycle | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   const [bCycle, setBCycle] = useState("")
   const [bRam, setBRam] = useState("")
@@ -232,17 +234,26 @@ export default function PlannerPage() {
     }
   }
 
-  async function cancelRow(row: ApiBreedingCycle) {
+  function cancelRow(row: ApiBreedingCycle) {
     if (row.result || row.diagnosisDate) {
       window.alert("Solo se puede cancelar un ciclo pendiente sin diagnóstico")
       return
     }
-    if (!window.confirm("¿Cancelar este ciclo? El registro se conserva en el historial.")) return
+    setToCancel(row)
+  }
+
+  async function confirmCancel() {
+    if (!toCancel) return
+    setCancelling(true)
     try {
-      await cancelBreedingCycle(row.id)
+      await cancelBreedingCycle(toCancel.id)
+      setToCancel(null)
       await load()
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "No se pudo cancelar el ciclo")
+      setToCancel(null)
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -675,7 +686,7 @@ export default function PlannerPage() {
         </form>
       </Drawer>
 
-      <Modal
+      <Drawer
         open={diagFor !== null}
         onClose={() => setDiagFor(null)}
         title="Registrar diagnóstico"
@@ -749,7 +760,21 @@ export default function PlannerPage() {
             <Textarea id="d-notes" rows={2} value={dNotes} onChange={(e) => setDNotes(e.target.value)} />
           </Field>
         </form>
-      </Modal>
+      </Drawer>
+
+      <ConfirmDialog
+        open={toCancel !== null}
+        title="Cancelar ciclo"
+        message={
+          toCancel
+            ? `¿Cancelar el ciclo "${toCancel.cycleName}"? El registro se conserva en el historial.`
+            : ""
+        }
+        confirmLabel="Cancelar ciclo"
+        loading={cancelling}
+        onConfirm={confirmCancel}
+        onClose={() => setToCancel(null)}
+      />
     </DashboardLayout>
   )
 }
