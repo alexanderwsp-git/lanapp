@@ -258,6 +258,7 @@ export default function MedicinesPage() {
   // (e.g. /medicines?scheduleSheep=<id>&medType=Dewormer&date=YYYY-MM-DD).
   const [pendingPrefill, setPendingPrefill] = useState<{
     sheepId: string
+    medId: string
     medType: string
     date: string
   } | null>(null)
@@ -269,6 +270,7 @@ export default function MedicinesPage() {
     if (!scheduleSheep) return
     setPendingPrefill({
       sheepId: scheduleSheep,
+      medId: params.get("medId") ?? "",
       medType: params.get("medType") ?? "",
       date: params.get("date") ?? today(),
     })
@@ -277,9 +279,9 @@ export default function MedicinesPage() {
 
   useEffect(() => {
     if (!pendingPrefill || meds.length === 0) return
-    const med = pendingPrefill.medType
-      ? meds.find((m) => m.type === pendingPrefill.medType)
-      : undefined
+    const med =
+      (pendingPrefill.medId ? meds.find((m) => m.id === pendingPrefill.medId) : undefined) ??
+      (pendingPrefill.medType ? meds.find((m) => m.type === pendingPrefill.medType) : undefined)
     setScheduleForm({
       medicineId: med?.id ?? "",
       sheepId: pendingPrefill.sheepId,

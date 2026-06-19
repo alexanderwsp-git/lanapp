@@ -32,7 +32,8 @@ import {
 } from "@/lib/api/analysis"
 import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
-import type { ApiLocation, ApiSheep, BulkResult } from "@/lib/api/types"
+import { fetchMedicines } from "@/lib/api/medicine"
+import type { ApiLocation, ApiMedicine, ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
 import { labelMedicineType, medicineTypeOptions } from "@/lib/labels/medicine"
 import { toDateInputValue, formatDisplayDate } from "@/lib/format"
@@ -79,12 +80,16 @@ type ResultForm = {
   diagnosis: string
   diagnosisTouched: boolean
   notes: string
+  suggestedMedicineId: string
+  suggestedMedicineTouched: boolean
 }
 
 type TreatmentSuggestion = {
   sheepId: string
   sheepTag: string
   medicineType: string
+  medicineId: string
+  medicineName: string
   message: string
 }
 
@@ -134,6 +139,7 @@ export default function AnalysisPage() {
   const [analyses, setAnalyses] = useState<ApiAnalysis[]>([])
   const [sheep, setSheep] = useState<ApiSheep[]>([])
   const [locations, setLocations] = useState<ApiLocation[]>([])
+  const [meds, setMeds] = useState<ApiMedicine[]>([])
   const [loadingTypes, setLoadingTypes] = useState(true)
   const [loadingAnalyses, setLoadingAnalyses] = useState(true)
 
@@ -167,6 +173,8 @@ export default function AnalysisPage() {
     diagnosis: "",
     diagnosisTouched: false,
     notes: "",
+    suggestedMedicineId: "",
+    suggestedMedicineTouched: false,
   })
   const [savingResult, setSavingResult] = useState(false)
   const [resultError, setResultError] = useState<string | null>(null)
@@ -233,17 +241,19 @@ export default function AnalysisPage() {
       setLoadingAnalyses(true)
       setLoadError(null)
       try {
-        const [typesRes, analysesRes, sheepRes, locsRes] = await Promise.all([
+        const [typesRes, analysesRes, sheepRes, locsRes, medsRes] = await Promise.all([
           fetchAnalysisTypes(1, 200),
           fetchAnalyses(1, 300),
           fetchSheep({ page: 1, limit: 200 }),
           fetchLocations(200).catch(() => [] as ApiLocation[]),
+          fetchMedicines(1, 200).catch(() => ({ items: [] as ApiMedicine[] })),
         ])
         if (cancelled) return
         setTypes(typesRes.items)
         setAnalyses(analysesRes.items)
         setSheep(sheepRes.items)
         setLocations(locsRes)
+        setMeds(medsRes.items)
       } catch (err) {
         if (!cancelled) {
           setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los datos")
@@ -465,6 +475,8 @@ export default function AnalysisPage() {
       diagnosis: a.diagnosis ?? "",
       diagnosisTouched: !!a.diagnosis,
       notes: a.notes ?? "",
+      suggestedMedicineId: "",
+      suggestedMedicineTouched: false,
     })
     setResultError(null)
   }
@@ -491,6 +503,27 @@ export default function AnalysisPage() {
   }, [resultTarget, resultForm])
   const liveRecommendation = livePreview ? analysisRecommendation(livePreview) : null
 
+  // Medicines matching the recommended type (fallback to the whole catalog),
+  // used to suggest a concrete treatment from the diagnosis.
+  const suggestedMeds = useMemo(() => {
+    if (!liveRecommendation?.medicineType) return []
+    const ofType = meds.filter((m) => m.type === liveRecommendation.medicineType)
+    return ofType.length > 0 ? ofType : meds
+  }, [meds, liveRecommendation?.medicineType])
+
+  // Auto-select the first matching medicine when a treatment becomes recommended
+  // and the user hasn't picked one manually.
+  useEffect(() => {
+    if (!liveRecommendation?.needsTreatment) return
+    if (resultForm.suggestedMedicineTouched) return
+    const first = suggestedMeds[0]?.id ?? ""
+    if (first && resultForm.suggestedMedicineId !== first) {
+      setResultForm((prev) =>
+        prev.suggestedMedicineTouched ? prev : { ...prev, suggestedMedicineId: first },
+      )
+    }
+  }, [liveRecommendation?.needsTreatment, suggestedMeds, resultForm.suggestedMedicineTouched, resultForm.suggestedMedicineId])
+
   async function confirmResult(e: React.FormEvent) {
     e.preventDefault()
     if (!resultTarget) return
@@ -515,6 +548,9 @@ export default function AnalysisPage() {
         notes: resultForm.notes.trim() || null,
       })
       const rec = analysisRecommendation(saved)
+      const chosenMed =
+        meds.find((m) => m.id === resultForm.suggestedMedicineId) ??
+        (rec.medicineType ? meds.find((m) => m.type === rec.medicineType) : undefined)
       setResultTarget(null)
       await loadAnalyses()
       if (rec.needsTreatment && rec.medicineType) {
@@ -522,6 +558,8 @@ export default function AnalysisPage() {
           sheepId: saved.sheepId,
           sheepTag: saved.sheep?.tag ?? sheepTag(saved.sheepId),
           medicineType: rec.medicineType,
+          medicineId: chosenMed?.id ?? "",
+          medicineName: chosenMed?.name ?? "",
           message: rec.message,
         })
       }
@@ -539,6 +577,7 @@ export default function AnalysisPage() {
       medType: treatment.medicineType,
       date: today(),
     })
+    if (treatment.medicineId) qs.set("medId", treatment.medicineId)
     router.push(`/medicines?${qs.toString()}`)
   }
 
@@ -736,7 +775,8 @@ export default function AnalysisPage() {
             <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
             <p>
               <strong>{treatment.sheepTag}:</strong> {treatment.message} Tratamiento sugerido:{" "}
-              <strong>{labelMedicineType(treatment.medicineType)}</strong>.
+              <strong>{treatment.medicineName || labelMedicineType(treatment.medicineType)}</strong>
+              {treatment.medicineName ? ` (${labelMedicineType(treatment.medicineType)})` : ""}.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1297,13 +1337,40 @@ export default function AnalysisPage() {
           </Field>
 
           {liveRecommendation?.needsTreatment && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-              <p>
-                {liveRecommendation.message}
-                {liveRecommendation.medicineType
-                  ? ` Al guardar podrás programar ${labelMedicineType(liveRecommendation.medicineType)}.`
-                  : ""}
+            <div className="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+              <div className="flex items-start gap-2">
+                <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <p>{liveRecommendation.message}</p>
+              </div>
+              {suggestedMeds.length > 0 ? (
+                <Field label="Tratamiento sugerido" htmlFor="result-suggested-med">
+                  <Select
+                    id="result-suggested-med"
+                    value={resultForm.suggestedMedicineId}
+                    onChange={(e) =>
+                      setResultForm({
+                        ...resultForm,
+                        suggestedMedicineId: e.target.value,
+                        suggestedMedicineTouched: true,
+                      })
+                    }
+                  >
+                    <option value="">Sin sugerencia específica</option>
+                    {suggestedMeds.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} — {labelMedicineType(m.type)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : (
+                <p className="text-xs text-amber-700">
+                  No hay medicamentos en el catálogo para sugerir. Podrás programarlo manualmente al
+                  guardar.
+                </p>
+              )}
+              <p className="text-xs text-amber-700">
+                Al guardar podrás programar la aplicación con un clic.
               </p>
             </div>
           )}
