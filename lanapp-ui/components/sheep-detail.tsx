@@ -13,6 +13,7 @@ import {
   import { DataTable } from "@/components/ui/data-table"
 import { SheepPesosTab } from "@/components/sheep-pesos-tab"
 import { SheepMontasTab } from "@/components/sheep-montas-tab"
+import { SheepReproStats } from "@/components/sheep-repro-stats"
 import { SheepFamachaTab } from "@/components/sheep-famacha-tab"
 import { SheepGenealogy } from "@/components/sheep-genealogy"
 import { SheepFormDrawer } from "@/components/sheep-form-drawer"
@@ -298,7 +299,10 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
           {tab === "peso" && <SheepPesosTab sheepId={sheep.id} />}
 
           {tab === "montas" && (
-            <SheepMontasTab sheep={sheep} onUpdated={onRefresh} />
+            <div className="flex flex-col gap-6">
+              <SheepReproStats sheep={sheep} />
+              <SheepMontasTab sheep={sheep} onUpdated={onRefresh} />
+            </div>
           )}
 
           {tab === "famacha" && <SheepFamachaTab sheepId={sheep.id} />}

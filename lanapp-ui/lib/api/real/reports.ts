@@ -41,6 +41,14 @@ const reportColumns: Record<ReportType, { key: string; label: string }[]> = {
     { key: "tasa", label: "Tasa de preñez" },
     { key: "ultimaMonta", label: "Última monta" },
   ],
+  madres: [
+    { key: "madre", label: "Madre" },
+    { key: "crias", label: "Crías" },
+    { key: "partos", label: "Partos" },
+    { key: "montas", label: "Montas totales" },
+    { key: "tasa", label: "Tasa de preñez" },
+    { key: "ultimoParto", label: "Último parto" },
+  ],
   famacha: [
     { key: "arete", label: "Arete" },
     { key: "nombre", label: "Nombre" },
