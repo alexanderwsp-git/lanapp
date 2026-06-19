@@ -621,10 +621,11 @@ export default function MedicinesPage() {
                       type="button"
                       disabled={statusUpdating === a.id}
                       onClick={() => openApply(a)}
-                      className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-500 disabled:opacity-50"
+                      className="rounded p-1.5 text-green-600 hover:bg-green-50 hover:text-green-700 disabled:opacity-50"
+                      title="Marcar como aplicado"
+                      aria-label="Marcar como aplicado"
                     >
-                      <CheckIcon className="h-4 w-4" />
-                      Aplicado
+                      <CheckIcon className="h-5 w-5" />
                     </button>
                     <button
                       type="button"
