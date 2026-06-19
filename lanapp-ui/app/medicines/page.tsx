@@ -542,7 +542,6 @@ export default function MedicinesPage() {
         loading={opts.loading}
         loadingText={opts.loadingText ?? "Cargando..."}
         empty={opts.empty}
-        rowClassName={(a) => (isDue(a) ? "bg-amber-50/60" : undefined)}
         columns={[
           {
             key: "medicine",
