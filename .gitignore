@@ -19,6 +19,9 @@ packages/*/dist/
 # OS
 Thumbs.db
 
+# Referencias de diseño (no versionar)
+**/public/design-ref/
+
 logs/
 
 **/logs/**
