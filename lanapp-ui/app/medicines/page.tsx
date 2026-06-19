@@ -254,6 +254,44 @@ export default function MedicinesPage() {
     }
   }, [])
 
+  // Prefill the schedule drawer when arriving from a treatment recommendation
+  // (e.g. /medicines?scheduleSheep=<id>&medType=Dewormer&date=YYYY-MM-DD).
+  const [pendingPrefill, setPendingPrefill] = useState<{
+    sheepId: string
+    medType: string
+    date: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const scheduleSheep = params.get("scheduleSheep")
+    if (!scheduleSheep) return
+    setPendingPrefill({
+      sheepId: scheduleSheep,
+      medType: params.get("medType") ?? "",
+      date: params.get("date") ?? today(),
+    })
+    window.history.replaceState({}, "", "/medicines")
+  }, [])
+
+  useEffect(() => {
+    if (!pendingPrefill || meds.length === 0) return
+    const med = pendingPrefill.medType
+      ? meds.find((m) => m.type === pendingPrefill.medType)
+      : undefined
+    setScheduleForm({
+      medicineId: med?.id ?? "",
+      sheepId: pendingPrefill.sheepId,
+      scheduledDate: pendingPrefill.date || today(),
+      notes: "",
+    })
+    setScheduleError(null)
+    setScheduleOpen(true)
+    setTab("scheduled")
+    setPendingPrefill(null)
+  }, [pendingPrefill, meds])
+
   const medicineOptions = useMemo(
     () => meds.map((m) => ({ value: m.id, label: m.name, sublabel: labelMedicineType(m.type) })),
     [meds],

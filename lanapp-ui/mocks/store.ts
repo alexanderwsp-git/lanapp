@@ -1,5 +1,5 @@
 import type { ApiBreedingCycle } from "@/lib/api/breeding-cycle"
-import type { ApiHealthCheck } from "@/lib/api/health-check"
+import type { ApiAnalysis, ApiAnalysisType } from "@/lib/analysis/types"
 import type { ApiMating } from "@/lib/api/mating"
 import type { ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
 import type { ApiWeight } from "@/lib/api/weight"
@@ -19,7 +19,8 @@ export type MockStore = {
   medicines: ApiMedicine[]
   medicineApplications: ApiMedicineApplication[]
   weights: ApiWeight[]
-  healthChecks: ApiHealthCheck[]
+  analysisTypes: ApiAnalysisType[]
+  analyses: ApiAnalysis[]
   matings: ApiMating[]
   pregnancyChecks: ApiPregnancyCheck[]
   breedingCycles: ApiBreedingCycle[]
@@ -95,6 +96,15 @@ export function enrichBreedingCycle(cycle: ApiBreedingCycle): ApiBreedingCycle {
       ? { id: ewe.id, tag: ewe.tag, name: ewe.name, currentLocationId: ewe.currentLocationId }
       : null,
     ram: ram ? { id: ram.id, tag: ram.tag, name: ram.name } : null,
+  }
+}
+
+export function enrichAnalysis(record: ApiAnalysis): ApiAnalysis {
+  const analysisType = getMockStore().analysisTypes.find((t) => t.id === record.analysisTypeId)
+  return {
+    ...record,
+    analysisType: analysisType ?? null,
+    sheep: sheepRef(record.sheepId),
   }
 }
 

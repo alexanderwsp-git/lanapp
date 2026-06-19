@@ -9,6 +9,7 @@ import {
   MapPinIcon,
   CalendarDaysIcon,
   BeakerIcon,
+  ClipboardDocumentCheckIcon,
   Cog6ToothIcon,
   ChartBarIcon,
   BellAlertIcon,
@@ -29,6 +30,7 @@ const primaryNav: NavItem[] = [
   { label: "Planificador", href: "/planner", icon: CalendarDaysIcon },
   { label: "Alertas destete", href: "/weaning", icon: BellAlertIcon },
   { label: "Medicamentos", href: "/medicines", icon: BeakerIcon },
+  { label: "Análisis", href: "/analysis", icon: ClipboardDocumentCheckIcon },
 ]
 
 const reportsNav: NavItem[] = [
@@ -37,7 +39,6 @@ const reportsNav: NavItem[] = [
   { label: "Montas", href: "/reports/montas", icon: ChartBarIcon },
   { label: "Reproductores", href: "/reports/reproductores", icon: ChartBarIcon },
   { label: "Madres", href: "/reports/madres", icon: ChartBarIcon },
-  { label: "FAMACHA", href: "/reports/famacha", icon: ChartBarIcon },
 ]
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
