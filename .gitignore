@@ -22,6 +22,9 @@ Thumbs.db
 # Referencias de diseño (no versionar)
 **/public/design-ref/
 
+# Capturas de verificación generadas en la raíz (no versionar)
+/*.png
+
 logs/
 
 **/logs/**
