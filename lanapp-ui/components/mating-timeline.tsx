@@ -1,12 +1,11 @@
 import type { ReactNode } from "react"
 import {
   CalendarDaysIcon,
-  ChatBubbleBottomCenterTextIcon,
   HeartIcon,
   TagIcon,
 } from "@heroicons/react/20/solid"
 import type { ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
-import { formatDisplayDate } from "@/lib/format"
+import { formatDisplayDate, formatRelativeDate } from "@/lib/format"
 import { labelDiagnosisType } from "@/lib/labels/breeding"
 import {
   PregnancyCheckKind,
@@ -55,17 +54,19 @@ function TypePill({ label }: { label: string }) {
   )
 }
 
-function NoteCallout({ note }: { note: string }) {
+function NoteComment({ note, author, date }: { note: string; author?: string; date?: string }) {
   return (
-    <div className="mt-2.5 flex gap-2 rounded-md border-l-4 border-indigo-400 bg-indigo-50/70 py-2 pr-3 pl-2.5">
-      <ChatBubbleBottomCenterTextIcon
-        aria-hidden="true"
-        className="mt-0.5 size-4 shrink-0 text-indigo-500"
-      />
-      <div className="min-w-0">
-        <p className="text-[11px] font-semibold tracking-wide text-indigo-700 uppercase">Nota</p>
-        <p className="mt-0.5 text-sm whitespace-pre-line text-gray-700">{note}</p>
-      </div>
+    <div className="mt-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm">
+      {(author || date) && (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <span className="text-sm">
+            <span className="font-semibold text-gray-900">{author ?? "Nota"}</span>
+            <span className="text-gray-500"> registró</span>
+          </span>
+          {date && <span className="whitespace-nowrap text-xs text-gray-400">{formatRelativeDate(date)}</span>}
+        </div>
+      )}
+      <p className="text-sm whitespace-pre-line text-gray-600">{note}</p>
     </div>
   )
 }
@@ -189,16 +190,20 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                         <HeartIcon aria-hidden="true" className="size-5 text-pink-500" />
                       </FeedIcon>
                       <div className="min-w-0 flex-1 py-0.5">
-                        <p className="text-sm text-gray-500">
-                          <span className="font-medium text-gray-900">Monta registrada</span>
-                          {item.partnerLabel && (
-                            <>
-                              {" "}
-                              · <span className="font-medium text-gray-900">{item.partnerLabel}</span>
-                            </>
-                          )}
-                          <span className="whitespace-nowrap"> · {formatDisplayDate(item.date)}</span>
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm text-gray-500">
+                            <span className="font-medium text-gray-900">Monta registrada</span>
+                            {item.partnerLabel && (
+                              <>
+                                {" "}
+                                · <span className="font-medium text-gray-900">{item.partnerLabel}</span>
+                              </>
+                            )}
+                          </p>
+                          <span className="whitespace-nowrap text-sm text-gray-500">
+                            {formatDisplayDate(item.date)}
+                          </span>
+                        </div>
                       </div>
                     </>
                   )}
@@ -209,21 +214,23 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                         <TagIcon aria-hidden="true" className="size-5 text-gray-500" />
                       </FeedIcon>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm text-gray-500">
-                          <span className="font-medium text-gray-900">Diagnóstico</span>
-                          <span className="whitespace-nowrap"> · {formatDisplayDate(item.check.checkDate)}</span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          {item.check.checkType && (
-                            <TypePill label={labelDiagnosisType(item.check.checkType)} />
-                          )}
-                          <ResultPill
-                            label={diagnosisResultLabel(item.check)}
-                            dotClass={diagnosisResultDot(item.check)}
-                          />
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="text-sm font-medium text-gray-900">Diagnóstico</span>
+                            {item.check.checkType && (
+                              <TypePill label={labelDiagnosisType(item.check.checkType)} />
+                            )}
+                            <ResultPill
+                              label={diagnosisResultLabel(item.check)}
+                              dotClass={diagnosisResultDot(item.check)}
+                            />
+                          </div>
+                          <span className="whitespace-nowrap text-sm text-gray-500">
+                            {formatDisplayDate(item.check.checkDate)}
+                          </span>
                         </div>
                         {item.check.nextCheckDate && (
-                          <p className="mt-2 text-sm text-gray-600">
+                          <p className="mt-1.5 text-sm text-gray-600">
                             Próximo chequeo: {formatDisplayDate(item.check.nextCheckDate)}
                             {hasConfirmedPregnancy(item.priorChecks) && !item.check.isPregnant && (
                               <span className="text-gray-500"> · La oveja sigue preñada</span>
@@ -231,7 +238,11 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                           </p>
                         )}
                         {displayNotes(item.check.notes) && (
-                          <NoteCallout note={displayNotes(item.check.notes)!} />
+                          <NoteComment
+                            note={displayNotes(item.check.notes)!}
+                            author={item.check.checkType ? labelDiagnosisType(item.check.checkType) : "Chequeo"}
+                            date={item.check.checkDate}
+                          />
                         )}
                       </div>
                     </>
@@ -243,15 +254,21 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                         <CalendarDaysIcon aria-hidden="true" className="size-5 text-indigo-500" />
                       </FeedIcon>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm text-gray-500">
-                          <span className="font-medium text-gray-900">Parto registrado</span>
-                          <span className="whitespace-nowrap"> · {formatDisplayDate(item.check.checkDate)}</span>
-                        </div>
-                        <div className="mt-2">
-                          <ResultPill label="Parto" dotClass="fill-indigo-500" />
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="text-sm font-medium text-gray-900">Parto registrado</span>
+                            <ResultPill label="Parto" dotClass="fill-indigo-500" />
+                          </div>
+                          <span className="whitespace-nowrap text-sm text-gray-500">
+                            {formatDisplayDate(item.check.checkDate)}
+                          </span>
                         </div>
                         {displayNotes(item.check.notes) && (
-                          <NoteCallout note={displayNotes(item.check.notes)!} />
+                          <NoteComment
+                            note={displayNotes(item.check.notes)!}
+                            author="Parto"
+                            date={item.check.checkDate}
+                          />
                         )}
                       </div>
                     </>

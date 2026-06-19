@@ -29,4 +29,22 @@ export const seedMatings: ApiMating[] = [
     expectedBirthDate: addDays("2026-03-16", 147),
     status: MatingStatus.PENDING,
   },
+  {
+    id: IDS.matings.m4,
+    maleId: IDS.sheep.negro,
+    femaleId: IDS.sheep.luna,
+    matingDate: "2025-09-02T00:00:00.000Z",
+    expectedBirthDate: addDays("2025-09-02", 147),
+    status: MatingStatus.EFFECTIVE,
+    notes: "Ciclo anterior — parto sin complicaciones.",
+  },
+  {
+    id: IDS.matings.m5,
+    maleId: IDS.sheep.toro,
+    femaleId: IDS.sheep.rosa,
+    matingDate: "2026-01-20T00:00:00.000Z",
+    expectedBirthDate: addDays("2026-01-20", 147),
+    status: MatingStatus.EFFECTIVE,
+    notes: "Requirió segundo chequeo para confirmar.",
+  },
 ]

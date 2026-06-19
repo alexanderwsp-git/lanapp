@@ -54,7 +54,7 @@ import { formatDisplayDate, formatAgeDays, toDateInputValue } from "@/lib/format
 import { labelBreedingResult, labelDiagnosisType, diagnosisTypesForForms } from "@/lib/labels/breeding"
 import { labelMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
 import { labelCategory } from "@/lib/labels/sheep"
-import { HeartIcon, ChatBubbleBottomCenterTextIcon } from "@heroicons/react/24/outline"
+import { HeartIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
@@ -508,8 +508,7 @@ export function SheepMontasTab({
                               </p>
                             )}
                             {noteSnippet && (
-                              <div className="mt-0.5 flex items-start gap-1.5 rounded-md border-l-2 border-indigo-300 bg-indigo-50/70 py-1 pr-2 pl-1.5">
-                                <ChatBubbleBottomCenterTextIcon className="mt-0.5 size-3.5 shrink-0 text-indigo-500" />
+                              <div className="mt-0.5 rounded-md border border-gray-200 bg-gray-50 px-2 py-1">
                                 <p className="line-clamp-2 text-xs text-gray-600">{noteSnippet}</p>
                               </div>
                             )}
