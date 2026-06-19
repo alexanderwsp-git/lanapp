@@ -20,7 +20,6 @@ import {
 } from "@/lib/analysis/types"
 import {
   bulkScheduleAnalyses,
-  createAnalysis,
   createAnalysisType,
   deleteAnalysis,
   deleteAnalysisType,
@@ -53,7 +52,6 @@ import {
   CheckBadgeIcon,
   XCircleIcon,
   ClockIcon,
-  UserGroupIcon,
   ArrowRightIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline"
@@ -146,6 +144,17 @@ export default function AnalysisPage() {
   const [savingBulk, setSavingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [bulkResult, setBulkResult] = useState<BulkResult | null>(null)
+
+  // Batch result entry (record results for many scheduled analyses at once).
+  const [batchOpen, setBatchOpen] = useState(false)
+  const [batchTypeId, setBatchTypeId] = useState("")
+  const [batchDate, setBatchDate] = useState(today())
+  const [batchEntries, setBatchEntries] = useState<
+    Record<string, { score: number | null; value: string; diagnosis: string; diagnosisTouched: boolean }>
+  >({})
+  const [savingBatch, setSavingBatch] = useState(false)
+  const [batchError, setBatchError] = useState<string | null>(null)
+  const [batchResult, setBatchResult] = useState<{ saved: number; needTreatment: number } | null>(null)
 
   const [resultTarget, setResultTarget] = useState<ApiAnalysis | null>(null)
   const [resultForm, setResultForm] = useState<ResultForm>({
@@ -269,10 +278,6 @@ export default function AnalysisPage() {
   const typeOptions = useMemo(
     () => types.map((t) => ({ value: t.id, label: t.name, sublabel: labelAnalysisType(t.type) })),
     [types],
-  )
-  const sheepOptions = useMemo(
-    () => sheep.map((s) => ({ value: s.id, label: s.tag, sublabel: s.name ?? undefined })),
-    [sheep],
   )
 
   function typeName(id: string) {
@@ -411,6 +416,116 @@ export default function AnalysisPage() {
       setBulkError(err instanceof Error ? err.message : "No se pudo programar en lote")
     } finally {
       setSavingBulk(false)
+    }
+  }
+
+  // --- Batch result entry ---
+  // Types that actually have pending analyses, with a count for the selector.
+  const batchTypeOptions = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; type: AnalysisType; count: number }>()
+    for (const a of scheduledAnalyses) {
+      const t = a.analysisType
+      if (!t) continue
+      const existing = map.get(t.id)
+      if (existing) existing.count++
+      else map.set(t.id, { id: t.id, name: t.name, type: t.type, count: 1 })
+    }
+    return Array.from(map.values())
+  }, [scheduledAnalyses])
+
+  const batchRows = useMemo(
+    () => scheduledAnalyses.filter((a) => a.analysisTypeId === batchTypeId),
+    [scheduledAnalyses, batchTypeId],
+  )
+  const batchIsFamacha =
+    batchTypeOptions.find((t) => t.id === batchTypeId)?.type === AnalysisType.FAMACHA
+
+  function openBatch() {
+    const firstType = batchTypeOptions[0]?.id ?? ""
+    setBatchTypeId(firstType)
+    setBatchDate(today())
+    setBatchEntries({})
+    setBatchError(null)
+    setBatchResult(null)
+    setBatchOpen(true)
+  }
+
+  function batchSelectScore(analysisId: string, score: number) {
+    setBatchEntries((prev) => {
+      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false }
+      return {
+        ...prev,
+        [analysisId]: {
+          ...entry,
+          score,
+          diagnosis: entry.diagnosisTouched ? entry.diagnosis : famachaDiagnosis(score),
+        },
+      }
+    })
+  }
+
+  function batchSetValue(analysisId: string, value: string) {
+    setBatchEntries((prev) => {
+      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false }
+      return { ...prev, [analysisId]: { ...entry, value } }
+    })
+  }
+
+  function batchSetDiagnosis(analysisId: string, diagnosis: string) {
+    setBatchEntries((prev) => {
+      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false }
+      return { ...prev, [analysisId]: { ...entry, diagnosis, diagnosisTouched: true } }
+    })
+  }
+
+  // How many rows in the current batch have a usable value entered.
+  const batchFilledCount = useMemo(() => {
+    return batchRows.reduce((n, a) => {
+      const entry = batchEntries[a.id]
+      if (!entry) return n
+      const ok = batchIsFamacha ? entry.score != null : entry.value.trim().length > 0
+      return ok ? n + 1 : n
+    }, 0)
+  }, [batchRows, batchEntries, batchIsFamacha])
+
+  async function saveBatch(e: React.FormEvent) {
+    e.preventDefault()
+    setBatchError(null)
+    setBatchResult(null)
+    if (!batchTypeId) return setBatchError("Selecciona un tipo de análisis")
+    if (!batchDate) return setBatchError("Indica la fecha")
+
+    const toSave = batchRows.filter((a) => {
+      const entry = batchEntries[a.id]
+      if (!entry) return false
+      return batchIsFamacha ? entry.score != null : entry.value.trim().length > 0
+    })
+    if (toSave.length === 0)
+      return setBatchError("Ingresa al menos un resultado para guardar")
+
+    setSavingBatch(true)
+    try {
+      let saved = 0
+      let needTreatment = 0
+      for (const a of toSave) {
+        const entry = batchEntries[a.id]
+        const completed = await markAnalysisCompleted(a, {
+          completedDate: batchDate,
+          famachaScore: batchIsFamacha ? entry.score : null,
+          resultValue: batchIsFamacha ? String(entry.score) : entry.value.trim(),
+          diagnosis: entry.diagnosis.trim() || null,
+          notes: null,
+        })
+        saved++
+        if (analysisRecommendation(completed).needsTreatment) needTreatment++
+      }
+      setBatchResult({ saved, needTreatment })
+      await loadAnalyses()
+      setBatchEntries({})
+    } catch (err) {
+      setBatchError(err instanceof Error ? err.message : "No se pudieron guardar los resultados")
+    } finally {
+      setSavingBatch(false)
     }
   }
 
@@ -1123,6 +1238,155 @@ export default function AnalysisPage() {
               )}
             </div>
           </div>
+        </form>
+      </Drawer>
+
+      {/* Batch result drawer — record results for many scheduled analyses at once */}
+      <Drawer
+        open={batchOpen}
+        onClose={() => setBatchOpen(false)}
+        title="Registrar resultados"
+        description="Captura el resultado de cada oveja con análisis pendiente."
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setBatchOpen(false)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cerrar
+            </button>
+            <button
+              type="submit"
+              form="batch-form"
+              disabled={savingBatch || batchFilledCount === 0}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60"
+            >
+              {savingBatch && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              Guardar {batchFilledCount > 0 ? `(${batchFilledCount})` : ""}
+            </button>
+          </>
+        }
+      >
+        <form id="batch-form" onSubmit={saveBatch} className="flex flex-col gap-4">
+          {batchError && (
+            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{batchError}</div>
+          )}
+          {batchResult && (
+            <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              {batchResult.saved} resultado(s) guardado(s).
+              {batchResult.needTreatment > 0
+                ? ` ${batchResult.needTreatment} requiere(n) tratamiento — revísalos en el historial para programarlo.`
+                : ""}
+            </div>
+          )}
+          {batchTypeOptions.length === 0 ? (
+            <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-4 text-center text-sm text-gray-500">
+              No hay análisis programados pendientes.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Tipo de análisis" htmlFor="batch-type">
+                  <Select
+                    id="batch-type"
+                    value={batchTypeId}
+                    onChange={(e) => {
+                      setBatchTypeId(e.target.value)
+                      setBatchEntries({})
+                      setBatchResult(null)
+                    }}
+                  >
+                    {batchTypeOptions.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.count})
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Fecha" required htmlFor="batch-date">
+                  <TextInput
+                    id="batch-date"
+                    type="date"
+                    value={batchDate}
+                    onChange={(e) => setBatchDate(e.target.value)}
+                    required
+                  />
+                </Field>
+              </div>
+
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-gray-700">
+                  Ovejas pendientes ({batchRows.length})
+                </p>
+                <div className="flex flex-col divide-y divide-gray-100 overflow-hidden rounded-md border border-gray-200">
+                  {batchRows.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-sm text-gray-500">
+                      Sin análisis pendientes de este tipo.
+                    </p>
+                  ) : (
+                    batchRows.map((a) => {
+                      const entry = batchEntries[a.id]
+                      return (
+                        <div key={a.id} className="flex flex-col gap-2 px-3 py-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium text-gray-900">
+                                {sheepTag(a.sheepId)}
+                              </span>
+                              {a.sheep?.name && (
+                                <span className="block truncate text-xs text-gray-500">
+                                  {a.sheep.name}
+                                </span>
+                              )}
+                            </span>
+                            {batchIsFamacha ? (
+                              <div className="flex gap-1">
+                                {SCORES.map((score) => {
+                                  const active = entry?.score === score
+                                  const style = scoreButton[score]
+                                  return (
+                                    <button
+                                      key={score}
+                                      type="button"
+                                      onClick={() => batchSelectScore(a.id, score)}
+                                      className={`h-8 w-8 rounded-md border text-sm font-semibold ${
+                                        active ? style.active : style.idle
+                                      }`}
+                                    >
+                                      {score}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <TextInput
+                                aria-label={`Resultado de ${sheepTag(a.sheepId)}`}
+                                value={entry?.value ?? ""}
+                                onChange={(e) => batchSetValue(a.id, e.target.value)}
+                                placeholder="Resultado"
+                                className="max-w-[10rem]"
+                              />
+                            )}
+                          </div>
+                          {(batchIsFamacha ? entry?.score != null : !!entry?.value.trim()) && (
+                            <TextInput
+                              aria-label={`Diagnóstico de ${sheepTag(a.sheepId)}`}
+                              value={entry?.diagnosis ?? ""}
+                              onChange={(e) => batchSetDiagnosis(a.id, e.target.value)}
+                              placeholder="Diagnóstico (opcional)"
+                            />
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </form>
       </Drawer>
 
