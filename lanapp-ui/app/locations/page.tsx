@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
-import { Modal } from "@/components/ui/modal"
+import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
@@ -206,13 +206,32 @@ export default function LocationsPage() {
         </div>
       )}
 
-      <Modal
+      <Drawer
         open={formOpen}
         onClose={() => setFormOpen(false)}
         title={editing ? "Editar ubicación" : "Nueva ubicación"}
         description="Define el potrero o área de manejo."
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setFormOpen(false)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="location-form"
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+            >
+              {saving ? "Guardando…" : editing ? "Guardar" : "Crear"}
+            </button>
+          </>
+        }
       >
-        <form onSubmit={save} className="flex flex-col gap-4">
+        <form id="location-form" onSubmit={save} className="flex flex-col gap-4">
           <Field label="Nombre" required htmlFor="nombre">
             <TextInput
               id="nombre"
@@ -239,24 +258,8 @@ export default function LocationsPage() {
           <Field label="Descripción" htmlFor="desc">
             <Textarea id="desc" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
-          <div className="mt-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setFormOpen(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {saving ? "Guardando…" : editing ? "Guardar" : "Crear"}
-            </button>
-          </div>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmDialog
         open={!!toDelete}

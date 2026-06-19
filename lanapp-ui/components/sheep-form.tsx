@@ -73,13 +73,41 @@ function formFromSheep(sheep: ApiSheep): FormState {
   }
 }
 
-export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" | "edit" }) {
+export function SheepForm({
+  initial,
+  mode,
+  variant = "page",
+  formId,
+  onSuccess,
+  onCancel,
+  onSavingChange,
+}: {
+  initial?: ApiSheep
+  mode: "new" | "edit"
+  variant?: "page" | "drawer"
+  formId?: string
+  onSuccess?: (sheepId: string) => void
+  onCancel?: () => void
+  onSavingChange?: (saving: boolean) => void
+}) {
   const router = useRouter()
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [locations, setLocations] = useState<ApiLocation[]>([])
   const [form, setForm] = useState<FormState>(() => (initial ? formFromSheep(initial) : emptyForm()))
   const [initialStatus] = useState<SheepStatus | null>(initial?.status ?? null)
+  const inDrawer = variant === "drawer"
+
+  // Reset form when the target sheep / mode changes (drawer reuse across rows).
+  useEffect(() => {
+    setForm(initial ? formFromSheep(initial) : emptyForm())
+    setError(null)
+  }, [initial, mode])
+
+  function setSaving(value: boolean) {
+    setSavingState(value)
+    onSavingChange?.(value)
+  }
+  const [saving, setSavingState] = useState(false)
 
   useEffect(() => {
     fetchLocations()
@@ -117,8 +145,12 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
       setSaving(true)
       try {
         const created = await createSheep(parsed.data as SheepCreate)
-        router.push(`/sheep/${created.id}`)
-        router.refresh()
+        if (onSuccess) {
+          onSuccess(created.id)
+        } else {
+          router.push(`/sheep/${created.id}`)
+          router.refresh()
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudo crear la oveja")
       } finally {
@@ -141,8 +173,12 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
       if (initialStatus !== null && form.status !== initialStatus) {
         await updateSheepStatus(initial.id, form.status)
       }
-      router.push(`/sheep/${initial.id}`)
-      router.refresh()
+      if (onSuccess) {
+        onSuccess(initial.id)
+      } else {
+        router.push(`/sheep/${initial.id}`)
+        router.refresh()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar los cambios")
     } finally {
@@ -151,11 +187,15 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg bg-white shadow">
+    <form
+      id={formId}
+      onSubmit={handleSubmit}
+      className={inDrawer ? "" : "rounded-lg bg-white shadow"}
+    >
       {error && (
-        <div className="mx-6 mt-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className={inDrawer ? "mb-5 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700" : "mx-6 mt-6 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700"}>{error}</div>
       )}
-      <div className="grid grid-cols-1 gap-x-6 gap-y-5 p-6 sm:grid-cols-2">
+      <div className={inDrawer ? "grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2" : "grid grid-cols-1 gap-x-6 gap-y-5 p-6 sm:grid-cols-2"}>
         <Field label="Arete" required htmlFor="tag">
           <TextInput
             id="tag"
@@ -303,35 +343,41 @@ export function SheepForm({ initial, mode }: { initial?: ApiSheep; mode: "new" |
         )}
       </div>
       {mode === "new" && (
-        <p className="px-6 text-xs text-gray-500">
+        <p className={inDrawer ? "mt-5 text-xs text-gray-500" : "px-6 text-xs text-gray-500"}>
           Categoría y estado los calcula el servidor al guardar. El peso inicial se registra como
           primer pesaje en la pestaña Pesos.
         </p>
       )}
       {mode === "edit" && (
-        <p className="px-6 text-xs text-gray-500">
+        <p className={inDrawer ? "mt-5 text-xs text-gray-500" : "px-6 text-xs text-gray-500"}>
           Para actualizar el peso, usa la pestaña Pesos en el detalle de la oveja.
         </p>
       )}
-      <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
-        <button
-          type="button"
-          onClick={() => router.push(mode === "edit" && initial ? `/sheep/${initial.id}` : "/sheep")}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-        >
-          {saving && (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          )}
-          {mode === "new" ? "Crear oveja" : "Guardar cambios"}
-        </button>
-      </div>
+      {!inDrawer && (
+        <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+          <button
+            type="button"
+            onClick={() =>
+              onCancel
+                ? onCancel()
+                : router.push(mode === "edit" && initial ? `/sheep/${initial.id}` : "/sheep")
+            }
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+          >
+            {saving && (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            )}
+            {mode === "new" ? "Crear oveja" : "Guardar cambios"}
+          </button>
+        </div>
+      )}
     </form>
   )
 }

@@ -36,6 +36,22 @@ export function formatDisplayDate(value: string | Date | undefined | null): stri
   return d.toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" })
 }
 
+/** ISO date → relative phrase in Spanish (e.g. "hoy", "hace 3 días", "hace 2 meses"). */
+export function formatRelativeDate(value: string | Date | undefined | null): string {
+  if (!value) return ""
+  const d = typeof value === "string" ? new Date(value) : value
+  if (Number.isNaN(d.getTime())) return ""
+  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000)
+  if (days < 0) return formatDisplayDate(d)
+  if (days === 0) return "hoy"
+  if (days === 1) return "ayer"
+  if (days < 30) return `hace ${days} días`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `hace ${months} ${months === 1 ? "mes" : "meses"}`
+  const years = Math.floor(days / 365)
+  return `hace ${years} ${years === 1 ? "año" : "años"}`
+}
+
 /** Coerce API decimal strings to a finite number. */
 export function toKg(value: unknown): number | null {
   if (value == null || value === "") return null

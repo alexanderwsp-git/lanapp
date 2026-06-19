@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { EmptyState } from "@/components/ui/empty-state"
+  import { EmptyState } from "@/components/ui/empty-state"
+  import { DataTable } from "@/components/ui/data-table"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import { createHealthCheck, fetchHealthChecksBySheep, type HealthCheckCreatePayload } from "@/lib/api/health-check"
 import { formatDisplayDate } from "@/lib/format"
@@ -147,39 +148,22 @@ export function SheepFamachaTab({ sheepId }: { sheepId: string }) {
         </div>
       </form>
 
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        {loading ? (
-          <p className="p-8 text-center text-sm text-gray-500">Cargando chequeos…</p>
-        ) : rows.length === 0 ? (
-          <EmptyState icon={ChartBarIcon} title="Sin chequeos" description="No hay registros FAMACHA." />
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {["Fecha", "Puntaje", "Notas"].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rows.map((f) => (
-                <tr key={f.id}>
-                  <td className="px-4 py-3 text-sm text-gray-900">{formatDisplayDate(f.checkDate)}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <StatusBadge color={famachaColor(f.famachaScore)}>{f.famachaScore}</StatusBadge>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{f.notes || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <DataTable
+        rows={rows}
+        rowKey={(f) => f.id}
+        loading={loading}
+        loadingText="Cargando chequeos…"
+        empty={<EmptyState icon={ChartBarIcon} title="Sin chequeos" description="No hay registros FAMACHA." />}
+        columns={[
+          { key: "date", header: "Fecha", className: "text-gray-900", cell: (f) => formatDisplayDate(f.checkDate) },
+          {
+            key: "score",
+            header: "Puntaje",
+            cell: (f) => <StatusBadge color={famachaColor(f.famachaScore)}>{f.famachaScore}</StatusBadge>,
+          },
+          { key: "notes", header: "Notas", className: "text-gray-700", cell: (f) => f.notes || "—" },
+        ]}
+      />
     </div>
   )
 }

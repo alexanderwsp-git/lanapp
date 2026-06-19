@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { WeightProgressChart } from "@/components/ui/weight-progress-chart"
-import { EmptyState } from "@/components/ui/empty-state"
-import { Modal } from "@/components/ui/modal"
+  import { EmptyState } from "@/components/ui/empty-state"
+  import { DataTable } from "@/components/ui/data-table"
+import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import {
@@ -216,68 +217,56 @@ export function SheepPesosTab({ sheepId }: SheepPesosTabProps) {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        {loading ? (
-          <p className="p-8 text-center text-sm text-gray-500">Cargando pesajes…</p>
-        ) : records.length === 0 ? (
-          <EmptyState icon={ScaleIcon} title="Sin pesajes" description="No hay registros de peso aún." />
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {["Fecha", "Peso (kg)", "Ganancia prom. (g/día)", "Notas", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {records.map((w) => (
-                <tr key={w.id}>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
-                    {formatDisplayDate(w.measurementDate)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    {Number(w.weight)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    {formatDailyGain(gainById.get(w.id) ?? null)}
-                  </td>
-                  <td className="max-w-xs px-4 py-3 text-sm text-gray-700">
-                    {w.notes?.trim() || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(w)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                        aria-label={`Editar pesaje del ${toDateInputValue(w.measurementDate)}`}
-                      >
-                        <PencilSquareIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setToDelete(w)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600"
-                        aria-label={`Eliminar pesaje del ${toDateInputValue(w.measurementDate)}`}
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <DataTable
+        rows={records}
+        rowKey={(w) => w.id}
+        loading={loading}
+        loadingText="Cargando pesajes…"
+        empty={<EmptyState icon={ScaleIcon} title="Sin pesajes" description="No hay registros de peso aún." />}
+        columns={[
+          {
+            key: "date",
+            header: "Fecha",
+            className: "whitespace-nowrap text-gray-900",
+            cell: (w) => formatDisplayDate(w.measurementDate),
+          },
+          { key: "weight", header: "Peso (kg)", className: "whitespace-nowrap", cell: (w) => Number(w.weight) },
+          {
+            key: "gain",
+            header: "Ganancia prom. (g/día)",
+            className: "whitespace-nowrap",
+            cell: (w) => formatDailyGain(gainById.get(w.id) ?? null),
+          },
+          { key: "notes", header: "Notas", className: "max-w-xs", cell: (w) => w.notes?.trim() || "—" },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            cell: (w) => (
+              <div className="flex justify-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => openEdit(w)}
+                  className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                  aria-label={`Editar pesaje del ${toDateInputValue(w.measurementDate)}`}
+                >
+                  <PencilSquareIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setToDelete(w)}
+                  className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600"
+                  aria-label={`Eliminar pesaje del ${toDateInputValue(w.measurementDate)}`}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
 
-      <Modal
+      <Drawer
         open={editing !== null}
         onClose={() => setEditing(null)}
         title="Editar peso"
@@ -336,7 +325,7 @@ export function SheepPesosTab({ sheepId }: SheepPesosTabProps) {
             />
           </Field>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmDialog
         open={toDelete !== null}

@@ -1,4 +1,4 @@
-export type ReportType = "maltonas" | "prenadas" | "montas" | "famacha"
+export type ReportType = "maltonas" | "prenadas" | "montas" | "famacha" | "reproductores"
 
 export type ReportConfig = {
   title: string
@@ -55,6 +55,23 @@ export const seedReports: Record<ReportType, ReportConfig> = {
       { oveja: "SA-103 Luna", carnero: "SA-055 Toro", fecha: "2026-03-15", resultado: "Pendiente" },
       { oveja: "SA-088 Estrella", carnero: "SA-055 Toro", fecha: "2026-03-16", resultado: "Preñada" },
       { oveja: "SA-001 Blanca", carnero: "SA-042 Negro", fecha: "2026-02-10", resultado: "Vacía" },
+    ],
+  },
+  reproductores: {
+    title: "Cobertura por reproductor",
+    total: 3,
+    columns: [
+      { key: "carnero", label: "Reproductor" },
+      { key: "hembras", label: "Hembras montadas" },
+      { key: "montas", label: "Montas totales" },
+      { key: "prenadas", label: "Preñadas" },
+      { key: "tasa", label: "Tasa de preñez" },
+      { key: "ultimaMonta", label: "Última monta" },
+    ],
+    rows: [
+      { carnero: "SA-055 Toro", hembras: 5, montas: 8, prenadas: 4, tasa: "80%", ultimaMonta: "2026-03-16" },
+      { carnero: "SA-042 Negro", hembras: 3, montas: 4, prenadas: 1, tasa: "33%", ultimaMonta: "2026-02-28" },
+      { carnero: "SA-091 Rayo", hembras: 2, montas: 2, prenadas: 1, tasa: "50%", ultimaMonta: "2026-01-20" },
     ],
   },
   famacha: {

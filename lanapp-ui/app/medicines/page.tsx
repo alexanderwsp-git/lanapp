@@ -1,12 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
-import { Modal } from "@/components/ui/modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { DataTable } from "@/components/ui/data-table"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { Combobox } from "@/components/ui/combobox"
 import { useSheepFilter } from "@/components/ui/sheep-filter"
@@ -36,7 +36,7 @@ import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import type { ApiLocation, ApiMedicine, ApiMedicineApplication, ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
-import { toDateInputValue } from "@/lib/format"
+import { toDateInputValue, formatDisplayDate } from "@/lib/format"
 import {
   labelMedicineStatus,
   labelMedicineType,
@@ -49,8 +49,8 @@ import {
   PencilSquareIcon,
   TrashIcon,
   ClipboardDocumentCheckIcon,
-  CheckIcon,
-  XMarkIcon,
+  CheckBadgeIcon,
+  XCircleIcon,
   ClockIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline"
@@ -533,108 +533,125 @@ export default function MedicinesPage() {
   function renderAppTable(
     rows: ApiMedicineApplication[],
     mode: "scheduled" | "history",
+    opts: { loading: boolean; empty: ReactNode; loadingText?: string },
   ) {
-    if (rows.length === 0) return null
-
     return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {["Medicamento", "Oveja", "Fecha", "Estado", "Notas", ""].map((h, i) => (
-                <th
-                  key={`${h}-${i}`}
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                >
-                  {h || "\u00a0"}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {rows.map((a) => {
+      <DataTable
+        rows={rows}
+        rowKey={(a) => a.id}
+        loading={opts.loading}
+        loadingText={opts.loadingText ?? "Cargando..."}
+        empty={opts.empty}
+        columns={[
+          {
+            key: "medicine",
+            header: "Medicamento",
+            className: "whitespace-nowrap font-medium text-gray-900",
+            cell: (a) => (
+              <div className="flex items-center gap-2">
+                <BeakerIcon className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                {a.medicine?.name ?? medDisplayName(a.medicineId)}
+              </div>
+            ),
+          },
+          {
+            key: "sheep",
+            header: "Oveja",
+            className: "whitespace-nowrap",
+            cell: (a) => (
+              <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                {a.sheep?.tag ?? sheepDisplayTag(a.sheepId)}
+              </span>
+            ),
+          },
+          {
+            key: "date",
+            header: "Fecha",
+            className: "whitespace-nowrap",
+            cell: (a) => {
               const due = isDue(a)
+              return (
+                <>
+                  <div className="font-medium text-gray-900">{formatDisplayDate(a.applicationDate)}</div>
+                  {mode === "scheduled" && due ? (
+                    <div className="mt-1">
+                      <StatusBadge color="yellow" icon={ClockIcon}>
+                        Vence hoy
+                      </StatusBadge>
+                    </div>
+                  ) : mode === "scheduled" && toDateInputValue(a.applicationDate) > today() ? (
+                    <span className="mt-1 inline-block text-xs text-gray-400">Próxima</span>
+                  ) : null}
+                </>
+              )
+            },
+          },
+          {
+            key: "status",
+            header: "Estado",
+            className: "whitespace-nowrap",
+            cell: (a) => {
               const statusLabel = labelMedicineStatus(a.status)
               return (
-                <tr key={a.id} className={due ? "bg-amber-50/60 hover:bg-amber-50" : "hover:bg-gray-50"}>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                    {a.medicine?.name ?? medDisplayName(a.medicineId)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    {a.sheep?.tag ?? sheepDisplayTag(a.sheepId)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    <div>{toDateInputValue(a.applicationDate)}</div>
-                    <span
-                      className={`text-xs ${
-                        mode === "scheduled" && due
-                          ? "font-medium text-amber-700"
-                          : mode === "scheduled" && toDateInputValue(a.applicationDate) > today()
-                            ? "text-gray-400"
-                            : "invisible"
-                      }`}
-                    >
-                      {mode === "scheduled" && due
-                        ? "Vence hoy"
-                        : mode === "scheduled" && toDateInputValue(a.applicationDate) > today()
-                          ? "Futura"
-                          : "\u00a0"}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <StatusBadge
-                      color={
-                        medicineStatusColor[
-                          mode === "scheduled" ? "Programado" : statusLabel
-                        ] ?? "gray"
-                      }
-                    >
-                      {mode === "scheduled" ? "Programado" : statusLabel}
-                    </StatusBadge>
-                  </td>
-                  <td className="max-w-[12rem] truncate px-4 py-3 text-sm text-gray-500" title={a.notes ?? undefined}>
-                    {a.notes || "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                    <div className="flex items-center justify-end gap-1">
-                      {mode === "scheduled" && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={statusUpdating === a.id}
-                            onClick={() => openApply(a)}
-                            className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-500 disabled:opacity-50"
-                          >
-                            <CheckIcon className="h-4 w-4" />
-                            Aplicado
-                          </button>
-                          <button
-                            type="button"
-                            disabled={statusUpdating === a.id}
-                            onClick={() => setAppStatus(a, MedicineStatus.CANCELLED)}
-                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
-                            title="Cancelar"
-                            aria-label="Cancelar"
-                          >
-                            <XMarkIcon className="h-5 w-5" />
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => setAppToDelete(a)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                        aria-label="Eliminar"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <StatusBadge
+                  color={medicineStatusColor[mode === "scheduled" ? "Programado" : statusLabel] ?? "gray"}
+                >
+                  {mode === "scheduled" ? "Programado" : statusLabel}
+                </StatusBadge>
               )
-            })}
-          </tbody>
-        </table>
-      </div>
+            },
+          },
+          {
+            key: "notes",
+            header: "Notas",
+            className: "max-w-[12rem] truncate text-gray-500",
+            cell: (a) => (
+              <span title={a.notes ?? undefined}>{a.notes || "—"}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            className: "whitespace-nowrap",
+            cell: (a) => (
+              <div className="flex items-center justify-end gap-1">
+                {mode === "scheduled" && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={statusUpdating === a.id}
+                      onClick={() => openApply(a)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
+                      title="Marcar como aplicado"
+                      aria-label="Marcar como aplicado"
+                    >
+                      <CheckBadgeIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={statusUpdating === a.id}
+                      onClick={() => setAppStatus(a, MedicineStatus.CANCELLED)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
+                      title="Cancelar"
+                      aria-label="Cancelar"
+                    >
+                      <XCircleIcon className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setAppToDelete(a)}
+                  className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  aria-label="Eliminar"
+                >
+                  <TrashIcon className="h-5 w-5" />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
     )
   }
 
@@ -723,10 +740,12 @@ export default function MedicinesPage() {
 
       <div className="mt-6">
         <div className={tab === "meds" ? undefined : "hidden"}>
-          <div className="overflow-hidden rounded-lg bg-white shadow">
-            {loadingMeds ? (
-              <p className="p-8 text-center text-sm text-gray-500">Cargando fármacos...</p>
-            ) : meds.length === 0 ? (
+          <DataTable
+            rows={meds}
+            rowKey={(m) => m.id}
+            loading={loadingMeds}
+            loadingText="Cargando fármacos..."
+            empty={
               <EmptyState
                 icon={BeakerIcon}
                 title="Sin medicamentos"
@@ -740,57 +759,48 @@ export default function MedicinesPage() {
                   </button>
                 }
               />
-            ) : (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {["Nombre", "Tipo", "Dosis", "Descripción", ""].map((h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {meds.map((m) => (
-                    <tr key={m.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                        {m.name}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <StatusBadge color="indigo">{labelMedicineType(m.type)}</StatusBadge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{m.dosage}</td>
-                      <td className="max-w-xs truncate px-4 py-3 text-sm text-gray-500">
-                        {m.description ?? "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => openEditMed(m)}
-                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                            aria-label={`Editar ${m.name}`}
-                          >
-                            <PencilSquareIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => setMedToDelete(m)}
-                            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                            aria-label={`Eliminar ${m.name}`}
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+            }
+            columns={[
+              { key: "name", header: "Nombre", className: "whitespace-nowrap font-medium text-gray-900", cell: (m) => m.name },
+              {
+                key: "type",
+                header: "Tipo",
+                className: "whitespace-nowrap",
+                cell: (m) => <StatusBadge color="indigo">{labelMedicineType(m.type)}</StatusBadge>,
+              },
+              { key: "dosage", header: "Dosis", className: "whitespace-nowrap", cell: (m) => m.dosage },
+              {
+                key: "description",
+                header: "Descripción",
+                className: "max-w-xs truncate text-gray-500",
+                cell: (m) => m.description ?? "—",
+              },
+              {
+                key: "actions",
+                header: "",
+                align: "right",
+                className: "whitespace-nowrap",
+                cell: (m) => (
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => openEditMed(m)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                      aria-label={`Editar ${m.name}`}
+                    >
+                      <PencilSquareIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setMedToDelete(m)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Eliminar ${m.name}`}
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </div>
 
         <div className={tab === "scheduled" ? undefined : "hidden"}>
@@ -812,10 +822,9 @@ export default function MedicinesPage() {
                 <option value="due">Pendientes hoy ({dueApps.length})</option>
               </select>
             </div>
-            <div className="overflow-hidden rounded-lg bg-white shadow">
-              {loadingApps ? (
-                <p className="p-8 text-center text-sm text-gray-500">Cargando...</p>
-              ) : visibleScheduled.length === 0 ? (
+            {renderAppTable(visibleScheduled, "scheduled", {
+              loading: loadingApps,
+              empty: (
                 <EmptyState
                   icon={ClipboardDocumentCheckIcon}
                   title={scheduleFilter === "due" ? "Sin pendientes" : "Sin programaciones"}
@@ -835,38 +844,56 @@ export default function MedicinesPage() {
                     ) : undefined
                   }
                 />
-              ) : (
-                renderAppTable(visibleScheduled, "scheduled")
-              )}
-            </div>
+              ),
+            })}
           </div>
         </div>
 
         <div className={tab === "history" ? undefined : "hidden"}>
-          <div className="overflow-hidden rounded-lg bg-white shadow">
-            {loadingApps ? (
-              <p className="p-8 text-center text-sm text-gray-500">Cargando historial...</p>
-            ) : historyApps.length === 0 ? (
+          {renderAppTable(historyApps, "history", {
+            loading: loadingApps,
+            loadingText: "Cargando historial...",
+            empty: (
               <EmptyState
                 icon={ClipboardDocumentCheckIcon}
                 title="Sin historial"
                 description="Las aplicaciones marcadas como Aplicado, Cancelado u Omitido aparecerán aquí."
               />
-            ) : (
-              renderAppTable(historyApps, "history")
-            )}
-          </div>
+            ),
+          })}
         </div>
       </div>
 
-      {/* Catalog modal */}
-      <Modal
+      {/* Catalog drawer */}
+      <Drawer
         open={medOpen}
         onClose={() => setMedOpen(false)}
         title={editingMed ? "Editar medicamento" : "Nuevo medicamento"}
         description="Registra un fármaco o vacuna en el inventario."
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setMedOpen(false)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="medicine-form"
+              disabled={savingMed}
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+            >
+              {savingMed && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              {editingMed ? "Guardar" : "Crear"}
+            </button>
+          </>
+        }
       >
-        <form onSubmit={saveMed} className="flex flex-col gap-4">
+        <form id="medicine-form" onSubmit={saveMed} className="flex flex-col gap-4">
           {medError && (
             <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{medError}</div>
           )}
@@ -916,36 +943,39 @@ export default function MedicinesPage() {
               onChange={(e) => setMedForm({ ...medForm, notes: e.target.value })}
             />
           </Field>
-          <div className="mt-2 flex justify-end gap-3">
+        </form>
+      </Drawer>
+
+      {/* Schedule drawer — planned date only */}
+      <Drawer
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        title="Programar aplicación"
+        description="Crea una dosis pendiente. Aún no se ha aplicado — marca Aplicado cuando la realices."
+        footer={
+          <>
             <button
               type="button"
-              onClick={() => setMedOpen(false)}
+              onClick={() => setScheduleOpen(false)}
               className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={savingMed}
+              form="schedule-form"
+              disabled={savingSchedule || !scheduleForm.medicineId || !scheduleForm.sheepId}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
             >
-              {savingMed && (
+              {savingSchedule && (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               )}
-              {editingMed ? "Guardar" : "Crear"}
+              Programar
             </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Schedule modal — planned date only */}
-      <Modal
-        open={scheduleOpen}
-        onClose={() => setScheduleOpen(false)}
-        title="Programar aplicación"
-        description="Crea una dosis pendiente. Aún no se ha aplicado — marca Aplicado cuando la realices."
+          </>
+        }
       >
-        <form onSubmit={saveSchedule} className="flex flex-col gap-4">
+        <form id="schedule-form" onSubmit={saveSchedule} className="flex flex-col gap-4">
           {scheduleError && (
             <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{scheduleError}</div>
           )}
@@ -984,27 +1014,8 @@ export default function MedicinesPage() {
               onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
             />
           </Field>
-          <div className="mt-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setScheduleOpen(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={savingSchedule || !scheduleForm.medicineId || !scheduleForm.sheepId}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {savingSchedule && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Programar
-            </button>
-          </div>
         </form>
-      </Modal>
+      </Drawer>
 
       {/* Bulk schedule drawer — many sheep, one medicine + date */}
       <Drawer
@@ -1124,8 +1135,8 @@ export default function MedicinesPage() {
         </form>
       </Drawer>
 
-      {/* Apply modal — confirm + optional next schedule */}
-      <Modal
+      {/* Apply drawer — confirm + optional next schedule */}
+      <Drawer
         open={!!applyTarget}
         onClose={() => setApplyTarget(null)}
         title="Registrar aplicación"
@@ -1134,8 +1145,30 @@ export default function MedicinesPage() {
             ? `${medDisplayName(applyTarget.medicineId)} → ${sheepDisplayTag(applyTarget.sheepId)}`
             : undefined
         }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setApplyTarget(null)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="apply-form"
+              disabled={savingApply}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60"
+            >
+              {savingApply && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              Confirmar aplicado
+            </button>
+          </>
+        }
       >
-        <form onSubmit={confirmApply} className="flex flex-col gap-4">
+        <form id="apply-form" onSubmit={confirmApply} className="flex flex-col gap-4">
           {applyError && (
             <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{applyError}</div>
           )}
@@ -1190,27 +1223,8 @@ export default function MedicinesPage() {
               placeholder="Ej. dosis aplicada, reacción, lote, observaciones del campo..."
             />
           </Field>
-          <div className="mt-2 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setApplyTarget(null)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={savingApply}
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60"
-            >
-              {savingApply && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Confirmar aplicado
-            </button>
-          </div>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmDialog
         open={!!medToDelete}

@@ -35,6 +35,7 @@ const reportsNav: NavItem[] = [
   { label: "Maltonas", href: "/reports/maltonas", icon: ChartBarIcon },
   { label: "Preñadas", href: "/reports/prenadas", icon: ChartBarIcon },
   { label: "Montas", href: "/reports/montas", icon: ChartBarIcon },
+  { label: "Reproductores", href: "/reports/reproductores", icon: ChartBarIcon },
   { label: "FAMACHA", href: "/reports/famacha", icon: ChartBarIcon },
 ]
 

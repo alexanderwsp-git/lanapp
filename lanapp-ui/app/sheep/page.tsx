@@ -7,7 +7,9 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { EmptyState } from "@/components/ui/empty-state"
+import { SheepFormDrawer } from "@/components/sheep-form-drawer"
+  import { EmptyState } from "@/components/ui/empty-state"
+  import { DataTable } from "@/components/ui/data-table"
 import { deleteSheep, fetchSheep } from "@/lib/api/sheep"
 import type { ApiSheep } from "@/lib/api/types"
 import {
@@ -38,6 +40,30 @@ export default function SheepListPage() {
   const [status, setStatus] = useState<SheepStatus | "">("")
   const [toDelete, setToDelete] = useState<ApiSheep | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState<"new" | "edit">("new")
+  const [editTarget, setEditTarget] = useState<ApiSheep | undefined>(undefined)
+
+  function openNew() {
+    setEditTarget(undefined)
+    setFormMode("new")
+    setFormOpen(true)
+  }
+
+  function openEdit(s: ApiSheep) {
+    setEditTarget(s)
+    setFormMode("edit")
+    setFormOpen(true)
+  }
+
+  // Support deep-link redirects from the legacy /sheep/new route.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("new") === "1") {
+      openNew()
+      window.history.replaceState(null, "", "/sheep")
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -94,13 +120,14 @@ export default function SheepListPage() {
         title="Ovejas"
         description="Inventario del rebaño de Granja San Alfonso"
         action={
-          <Link
-            href="/sheep/new"
+          <button
+            type="button"
+            onClick={openNew}
             className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
           >
             <PlusIcon className="h-5 w-5" aria-hidden="true" />
             Nueva oveja
-          </Link>
+          </button>
         }
       />
 
@@ -150,96 +177,112 @@ export default function SheepListPage() {
         </div>
       )}
 
-      <div className="mt-4 overflow-hidden rounded-lg bg-white shadow">
-        {loading ? (
-          <p className="p-8 text-center text-sm text-gray-500">Cargando inventario...</p>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon={Squares2X2Icon}
-            title="Sin resultados"
-            description={
-              rows.length === 0
-                ? "No hay ovejas registradas. Agrega la primera."
-                : "No se encontraron ovejas con los filtros aplicados."
-            }
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {["Arete", "Nombre", "Sexo", "Raza", "F. nacimiento", "Edad", "Categoría", "Último peso", "Estado", ""].map((h) => (
-                    <th
-                      key={h}
-                      scope="col"
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {filtered.map((s) => {
-                  const statusLabel = labelStatus(s.status)
-                  return (
-                    <tr key={s.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-indigo-600">
-                        <Link href={`/sheep/${s.id}`}>{s.tag}</Link>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{s.name ?? "—"}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelGender(s.gender)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{s.breed}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                        {formatDisplayDate(s.birthDate)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                        {formatAgeDays(s.birthDate)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{labelCategory(s.category)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatLastWeight(s)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <StatusBadge color={statusColor[statusLabel] ?? statusColor[s.status] ?? "gray"}>
-                          {statusLabel}
-                        </StatusBadge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/sheep/${s.id}`}
-                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                            aria-label={`Ver ${s.tag}`}
-                          >
-                            <EyeIcon className="h-5 w-5" />
-                          </Link>
-                          <Link
-                            href={`/sheep/${s.id}/edit`}
-                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                            aria-label={`Editar ${s.tag}`}
-                          >
-                            <PencilSquareIcon className="h-5 w-5" />
-                          </Link>
-                          <button
-                            onClick={() => setToDelete(s)}
-                            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                            aria-label={`Eliminar ${s.tag}`}
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="mt-4">
+        <DataTable
+          rows={filtered}
+          rowKey={(s) => s.id}
+          loading={loading}
+          loadingText="Cargando inventario..."
+          countLabel={(_, shown) => `${shown} mostradas · ${total} en total`}
+          empty={
+            <EmptyState
+              icon={Squares2X2Icon}
+              title="Sin resultados"
+              description={
+                rows.length === 0
+                  ? "No hay ovejas registradas. Agrega la primera."
+                  : "No se encontraron ovejas con los filtros aplicados."
+              }
+              action={
+                rows.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={openNew}
+                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                  >
+                    Nueva oveja
+                  </button>
+                ) : undefined
+              }
+            />
+          }
+          columns={[
+            {
+              key: "tag",
+              header: "Arete",
+              className: "whitespace-nowrap font-medium text-indigo-600",
+              cell: (s) => <Link href={`/sheep/${s.id}`}>{s.tag}</Link>,
+            },
+            {
+              key: "name",
+              header: "Nombre",
+              className: "whitespace-nowrap text-gray-900",
+              cell: (s) => s.name ?? "—",
+            },
+            { key: "gender", header: "Sexo", className: "whitespace-nowrap text-gray-500", cell: (s) => labelGender(s.gender) },
+            { key: "breed", header: "Raza", className: "whitespace-nowrap text-gray-500", cell: (s) => s.breed },
+            {
+              key: "birth",
+              header: "F. nacimiento",
+              className: "whitespace-nowrap text-gray-500",
+              cell: (s) => formatDisplayDate(s.birthDate),
+            },
+            { key: "age", header: "Edad", className: "whitespace-nowrap text-gray-500", cell: (s) => formatAgeDays(s.birthDate) },
+            {
+              key: "category",
+              header: "Categoría",
+              className: "whitespace-nowrap text-gray-500",
+              cell: (s) => labelCategory(s.category),
+            },
+            { key: "weight", header: "Último peso", className: "whitespace-nowrap text-gray-500", cell: (s) => formatLastWeight(s) },
+            {
+              key: "status",
+              header: "Estado",
+              className: "whitespace-nowrap",
+              cell: (s) => {
+                const statusLabel = labelStatus(s.status)
+                return (
+                  <StatusBadge color={statusColor[statusLabel] ?? statusColor[s.status] ?? "gray"}>
+                    {statusLabel}
+                  </StatusBadge>
+                )
+              },
+            },
+            {
+              key: "actions",
+              header: "",
+              align: "right",
+              className: "whitespace-nowrap",
+              cell: (s) => (
+                <div className="flex items-center justify-end gap-1">
+                  <Link
+                    href={`/sheep/${s.id}`}
+                    className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    aria-label={`Ver ${s.tag}`}
+                  >
+                    <EyeIcon className="h-5 w-5" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(s)}
+                    className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                    aria-label={`Editar ${s.tag}`}
+                  >
+                    <PencilSquareIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setToDelete(s)}
+                    className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    aria-label={`Eliminar ${s.tag}`}
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
-
-      <p className="mt-3 text-sm text-gray-500">
-        {filtered.length} mostradas · {total} en total
-      </p>
 
       <ConfirmDialog
         open={!!toDelete}
@@ -249,6 +292,14 @@ export default function SheepListPage() {
         loading={deleting}
         onConfirm={confirmDelete}
         onClose={() => setToDelete(null)}
+      />
+
+      <SheepFormDrawer
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        mode={formMode}
+        initial={editTarget}
+        onSaved={() => load()}
       />
     </DashboardLayout>
   )

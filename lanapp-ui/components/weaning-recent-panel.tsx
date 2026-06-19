@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { EmptyState } from "@/components/ui/empty-state"
+  import { EmptyState } from "@/components/ui/empty-state"
+  import { DataTable } from "@/components/ui/data-table"
 import { Field, TextInput } from "@/components/ui/form-fields"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { fetchRecentWeanings, type ApiRecentWeaningRecord } from "@/lib/api/weaning"
 import {
   displayKgValue,
-  formatAgeDays,
+  ageInDays,
   formatDailyGain,
   formatDisplayDate,
   shiftDateIso,
@@ -148,78 +149,52 @@ export function WeaningRecentPanel({ refreshKey = 0 }: WeaningRecentPanelProps) 
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        {loading ? (
-          <p className="p-8 text-center text-sm text-gray-500">Cargando destetes…</p>
-        ) : rows.length === 0 ? (
+      <DataTable
+        rows={rows}
+        rowKey={(r) => r.id}
+        loading={loading}
+        loadingText="Cargando destetes…"
+        countLabel={(_, total) =>
+          `${total} destete(s) entre ${formatDisplayDate(fromDate)} y ${formatDisplayDate(toDate)}`
+        }
+        empty={
           <EmptyState
             icon={CheckCircleIcon}
             title="Sin destetes en este rango"
             description="Prueba ampliar las fechas o elegir otra fecha de referencia."
           />
-        ) : (
-          <div className="overflow-x-auto">
-            <p className="border-b border-gray-100 px-4 py-2 text-xs text-gray-500">
-              {rows.length} destete(s) entre {formatDisplayDate(fromDate)} y {formatDisplayDate(toDate)}
-            </p>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {[
-                    "Arete",
-                    "Nombre",
-                    "F. destete",
-                    "Peso (kg)",
-                    "Ganancia (g/día)",
-                    "Categoría",
-                    "F. nacimiento",
-                    "Edad al destete",
-                    "Lote",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {rows.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium">
-                      <Link href={`/sheep/${r.sheepId}`} className="text-indigo-600 hover:text-indigo-500">
-                        {r.tag}
-                      </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{r.name || "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                      {formatDisplayDate(r.weaningDate)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                      {displayKgValue(r.weaningWeight)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                      {formatDailyGain(r.dailyGain)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <StatusBadge color="indigo">{labelCategory(r.category)}</StatusBadge>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                      {formatDisplayDate(r.birthDate)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                      {formatAgeDays(r.birthDate, new Date(r.weaningDate))}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{r.lotId || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        }
+        columns={[
+          {
+            key: "tag",
+            header: "Arete",
+            className: "whitespace-nowrap font-medium",
+            cell: (r) => (
+              <Link href={`/sheep/${r.sheepId}`} className="text-indigo-600 hover:text-indigo-500">
+                {r.tag}
+              </Link>
+            ),
+          },
+          { key: "name", header: "Nombre", className: "whitespace-nowrap", cell: (r) => r.name || "—" },
+          { key: "weaningDate", header: "F. destete", className: "whitespace-nowrap", cell: (r) => formatDisplayDate(r.weaningDate) },
+          { key: "weight", header: "Peso (kg)", className: "whitespace-nowrap", cell: (r) => displayKgValue(r.weaningWeight) },
+          { key: "gain", header: "Ganancia (g/día)", className: "whitespace-nowrap", cell: (r) => formatDailyGain(r.dailyGain) },
+          {
+            key: "category",
+            header: "Categoría",
+            className: "whitespace-nowrap",
+            cell: (r) => <StatusBadge color="indigo">{labelCategory(r.category)}</StatusBadge>,
+          },
+          { key: "birthDate", header: "F. nacimiento", className: "whitespace-nowrap", cell: (r) => formatDisplayDate(r.birthDate) },
+          {
+            key: "ageAtWeaning",
+            header: "Edad al destete",
+            className: "whitespace-nowrap",
+            cell: (r) => (r.birthDate ? `${ageInDays(r.birthDate, new Date(r.weaningDate))} d` : "—"),
+          },
+          { key: "lot", header: "Lote", className: "whitespace-nowrap", cell: (r) => r.lotId || "—" },
+        ]}
+      />
     </div>
   )
 }

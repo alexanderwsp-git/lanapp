@@ -6,9 +6,23 @@ import {
   completeNewPassword,
   loginWithPassword,
 } from '@/lib/auth/cognito-service';
+import { isSkipAuthEnabled } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
   try {
+    // Dev / mock mode: bypass Cognito entirely and issue a dev session.
+    if (isSkipAuthEnabled()) {
+      const tokens = {
+        AccessToken: 'dev-access-token',
+        RefreshToken: 'dev-refresh-token',
+        IdToken: 'dev-id-token',
+        ExpiresIn: 3600,
+      };
+      const response = jsonOk(tokens, 'Inicio de sesión exitoso (modo dev)');
+      setAuthCookie(response, tokens.ExpiresIn);
+      return response;
+    }
+
     const body = (await request.json()) as {
       username?: string;
       password?: string;

@@ -1,25 +1,148 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { type ComponentType, type SVGProps, useEffect, useMemo, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
+import { StatCard } from "@/components/ui/stat-card"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { fetchReport, type ReportType } from "@/lib/api/reports"
+import { DataTable } from "@/components/ui/data-table"
+import { fetchReport, type ReportType, type ReportConfig } from "@/lib/api/reports"
 import { statusColor } from "@/mocks/labels"
-import { ArrowDownTrayIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline"
+import { formatDisplayDate } from "@/lib/format"
+import {
+  ArrowDownTrayIcon,
+  ArrowTrendingUpIcon,
+  CalendarDaysIcon,
+  ChartBarIcon,
+  ClockIcon,
+  DocumentChartBarIcon,
+  ExclamationTriangleIcon,
+  EyeIcon,
+  HeartIcon,
+  MagnifyingGlassIcon,
+  ScaleIcon,
+  Squares2X2Icon,
+  UsersIcon,
+} from "@heroicons/react/24/outline"
 
 const badgeKeys = new Set(["resultado", "alerta"])
+const dateKeys = new Set(["fecha", "fechaMonta", "fechaParto", "fechaChequeo", "ultimaMonta"])
+
+type ReportRow = ReportConfig["rows"][number]
+type StatItem = {
+  label: string
+  value: string | number
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+  hint?: string
+}
+type ReportMeta = {
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+  stats: (rows: ReportRow[], total: number) => StatItem[]
+}
+
+/** Numeric values of a column, ignoring non-numeric entries. */
+function nums(rows: ReportRow[], key: string): number[] {
+  return rows.map((r) => Number(r[key])).filter((n) => Number.isFinite(n))
+}
+/** Rounded average of a numeric column (1 decimal). */
+function avg(rows: ReportRow[], key: string): number {
+  const a = nums(rows, key)
+  if (!a.length) return 0
+  return Math.round((a.reduce((s, n) => s + n, 0) / a.length) * 10) / 10
+}
+function countWhere(rows: ReportRow[], fn: (r: ReportRow) => boolean): number {
+  return rows.filter(fn).length
+}
+/** Earliest ISO date string in a column (ISO sorts lexically). */
+function earliest(rows: ReportRow[], key: string): string | null {
+  const values = rows.map((r) => String(r[key])).filter(Boolean).sort()
+  return values[0] ?? null
+}
+
+const reportMeta: Record<ReportType, ReportMeta> = {
+  maltonas: {
+    icon: ArrowTrendingUpIcon,
+    stats: (rows, total) => {
+      const hembras = countWhere(rows, (r) => String(r.sexo).toLowerCase() === "hembra")
+      const pct = rows.length ? Math.round((hembras / rows.length) * 100) : 0
+      return [
+        { label: "Total maltonas", value: total, icon: Squares2X2Icon, hint: "En etapa de crecimiento" },
+        { label: "Peso promedio", value: `${avg(rows, "peso")} kg`, icon: ScaleIcon, hint: "De los corderos en muestra" },
+        { label: "Edad promedio", value: `${avg(rows, "edadDias")} días`, icon: ClockIcon, hint: "Desde el nacimiento" },
+        { label: "Proporción hembras", value: `${pct}%`, icon: UsersIcon, hint: "Del grupo evaluado" },
+      ]
+    },
+  },
+  prenadas: {
+    icon: HeartIcon,
+    stats: (rows, total) => {
+      const next = earliest(rows, "fechaParto")
+      const maxDias = nums(rows, "dias").reduce((m, n) => Math.max(m, n), 0)
+      return [
+        { label: "Total preñadas", value: total, icon: HeartIcon, hint: "Ovejas en gestación" },
+        { label: "Gestación promedio", value: `${avg(rows, "dias")} días`, icon: ClockIcon, hint: "Avance medio del grupo" },
+        { label: "Próximo parto", value: next ? formatDisplayDate(next) : "—", icon: CalendarDaysIcon, hint: "Fecha estimada más cercana" },
+        { label: "Más avanzada", value: `${maxDias} días`, icon: ArrowTrendingUpIcon, hint: "Mayor gestación registrada" },
+      ]
+    },
+  },
+  montas: {
+    icon: CalendarDaysIcon,
+    stats: (rows, total) => {
+      const prenadas = countWhere(rows, (r) => String(r.resultado) === "Preñada")
+      const pendientes = countWhere(rows, (r) => String(r.resultado) === "Pendiente")
+      const decided = countWhere(rows, (r) => String(r.resultado) !== "Pendiente")
+      const tasa = decided ? Math.round((prenadas / decided) * 100) : 0
+      return [
+        { label: "Total montas", value: total, icon: CalendarDaysIcon, hint: "Registradas en el periodo" },
+        { label: "Preñadas", value: prenadas, icon: HeartIcon, hint: "Confirmadas en la muestra" },
+        { label: "Pendientes", value: pendientes, icon: ClockIcon, hint: "Sin diagnóstico" },
+        { label: "Tasa de preñez", value: `${tasa}%`, icon: ChartBarIcon, hint: "De las montas diagnosticadas" },
+      ]
+    },
+  },
+  reproductores: {
+    icon: UsersIcon,
+    stats: (rows) => {
+      const totalHembras = nums(rows, "hembras").reduce((s, n) => s + n, 0)
+      const totalMontas = nums(rows, "montas").reduce((s, n) => s + n, 0)
+      const totalPrenadas = nums(rows, "prenadas").reduce((s, n) => s + n, 0)
+      const tasa = totalMontas ? Math.round((totalPrenadas / totalMontas) * 100) : 0
+      return [
+        { label: "Reproductores activos", value: rows.length, icon: UsersIcon, hint: "Con montas registradas" },
+        { label: "Hembras cubiertas", value: totalHembras, icon: HeartIcon, hint: "Total de hembras montadas" },
+        { label: "Montas totales", value: totalMontas, icon: CalendarDaysIcon, hint: "En el periodo" },
+        { label: "Tasa de preñez", value: `${tasa}%`, icon: ChartBarIcon, hint: "Promedio del plantel" },
+      ]
+    },
+  },
+  famacha: {
+    icon: EyeIcon,
+    stats: (rows, total) => {
+      const atencion = countWhere(rows, (r) => String(r.alerta) !== "Sin alerta")
+      const riesgo = countWhere(rows, (r) => Number(r.ultimoPuntaje) <= 2)
+      return [
+        { label: "Total chequeos", value: total, icon: EyeIcon, hint: "Evaluaciones realizadas" },
+        { label: "Puntaje promedio", value: avg(rows, "ultimoPuntaje"), icon: ChartBarIcon, hint: "Escala FAMACHA 1–5" },
+        { label: "Requieren atención", value: atencion, icon: ExclamationTriangleIcon, hint: "Con alerta activa" },
+        { label: "En riesgo (≤2)", value: riesgo, icon: HeartIcon, hint: "Posible anemia" },
+      ]
+    },
+  },
+}
 
 export function ReportShell({ reportType, description }: { reportType: ReportType; description?: string }) {
-  const [cfg, setCfg] = useState<Awaited<ReturnType<typeof fetchReport>> | null>(null)
+  const [cfg, setCfg] = useState<ReportConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
+    setQuery("")
     fetchReport(reportType)
       .then((data) => {
         if (!cancelled) setCfg(data)
@@ -38,10 +161,21 @@ export function ReportShell({ reportType, description }: { reportType: ReportTyp
     }
   }, [reportType])
 
+  const meta = reportMeta[reportType]
+
+  const filteredRows = useMemo(() => {
+    if (!cfg) return []
+    const q = query.trim().toLowerCase()
+    if (!q) return cfg.rows
+    return cfg.rows.filter((row) => Object.values(row).some((v) => String(v).toLowerCase().includes(q)))
+  }, [cfg, query])
+
+  const stats = useMemo(() => (cfg ? meta.stats(cfg.rows, cfg.total) : []), [cfg, meta])
+
   if (loading) {
     return (
       <DashboardLayout>
-        <p className="text-sm text-gray-500">Cargando reporte…</p>
+        <ReportSkeleton />
       </DashboardLayout>
     )
   }
@@ -57,6 +191,7 @@ export function ReportShell({ reportType, description }: { reportType: ReportTyp
   return (
     <DashboardLayout>
       <PageHeader
+        icon={meta.icon}
         title={cfg.title}
         description={description ?? `${cfg.total} registros en total`}
         action={
@@ -67,43 +202,94 @@ export function ReportShell({ reportType, description }: { reportType: ReportTyp
         }
       />
 
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s) => (
+          <StatCard key={s.label} label={s.label} value={s.value} icon={s.icon} hint={s.hint} />
+        ))}
+      </div>
+
       <div className="overflow-hidden rounded-lg bg-white shadow">
-        {cfg.rows.length === 0 ? (
-          <EmptyState icon={DocumentChartBarIcon} title="Sin datos" description="No hay registros para este reporte." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {cfg.columns.map((c) => (
-                    <th key={c.key} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      {c.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {cfg.rows.map((row, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    {cfg.columns.map((c, j) => {
-                      const value = row[c.key]
-                      return (
-                        <td key={c.key} className="whitespace-nowrap px-4 py-3 text-sm">
-                          {badgeKeys.has(c.key) ? (
-                            <StatusBadge color={statusColor[String(value)] ?? "gray"}>{value}</StatusBadge>
-                          ) : (
-                            <span className={j === 0 ? "font-medium text-gray-900" : "text-gray-700"}>{value}</span>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-xs">
+            <MagnifyingGlassIcon
+              className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filtrar registros…"
+              aria-label="Filtrar registros del reporte"
+              className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
           </div>
-        )}
+          <p className="text-sm text-gray-500">
+            {query.trim()
+              ? `${filteredRows.length} de ${cfg.rows.length} registros`
+              : `${cfg.rows.length} registros en la muestra`}
+          </p>
+        </div>
+
+        <DataTable<{ row: ReportRow; i: number }>
+          bare
+          rows={filteredRows.map((row, i) => ({ row, i }))}
+          rowKey={({ i }) => String(i)}
+          empty={
+            query.trim() ? (
+              <EmptyState
+                icon={MagnifyingGlassIcon}
+                title="Sin coincidencias"
+                description={`Ningún registro coincide con "${query.trim()}".`}
+              />
+            ) : (
+              <EmptyState
+                icon={DocumentChartBarIcon}
+                title="Sin datos"
+                description="No hay registros para este reporte."
+              />
+            )
+          }
+          columns={cfg.columns.map((c, j) => ({
+            key: c.key,
+            header: c.label,
+            className: "whitespace-nowrap",
+            cell: ({ row }) => {
+              const value = row[c.key]
+              if (badgeKeys.has(c.key)) {
+                return <StatusBadge color={statusColor[String(value)] ?? "gray"}>{value}</StatusBadge>
+              }
+              const display = dateKeys.has(c.key) && value ? formatDisplayDate(String(value)) : value
+              return (
+                <span className={j === 0 ? "font-medium text-gray-900" : "text-gray-700"}>{display}</span>
+              )
+            },
+          }))}
+        />
       </div>
     </DashboardLayout>
+  )
+}
+
+function ReportSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="mb-6 flex items-center gap-4">
+        <div className="h-11 w-11 rounded-lg bg-gray-200" />
+        <div className="space-y-2">
+          <div className="h-6 w-48 rounded bg-gray-200" />
+          <div className="h-4 w-64 rounded bg-gray-100" />
+        </div>
+      </div>
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-28 rounded-lg bg-white p-6 shadow">
+            <div className="h-4 w-24 rounded bg-gray-200" />
+            <div className="mt-3 h-8 w-16 rounded bg-gray-200" />
+          </div>
+        ))}
+      </div>
+      <div className="h-64 rounded-lg bg-white shadow" />
+    </div>
   )
 }

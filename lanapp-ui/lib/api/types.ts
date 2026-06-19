@@ -6,6 +6,10 @@ export type ApiSheep = SheepJson & {
   currentLocation?: { id: string; name: string } | null
   latestWeight?: number | string | null
   latestWeightDate?: string | null
+  /** ID de la madre (hembra) para genealogía. */
+  motherId?: string | null
+  /** ID del padre (reproductor) para genealogía. */
+  fatherId?: string | null
 }
 
 export type ApiMedicine = Medicine & {
