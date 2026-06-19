@@ -1,8 +1,8 @@
 import type { ReactNode } from "react"
 import {
-  CalendarDaysIcon,
+  BeakerIcon,
   HeartIcon,
-  TagIcon,
+  SunIcon,
 } from "@heroicons/react/20/solid"
 import type { ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
 import { formatDisplayDate, formatRelativeDate } from "@/lib/format"
@@ -211,7 +211,7 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                   {item.kind === "diagnosis" && (
                     <>
                       <FeedIcon>
-                        <TagIcon aria-hidden="true" className="size-5 text-gray-500" />
+                        <BeakerIcon aria-hidden="true" className="size-4 text-gray-500" />
                       </FeedIcon>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
@@ -251,7 +251,7 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                   {item.kind === "delivery" && (
                     <>
                       <FeedIcon>
-                        <CalendarDaysIcon aria-hidden="true" className="size-5 text-indigo-500" />
+                        <SunIcon aria-hidden="true" className="size-4 text-amber-500" />
                       </FeedIcon>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
