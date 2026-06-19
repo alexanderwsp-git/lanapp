@@ -524,7 +524,7 @@ export function SheepMontasTab({
                       onClick={() => openEco(m)}
                       title="Diagnóstico"
                       aria-label="Diagnóstico"
-                      className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                     >
                       <BeakerIcon className="size-5" aria-hidden="true" />
                     </button>
@@ -535,7 +535,7 @@ export function SheepMontasTab({
                       onClick={() => openParto(m)}
                       title="Registrar parto"
                       aria-label="Registrar parto"
-                      className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                     >
                       <SunIcon className="size-5" aria-hidden="true" />
                     </button>
@@ -547,7 +547,7 @@ export function SheepMontasTab({
                       title={isExpanded ? "Ocultar historial" : "Ver historial"}
                       aria-label={isExpanded ? "Ocultar historial" : "Ver historial"}
                       aria-expanded={isExpanded}
-                      className="inline-flex items-center gap-1 rounded-md p-1.5 text-gray-600 hover:bg-gray-100"
+                      className="inline-flex items-center gap-1 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                     >
                       <ClockIcon className="size-5" aria-hidden="true" />
                       <span className="text-xs font-medium">{m.checks.length}</span>

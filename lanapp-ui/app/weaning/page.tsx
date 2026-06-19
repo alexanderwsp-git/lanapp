@@ -281,7 +281,7 @@ export default function WeaningPage() {
                   onClick={() => openDrawer([s.id])}
                   title="Destetar"
                   aria-label="Destetar"
-                  className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                 >
                   <AcademicCapIcon className="h-5 w-5" aria-hidden="true" />
                 </button>

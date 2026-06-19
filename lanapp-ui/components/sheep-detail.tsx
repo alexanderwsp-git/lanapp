@@ -14,6 +14,7 @@ import {
 import { SheepPesosTab } from "@/components/sheep-pesos-tab"
 import { SheepMontasTab } from "@/components/sheep-montas-tab"
 import { SheepFamachaTab } from "@/components/sheep-famacha-tab"
+import { SheepGenealogy } from "@/components/sheep-genealogy"
 import { SheepFormDrawer } from "@/components/sheep-form-drawer"
 import type { ApiSheep, ApiMedicineApplication } from "@/lib/api/types"
 import { fetchWeaningRecordsBySheep, type ApiWeaningRecord } from "@/lib/api/weaning"
@@ -205,6 +206,8 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
                   </div>
                 </dl>
               </div>
+
+              <SheepGenealogy sheep={sheep} />
 
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">

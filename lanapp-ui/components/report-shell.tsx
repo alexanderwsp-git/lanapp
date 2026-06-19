@@ -27,6 +27,7 @@ import {
 } from "@heroicons/react/24/outline"
 
 const badgeKeys = new Set(["resultado", "alerta"])
+const dateKeys = new Set(["fecha", "fechaMonta", "fechaParto", "fechaChequeo", "ultimaMonta"])
 
 type ReportRow = ReportConfig["rows"][number]
 type StatItem = {
@@ -98,6 +99,21 @@ const reportMeta: Record<ReportType, ReportMeta> = {
         { label: "Preñadas", value: prenadas, icon: HeartIcon, hint: "Confirmadas en la muestra" },
         { label: "Pendientes", value: pendientes, icon: ClockIcon, hint: "Sin diagnóstico" },
         { label: "Tasa de preñez", value: `${tasa}%`, icon: ChartBarIcon, hint: "De las montas diagnosticadas" },
+      ]
+    },
+  },
+  reproductores: {
+    icon: UsersIcon,
+    stats: (rows) => {
+      const totalHembras = nums(rows, "hembras").reduce((s, n) => s + n, 0)
+      const totalMontas = nums(rows, "montas").reduce((s, n) => s + n, 0)
+      const totalPrenadas = nums(rows, "prenadas").reduce((s, n) => s + n, 0)
+      const tasa = totalMontas ? Math.round((totalPrenadas / totalMontas) * 100) : 0
+      return [
+        { label: "Reproductores activos", value: rows.length, icon: UsersIcon, hint: "Con montas registradas" },
+        { label: "Hembras cubiertas", value: totalHembras, icon: HeartIcon, hint: "Total de hembras montadas" },
+        { label: "Montas totales", value: totalMontas, icon: CalendarDaysIcon, hint: "En el periodo" },
+        { label: "Tasa de preñez", value: `${tasa}%`, icon: ChartBarIcon, hint: "Promedio del plantel" },
       ]
     },
   },
@@ -240,10 +256,12 @@ export function ReportShell({ reportType, description }: { reportType: ReportTyp
             className: "whitespace-nowrap",
             cell: ({ row }) => {
               const value = row[c.key]
-              return badgeKeys.has(c.key) ? (
-                <StatusBadge color={statusColor[String(value)] ?? "gray"}>{value}</StatusBadge>
-              ) : (
-                <span className={j === 0 ? "font-medium text-gray-900" : "text-gray-700"}>{value}</span>
+              if (badgeKeys.has(c.key)) {
+                return <StatusBadge color={statusColor[String(value)] ?? "gray"}>{value}</StatusBadge>
+              }
+              const display = dateKeys.has(c.key) && value ? formatDisplayDate(String(value)) : value
+              return (
+                <span className={j === 0 ? "font-medium text-gray-900" : "text-gray-700"}>{display}</span>
               )
             },
           }))}

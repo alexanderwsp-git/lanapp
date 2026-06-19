@@ -24,6 +24,8 @@ export const seedSheep: ApiSheep[] = [
     recordType: RecordType.BORN,
     currentLocationId: IDS.locations.sanAlfonso,
     isPregnant: false,
+    motherId: IDS.sheep.luna,
+    fatherId: IDS.sheep.toro,
     notes: "",
   },
   {
@@ -40,6 +42,8 @@ export const seedSheep: ApiSheep[] = [
     recordType: RecordType.BORN,
     currentLocationId: IDS.locations.potreroNorte,
     isBreedingRam: true,
+    motherId: IDS.sheep.luna,
+    fatherId: IDS.sheep.toro,
     notes: "",
   },
   {
@@ -73,6 +77,8 @@ export const seedSheep: ApiSheep[] = [
     category: SheepCategory.CORDERA,
     recordType: RecordType.BORN,
     currentLocationId: IDS.locations.potreroSur,
+    motherId: IDS.sheep.estrella,
+    fatherId: IDS.sheep.negro,
     notes: "",
   },
   {
@@ -88,6 +94,8 @@ export const seedSheep: ApiSheep[] = [
     category: SheepCategory.BORREGA,
     recordType: RecordType.BORN,
     currentLocationId: IDS.locations.potreroNorte,
+    motherId: IDS.sheep.luna,
+    fatherId: IDS.sheep.toro,
     notes: "",
   },
   {
@@ -103,6 +111,8 @@ export const seedSheep: ApiSheep[] = [
     category: SheepCategory.CORDERA,
     recordType: RecordType.BORN,
     currentLocationId: IDS.locations.potreroSur,
+    motherId: IDS.sheep.estrella,
+    fatherId: IDS.sheep.negro,
     notes: "",
   },
   {
@@ -150,6 +160,8 @@ export const seedSheep: ApiSheep[] = [
     category: SheepCategory.CORDERA,
     recordType: RecordType.BORN,
     currentLocationId: IDS.locations.potreroSur,
+    motherId: IDS.sheep.estrella,
+    fatherId: IDS.sheep.negro,
     notes: "",
   },
 ]

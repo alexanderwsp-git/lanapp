@@ -33,6 +33,14 @@ const reportColumns: Record<ReportType, { key: string; label: string }[]> = {
     { key: "fecha", label: "Fecha monta" },
     { key: "resultado", label: "Resultado" },
   ],
+  reproductores: [
+    { key: "carnero", label: "Reproductor" },
+    { key: "hembras", label: "Hembras montadas" },
+    { key: "montas", label: "Montas totales" },
+    { key: "prenadas", label: "Preñadas" },
+    { key: "tasa", label: "Tasa de preñez" },
+    { key: "ultimaMonta", label: "Última monta" },
+  ],
   famacha: [
     { key: "arete", label: "Arete" },
     { key: "nombre", label: "Nombre" },

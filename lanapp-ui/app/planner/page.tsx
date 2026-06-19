@@ -469,16 +469,9 @@ export default function PlannerPage() {
                 header: "Resultado",
                 className: "whitespace-nowrap",
                 cell: (r) => (
-                  <>
-                    <StatusBadge color={breedingResultBadgeColor(r.result)}>
-                      {labelBreedingResult(r.result)}
-                    </StatusBadge>
-                    {r.diagnosisType && r.diagnosisDate && (
-                      <span className="ml-2 text-xs text-gray-400">
-                        {labelDiagnosisType(r.diagnosisType)} · {formatDisplayDate(r.diagnosisDate)}
-                      </span>
-                    )}
-                  </>
+                  <StatusBadge color={breedingResultBadgeColor(r.result)}>
+                    {labelBreedingResult(r.result)}
+                  </StatusBadge>
                 ),
               },
               {
@@ -505,7 +498,7 @@ export default function PlannerPage() {
                         disabled={confirmingId === r.id}
                         title="Confirmar monta"
                         aria-label="Confirmar monta"
-                        className="rounded-md p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
+                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
                       >
                         <HeartIcon className="size-5" aria-hidden="true" />
                       </button>

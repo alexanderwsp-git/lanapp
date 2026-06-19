@@ -621,7 +621,7 @@ export default function MedicinesPage() {
                       type="button"
                       disabled={statusUpdating === a.id}
                       onClick={() => openApply(a)}
-                      className="rounded p-1.5 text-green-600 hover:bg-green-50 hover:text-green-700 disabled:opacity-50"
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
                       title="Marcar como aplicado"
                       aria-label="Marcar como aplicado"
                     >
@@ -631,7 +631,7 @@ export default function MedicinesPage() {
                       type="button"
                       disabled={statusUpdating === a.id}
                       onClick={() => setAppStatus(a, MedicineStatus.CANCELLED)}
-                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
                       title="Cancelar"
                       aria-label="Cancelar"
                     >
