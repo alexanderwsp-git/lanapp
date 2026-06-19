@@ -49,8 +49,8 @@ import {
   PencilSquareIcon,
   TrashIcon,
   ClipboardDocumentCheckIcon,
-  CheckIcon,
-  XMarkIcon,
+  CheckBadgeIcon,
+  XCircleIcon,
   ClockIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline"
@@ -625,7 +625,7 @@ export default function MedicinesPage() {
                       title="Marcar como aplicado"
                       aria-label="Marcar como aplicado"
                     >
-                      <CheckIcon className="h-5 w-5" />
+                      <CheckBadgeIcon className="h-5 w-5" />
                     </button>
                     <button
                       type="button"
@@ -635,7 +635,7 @@ export default function MedicinesPage() {
                       title="Cancelar"
                       aria-label="Cancelar"
                     >
-                      <XMarkIcon className="h-5 w-5" />
+                      <XCircleIcon className="h-5 w-5" />
                     </button>
                   </>
                 )}

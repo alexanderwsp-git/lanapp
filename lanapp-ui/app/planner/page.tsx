@@ -42,6 +42,7 @@ import {
   UserGroupIcon,
   ArrowRightIcon,
   CheckIcon,
+  HeartIcon,
   XMarkIcon,
   BeakerIcon,
   TrashIcon,
@@ -504,9 +505,9 @@ export default function PlannerPage() {
                         disabled={confirmingId === r.id}
                         title="Confirmar monta"
                         aria-label="Confirmar monta"
-                        className="rounded-md p-1.5 text-green-600 hover:bg-green-50 hover:text-green-700 disabled:opacity-50"
+                        className="rounded-md p-1.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
                       >
-                        <CheckIcon className="size-5" aria-hidden="true" />
+                        <HeartIcon className="size-5" aria-hidden="true" />
                       </button>
                     )}
                     <button
