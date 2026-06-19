@@ -49,13 +49,6 @@ const reportColumns: Record<ReportType, { key: string; label: string }[]> = {
     { key: "tasa", label: "Tasa de preñez" },
     { key: "ultimoParto", label: "Último parto" },
   ],
-  famacha: [
-    { key: "arete", label: "Arete" },
-    { key: "nombre", label: "Nombre" },
-    { key: "ultimoPuntaje", label: "Último puntaje" },
-    { key: "fechaChequeo", label: "Fecha chequeo" },
-    { key: "alerta", label: "Alerta" },
-  ],
 }
 
 function mapApiReport(reportType: ReportType, data: ApiReportPayload): ReportConfig {

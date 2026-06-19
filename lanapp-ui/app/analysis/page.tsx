@@ -114,7 +114,7 @@ const emptyScheduleForm = (): ScheduleForm => ({
   notes: "",
 })
 
-const HISTORY_STATUSES = new Set([
+const HISTORY_STATUSES = new Set<AnalysisStatus>([
   AnalysisStatus.COMPLETED,
   AnalysisStatus.CANCELLED,
   AnalysisStatus.MISSED,

@@ -4,7 +4,6 @@ export type ReportType =
   | "maltonas"
   | "prenadas"
   | "montas"
-  | "famacha"
   | "reproductores"
   | "madres"
 
@@ -98,22 +97,6 @@ export const seedReports: Record<ReportType, ReportConfig> = {
       { id: IDS.sheep.estrella, madre: "SA-088 Estrella", crias: 4, partos: 3, montas: 4, tasa: "75%", ultimoParto: "2025-12-10" },
       { id: IDS.sheep.blanca, madre: "SA-001 Blanca", crias: 2, partos: 2, montas: 3, tasa: "67%", ultimoParto: "2025-09-02" },
       { madre: "SA-120 Perla", crias: 1, partos: 1, montas: 2, tasa: "50%", ultimoParto: "2025-07-18" },
-    ],
-  },
-  famacha: {
-    title: "Reporte FAMACHA",
-    total: 15,
-    columns: [
-      { key: "arete", label: "Arete" },
-      { key: "nombre", label: "Nombre" },
-      { key: "ultimoPuntaje", label: "Último puntaje" },
-      { key: "fechaChequeo", label: "Fecha chequeo" },
-      { key: "alerta", label: "Alerta" },
-    ],
-    rows: [
-      { arete: "SA-001", nombre: "Blanca", ultimoPuntaje: 2, fechaChequeo: "2026-06-01", alerta: "Desparasitar" },
-      { arete: "SA-042", nombre: "Negro", ultimoPuntaje: 4, fechaChequeo: "2026-06-01", alerta: "Sin alerta" },
-      { arete: "SA-103", nombre: "Luna", ultimoPuntaje: 5, fechaChequeo: "2026-06-01", alerta: "Sin alerta" },
     ],
   },
 }
