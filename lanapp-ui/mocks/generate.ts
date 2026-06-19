@@ -1,7 +1,7 @@
 import type { MockStore } from "./store"
 import { seedBreedingCycles } from "./data/breeding-cycles"
 import { seedFarmParameters } from "./data/farm-parameters"
-import { seedHealthChecks } from "./data/health-checks"
+import { seedAnalyses, seedAnalysisTypes } from "./data/analyses"
 import { seedLocations } from "./data/locations"
 import { seedMatings } from "./data/matings"
 import { seedMedicineApplications, seedMedicines } from "./data/medicines"
@@ -10,7 +10,7 @@ import { seedSheep } from "./data/sheep"
 import { seedWeaningRecords } from "./data/weaning-records"
 import { seedWeights } from "./data/weights"
 import { buildExtraSheep } from "./factories/sheep"
-import { buildHealthChecksForSheepList } from "./factories/health-check"
+import { buildAnalysesForSheepList } from "./factories/analysis"
 import { buildWeightsForSheepList } from "./factories/weight"
 import { getMockExtraSheepCount, getMockWeightsPerSheep } from "./mock-config"
 import { deepClone } from "./utils"
@@ -34,9 +34,9 @@ export function generateMockStore(): MockStore {
     ...buildWeightsForSheepList(extraSheep, getMockWeightsPerSheep()),
   ]
 
-  const healthChecks = [
-    ...deepClone(seedHealthChecks),
-    ...buildHealthChecksForSheepList(extraSheep),
+  const analyses = [
+    ...deepClone(seedAnalyses),
+    ...buildAnalysesForSheepList(extraSheep),
   ]
 
   return {
@@ -45,7 +45,8 @@ export function generateMockStore(): MockStore {
     medicines: deepClone(seedMedicines),
     medicineApplications: deepClone(seedMedicineApplications),
     weights,
-    healthChecks,
+    analysisTypes: deepClone(seedAnalysisTypes),
+    analyses,
     matings: deepClone(seedMatings),
     pregnancyChecks: deepClone(seedPregnancyChecks),
     breedingCycles: deepClone(seedBreedingCycles),

@@ -3,7 +3,6 @@ import type {
   WeightCreatePayload,
   WeightUpdatePayload,
 } from "@/lib/api/weight"
-import type { HealthCheckCreatePayload, ApiHealthCheck } from "@/lib/api/health-check"
 import { getMockStore, notFound } from "../store"
 import { calcDailyGain, newId } from "../utils"
 
@@ -60,23 +59,4 @@ export async function deleteWeight(id: string): Promise<void> {
   const idx = store.weights.findIndex((w) => w.id === id)
   if (idx === -1) throw notFound("Peso", id)
   store.weights.splice(idx, 1)
-}
-
-export async function fetchHealthChecksBySheep(sheepId: string): Promise<ApiHealthCheck[]> {
-  return getMockStore()
-    .healthChecks.filter((h) => h.sheepId === sheepId)
-    .sort((a, b) => b.checkDate.localeCompare(a.checkDate))
-}
-
-export async function createHealthCheck(payload: HealthCheckCreatePayload): Promise<ApiHealthCheck> {
-  const record: ApiHealthCheck = {
-    id: newId(),
-    sheepId: payload.sheepId,
-    checkDate: new Date(payload.checkDate).toISOString(),
-    famachaScore: payload.famachaScore,
-    weight: payload.weight,
-    notes: payload.notes,
-  }
-  getMockStore().healthChecks.push(record)
-  return record
 }

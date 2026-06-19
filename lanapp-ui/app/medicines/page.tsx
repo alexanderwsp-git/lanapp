@@ -15,15 +15,12 @@ import {
   MedicineCreateSchema,
   MedicineStatus,
   MedicineType,
-  MedicineApplicationCreateSchema,
   type MedicineCreate,
   type MedicineUpdate,
-  type MedicineApplicationCreate,
 } from "@sheep/domain"
 import {
   bulkScheduleMedicineApplications,
   createMedicine,
-  createMedicineApplication,
   deleteMedicine,
   deleteMedicineApplication,
   fetchMedicineApplications,
@@ -52,7 +49,6 @@ import {
   CheckBadgeIcon,
   XCircleIcon,
   ClockIcon,
-  UserGroupIcon,
 } from "@heroicons/react/24/outline"
 
 type MedForm = {
@@ -60,13 +56,6 @@ type MedForm = {
   name: string
   dosage: string
   description: string
-  notes: string
-}
-
-type ScheduleForm = {
-  medicineId: string
-  sheepId: string
-  scheduledDate: string
   notes: string
 }
 
@@ -84,13 +73,6 @@ const emptyMedForm = (): MedForm => ({
   name: "",
   dosage: "",
   description: "",
-  notes: "",
-})
-
-const emptyScheduleForm = (): ScheduleForm => ({
-  medicineId: "",
-  sheepId: "",
-  scheduledDate: today(),
   notes: "",
 })
 
@@ -125,11 +107,6 @@ export default function MedicinesPage() {
   const [savingMed, setSavingMed] = useState(false)
   const [deletingMed, setDeletingMed] = useState(false)
   const [medError, setMedError] = useState<string | null>(null)
-
-  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(emptyScheduleForm())
-  const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [savingSchedule, setSavingSchedule] = useState(false)
-  const [scheduleError, setScheduleError] = useState<string | null>(null)
 
   const [locations, setLocations] = useState<ApiLocation[]>([])
   const [bulkOpen, setBulkOpen] = useState(false)
@@ -254,19 +231,47 @@ export default function MedicinesPage() {
     }
   }, [])
 
+  // Prefill the schedule drawer when arriving from a treatment recommendation
+  // (e.g. /medicines?scheduleSheep=<id>&medType=Dewormer&date=YYYY-MM-DD).
+  const [pendingPrefill, setPendingPrefill] = useState<{
+    sheepId: string
+    medId: string
+    medType: string
+    date: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const scheduleSheep = params.get("scheduleSheep")
+    if (!scheduleSheep) return
+    setPendingPrefill({
+      sheepId: scheduleSheep,
+      medId: params.get("medId") ?? "",
+      medType: params.get("medType") ?? "",
+      date: params.get("date") ?? today(),
+    })
+    window.history.replaceState({}, "", "/medicines")
+  }, [])
+
+  useEffect(() => {
+    if (!pendingPrefill || meds.length === 0) return
+    const med =
+      (pendingPrefill.medId ? meds.find((m) => m.id === pendingPrefill.medId) : undefined) ??
+      (pendingPrefill.medType ? meds.find((m) => m.type === pendingPrefill.medType) : undefined)
+    openBulk({
+      medicineId: med?.id ?? "",
+      sheepId: pendingPrefill.sheepId,
+      date: pendingPrefill.date || today(),
+    })
+    setTab("scheduled")
+    setPendingPrefill(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPrefill, meds])
+
   const medicineOptions = useMemo(
     () => meds.map((m) => ({ value: m.id, label: m.name, sublabel: labelMedicineType(m.type) })),
     [meds],
-  )
-
-  const sheepOptions = useMemo(
-    () =>
-      sheep.map((s) => ({
-        value: s.id,
-        label: s.tag,
-        sublabel: s.name ?? undefined,
-      })),
-    [sheep],
   )
 
   function medDisplayName(id: string) {
@@ -373,47 +378,11 @@ export default function MedicinesPage() {
     }
   }
 
-  function openSchedule() {
-    setScheduleForm(emptyScheduleForm())
-    setScheduleError(null)
-    setScheduleOpen(true)
-  }
-
-  async function saveSchedule(e: React.FormEvent) {
-    e.preventDefault()
-    setScheduleError(null)
-    const payload = {
-      medicineId: scheduleForm.medicineId,
-      sheepId: scheduleForm.sheepId,
-      applicationDate: scheduleForm.scheduledDate,
-      status: MedicineStatus.SCHEDULED,
-      notes: scheduleForm.notes.trim() || undefined,
-    }
-
-    const parsed = MedicineApplicationCreateSchema.safeParse(payload)
-    if (!parsed.success) {
-      setScheduleError(parsed.error.errors[0]?.message ?? "Datos inválidos")
-      return
-    }
-
-    setSavingSchedule(true)
-    try {
-      await createMedicineApplication(parsed.data as MedicineApplicationCreate)
-      setScheduleOpen(false)
-      setTab("scheduled")
-      await loadApps()
-    } catch (err) {
-      setScheduleError(err instanceof Error ? err.message : "No se pudo programar")
-    } finally {
-      setSavingSchedule(false)
-    }
-  }
-
-  function openBulk() {
-    setBulkMedicineId("")
-    setBulkDate(today())
+  function openBulk(prefill?: { medicineId?: string; sheepId?: string; date?: string }) {
+    setBulkMedicineId(prefill?.medicineId ?? "")
+    setBulkDate(prefill?.date || today())
     setBulkNotes("")
-    setBulkSelected(new Set())
+    setBulkSelected(prefill?.sheepId ? new Set([prefill.sheepId]) : new Set())
     setBulkError(null)
     setBulkResult(null)
     setBulkOpen(true)
@@ -670,24 +639,14 @@ export default function MedicinesPage() {
               Nuevo medicamento
             </button>
           ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={openBulk}
-                disabled={meds.length === 0 || sheep.length === 0}
-                className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
-              >
-                <UserGroupIcon className="h-5 w-5" aria-hidden="true" />
-                Programar en lote
-              </button>
-              <button
-                onClick={openSchedule}
-                disabled={meds.length === 0 || sheep.length === 0}
-                className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-              >
-                <PlusIcon className="h-5 w-5" aria-hidden="true" />
-                Programar aplicación
-              </button>
-            </div>
+            <button
+              onClick={() => openBulk()}
+              disabled={meds.length === 0 || sheep.length === 0}
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+            >
+              <PlusIcon className="h-5 w-5" aria-hidden="true" />
+              Programar aplicación
+            </button>
           )
         }
       />
@@ -836,7 +795,7 @@ export default function MedicinesPage() {
                   action={
                     scheduleFilter === "all" && meds.length > 0 && sheep.length > 0 ? (
                       <button
-                        onClick={openSchedule}
+                        onClick={() => openBulk()}
                         className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
                       >
                         Programar aplicación
@@ -946,82 +905,11 @@ export default function MedicinesPage() {
         </form>
       </Drawer>
 
-      {/* Schedule drawer — planned date only */}
-      <Drawer
-        open={scheduleOpen}
-        onClose={() => setScheduleOpen(false)}
-        title="Programar aplicación"
-        description="Crea una dosis pendiente. Aún no se ha aplicado — marca Aplicado cuando la realices."
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setScheduleOpen(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="schedule-form"
-              disabled={savingSchedule || !scheduleForm.medicineId || !scheduleForm.sheepId}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {savingSchedule && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Programar
-            </button>
-          </>
-        }
-      >
-        <form id="schedule-form" onSubmit={saveSchedule} className="flex flex-col gap-4">
-          {scheduleError && (
-            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{scheduleError}</div>
-          )}
-          <Field label="Medicamento" required htmlFor="sch-medicine">
-            <Combobox
-              id="sch-medicine"
-              options={medicineOptions}
-              value={scheduleForm.medicineId}
-              onChange={(v) => setScheduleForm({ ...scheduleForm, medicineId: v })}
-              placeholder="Seleccionar medicamento"
-            />
-          </Field>
-          <Field label="Oveja" required htmlFor="sch-sheep">
-            <Combobox
-              id="sch-sheep"
-              options={sheepOptions}
-              value={scheduleForm.sheepId}
-              onChange={(v) => setScheduleForm({ ...scheduleForm, sheepId: v })}
-              placeholder="Seleccionar oveja"
-            />
-          </Field>
-          <Field label="Fecha programada" required htmlFor="sch-date">
-            <TextInput
-              id="sch-date"
-              type="date"
-              value={scheduleForm.scheduledDate}
-              onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledDate: e.target.value })}
-              required
-            />
-          </Field>
-          <Field label="Notas" htmlFor="sch-notes">
-            <Textarea
-              id="sch-notes"
-              rows={2}
-              value={scheduleForm.notes}
-              onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
-            />
-          </Field>
-        </form>
-      </Drawer>
-
-      {/* Bulk schedule drawer — many sheep, one medicine + date */}
+      {/* Schedule drawer — one medicine + date, one or many sheep */}
       <Drawer
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
-        title="Programar en lote"
+        title="Programar aplicación"
         description={`${bulkSelected.size} oveja(s) seleccionada(s)`}
         footer={
           <>

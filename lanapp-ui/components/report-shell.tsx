@@ -18,8 +18,6 @@ import {
   ChartBarIcon,
   ClockIcon,
   DocumentChartBarIcon,
-  ExclamationTriangleIcon,
-  EyeIcon,
   HeartIcon,
   MagnifyingGlassIcon,
   ScaleIcon,
@@ -142,19 +140,6 @@ const reportMeta: Record<ReportType, ReportMeta> = {
         { label: "Crías totales", value: totalCrias, icon: HeartIcon, hint: "Producidas por el grupo" },
         { label: "Partos totales", value: totalPartos, icon: CalendarDaysIcon, hint: "Acumulados" },
         { label: "Tasa de preñez", value: `${tasaProm}%`, icon: ChartBarIcon, hint: "Promedio del grupo" },
-      ]
-    },
-  },
-  famacha: {
-    icon: EyeIcon,
-    stats: (rows, total) => {
-      const atencion = countWhere(rows, (r) => String(r.alerta) !== "Sin alerta")
-      const riesgo = countWhere(rows, (r) => Number(r.ultimoPuntaje) <= 2)
-      return [
-        { label: "Total chequeos", value: total, icon: EyeIcon, hint: "Evaluaciones realizadas" },
-        { label: "Puntaje promedio", value: avg(rows, "ultimoPuntaje"), icon: ChartBarIcon, hint: "Escala FAMACHA 1–5" },
-        { label: "Requieren atención", value: atencion, icon: ExclamationTriangleIcon, hint: "Con alerta activa" },
-        { label: "En riesgo (≤2)", value: riesgo, icon: HeartIcon, hint: "Posible anemia" },
       ]
     },
   },
