@@ -54,7 +54,7 @@ import { formatDisplayDate, formatAgeDays, toDateInputValue } from "@/lib/format
 import { labelBreedingResult, labelDiagnosisType, diagnosisTypesForForms } from "@/lib/labels/breeding"
 import { labelMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
 import { labelCategory } from "@/lib/labels/sheep"
-import { HeartIcon } from "@heroicons/react/24/outline"
+import { HeartIcon, ChatBubbleBottomCenterTextIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
@@ -67,6 +67,17 @@ type MatingRow = ApiMating & { checks: ApiPregnancyCheck[] }
 function sheepLabel(s: Pick<ApiSheep, "tag" | "name"> | null | undefined, id: string): string {
   if (!s) return id
   return s.name ? `${s.tag} · ${s.name}` : s.tag
+}
+
+/** Most recent non-empty note across a mating's checks (prefix stripped). */
+function latestCheckNote(checks: ApiPregnancyCheck[]): string | undefined {
+  const withNotes = [...checks]
+    .filter((c) => c.notes?.trim())
+    .sort((a, b) => b.checkDate.localeCompare(a.checkDate))
+  const raw = withNotes[0]?.notes
+  if (!raw) return undefined
+  const stripped = raw.replace(/^\[(ECO|FAMACHA|Control Monta)\]\s*/i, "").trim()
+  return stripped || undefined
 }
 
 export function SheepMontasTab({
@@ -455,6 +466,7 @@ export function SheepMontasTab({
                   const birth = partoDate(m)
                   const isExpanded = expandedId === m.id
                   const ecoWindow = suggestedEcoWindow(m.matingDate, reproParams)
+                  const noteSnippet = latestCheckNote(m.checks)
                   return (
                     <Fragment key={m.id}>
                       <tr className="hover:bg-gray-50">
@@ -471,24 +483,43 @@ export function SheepMontasTab({
                             </StatusBadge>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
-                          {phaseInfo.detail && <div>{phaseInfo.detail}</div>}
-                          {actions.phase === "awaiting_diagnosis" && (
-                            <div className="mt-1 text-indigo-700">
-                              ECO sugerido: {formatDisplayDate(ecoWindow.min)} –{" "}
-                              {formatDisplayDate(ecoWindow.max)}
-                            </div>
-                          )}
-                          {m.expectedBirthDate && actions.phase === "pregnant" && !birth && (
-                            <div className="mt-1">Parto esperado: {formatDisplayDate(m.expectedBirthDate)}</div>
-                          )}
-                          {birth && <div className="mt-1">Parto: {formatDisplayDate(birth)}</div>}
-                          {actions.phase === "empty" && (
-                            <div className="mt-1 text-amber-700">
-                              Aplicar Vitasel y registrar nueva monta (~{reproParams.heatCycleDays} días)
-                            </div>
-                          )}
-                          {!phaseInfo.detail && !birth && actions.phase === "awaiting_diagnosis" && "—"}
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex max-w-xs flex-col gap-1.5">
+                            {phaseInfo.detail && (
+                              <p className="text-sm font-medium text-gray-700">{phaseInfo.detail}</p>
+                            )}
+                            {actions.phase === "awaiting_diagnosis" && (
+                              <p className="text-xs text-indigo-700">
+                                ECO sugerido: {formatDisplayDate(ecoWindow.min)} –{" "}
+                                {formatDisplayDate(ecoWindow.max)}
+                              </p>
+                            )}
+                            {m.expectedBirthDate && actions.phase === "pregnant" && !birth && (
+                              <p className="text-xs text-gray-500">
+                                Parto esperado: {formatDisplayDate(m.expectedBirthDate)}
+                              </p>
+                            )}
+                            {birth && (
+                              <p className="text-xs text-gray-500">Parto: {formatDisplayDate(birth)}</p>
+                            )}
+                            {actions.phase === "empty" && (
+                              <p className="text-xs text-amber-700">
+                                Aplicar Vitasel y registrar nueva monta (~{reproParams.heatCycleDays} días)
+                              </p>
+                            )}
+                            {noteSnippet && (
+                              <div className="mt-0.5 flex items-start gap-1.5 rounded-md border-l-2 border-indigo-300 bg-indigo-50/70 py-1 pr-2 pl-1.5">
+                                <ChatBubbleBottomCenterTextIcon className="mt-0.5 size-3.5 shrink-0 text-indigo-500" />
+                                <p className="line-clamp-2 text-xs text-gray-600">{noteSnippet}</p>
+                              </div>
+                            )}
+                            {!phaseInfo.detail &&
+                              !birth &&
+                              !noteSnippet &&
+                              actions.phase === "awaiting_diagnosis" && (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex flex-wrap gap-2">

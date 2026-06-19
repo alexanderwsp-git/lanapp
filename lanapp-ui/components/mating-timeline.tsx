@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import {
   CalendarDaysIcon,
+  ChatBubbleBottomCenterTextIcon,
   HeartIcon,
   TagIcon,
 } from "@heroicons/react/20/solid"
@@ -51,6 +52,21 @@ function TypePill({ label }: { label: string }) {
     <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200 ring-inset">
       {label}
     </span>
+  )
+}
+
+function NoteCallout({ note }: { note: string }) {
+  return (
+    <div className="mt-2.5 flex gap-2 rounded-md border-l-4 border-indigo-400 bg-indigo-50/70 py-2 pr-3 pl-2.5">
+      <ChatBubbleBottomCenterTextIcon
+        aria-hidden="true"
+        className="mt-0.5 size-4 shrink-0 text-indigo-500"
+      />
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold tracking-wide text-indigo-700 uppercase">Nota</p>
+        <p className="mt-0.5 text-sm whitespace-pre-line text-gray-700">{note}</p>
+      </div>
+    </div>
   )
 }
 
@@ -215,7 +231,7 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                           </p>
                         )}
                         {displayNotes(item.check.notes) && (
-                          <p className="mt-2 text-sm text-gray-700">{displayNotes(item.check.notes)}</p>
+                          <NoteCallout note={displayNotes(item.check.notes)!} />
                         )}
                       </div>
                     </>
@@ -235,7 +251,7 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                           <ResultPill label="Parto" dotClass="fill-indigo-500" />
                         </div>
                         {displayNotes(item.check.notes) && (
-                          <p className="mt-2 text-sm text-gray-700">{displayNotes(item.check.notes)}</p>
+                          <NoteCallout note={displayNotes(item.check.notes)!} />
                         )}
                       </div>
                     </>
