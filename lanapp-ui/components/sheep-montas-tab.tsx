@@ -54,7 +54,7 @@ import { formatDisplayDate, formatAgeDays, toDateInputValue } from "@/lib/format
 import { labelBreedingResult, labelDiagnosisType, diagnosisTypesForForms } from "@/lib/labels/breeding"
 import { labelMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
 import { labelCategory } from "@/lib/labels/sheep"
-import { HeartIcon } from "@heroicons/react/24/outline"
+import { HeartIcon, BeakerIcon, SunIcon, ClockIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
@@ -508,8 +508,9 @@ export function SheepMontasTab({
                               <button
                                 type="button"
                                 onClick={() => openEco(m)}
-                                className="text-xs font-medium text-indigo-600 hover:underline"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline"
                               >
+                                <BeakerIcon className="size-4" aria-hidden="true" />
                                 Diagnóstico
                               </button>
                             ) : (
@@ -521,8 +522,9 @@ export function SheepMontasTab({
                               <button
                                 type="button"
                                 onClick={() => openParto(m)}
-                                className="text-xs font-medium text-indigo-600 hover:underline"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline"
                               >
+                                <SunIcon className="size-4" aria-hidden="true" />
                                 Registrar parto
                               </button>
                             ) : actions.phase === "pregnant" ? null : actions.deliverBlockedReason ? (
@@ -532,8 +534,9 @@ export function SheepMontasTab({
                               <button
                                 type="button"
                                 onClick={() => setExpandedId(isExpanded ? null : m.id)}
-                                className="text-xs font-medium text-gray-600 hover:underline"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:underline"
                               >
+                                <ClockIcon className="size-4" aria-hidden="true" />
                                 {isExpanded ? "Ocultar historial" : `Historial (${m.checks.length})`}
                               </button>
                             )}
