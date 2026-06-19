@@ -1,13 +1,13 @@
 import { MedicineType } from "@sheep/domain"
-import { AnalysisStatus, AnalysisType, type ApiAnalysis } from "@/lib/analysis/types"
+import { AnalysisStatus, AnalysisKind, type ApiAnalysis } from "@/lib/analysis/types"
 import type { BadgeColor } from "@/mocks/labels"
 
-const typeLabels: Record<AnalysisType, string> = {
-  [AnalysisType.FAMACHA]: "FAMACHA",
-  [AnalysisType.COPROLOGICAL]: "Coprológico",
-  [AnalysisType.BODY_CONDITION]: "Condición corporal",
-  [AnalysisType.BLOOD]: "Sangre",
-  [AnalysisType.OTHER]: "Otro",
+const typeLabels: Record<AnalysisKind, string> = {
+  [AnalysisKind.FAMACHA]: "FAMACHA",
+  [AnalysisKind.COPROLOGICAL]: "Coprológico",
+  [AnalysisKind.BODY_CONDITION]: "Condición corporal",
+  [AnalysisKind.BLOOD]: "Sangre",
+  [AnalysisKind.OTHER]: "Otro",
 }
 
 const statusLabels: Record<AnalysisStatus, string> = {
@@ -17,15 +17,15 @@ const statusLabels: Record<AnalysisStatus, string> = {
   [AnalysisStatus.MISSED]: "Omitido",
 }
 
-export function labelAnalysisType(type: AnalysisType | string): string {
-  return typeLabels[type as AnalysisType] ?? String(type)
+export function labelAnalysisType(type: AnalysisKind | string): string {
+  return typeLabels[type as AnalysisKind] ?? String(type)
 }
 
 export function labelAnalysisStatus(status: AnalysisStatus | string): string {
   return statusLabels[status as AnalysisStatus] ?? String(status)
 }
 
-export const analysisTypeOptions = Object.values(AnalysisType)
+export const analysisTypeOptions = Object.values(AnalysisKind)
 export const analysisStatusOptions = Object.values(AnalysisStatus)
 
 export const analysisStatusColor: Record<string, BadgeColor> = {
@@ -69,7 +69,7 @@ export type AnalysisRecommendation = {
  */
 export function analysisRecommendation(record: ApiAnalysis): AnalysisRecommendation {
   const type = record.analysisType?.type
-  if (type === AnalysisType.FAMACHA && record.famachaScore != null) {
+  if (type === AnalysisKind.FAMACHA && record.famachaScore != null) {
     if (record.famachaScore <= 2) {
       return {
         needsTreatment: true,
@@ -80,7 +80,7 @@ export function analysisRecommendation(record: ApiAnalysis): AnalysisRecommendat
     return { needsTreatment: false, message: "Sin alerta. No requiere tratamiento." }
   }
 
-  if (type === AnalysisType.COPROLOGICAL) {
+  if (type === AnalysisKind.COPROLOGICAL) {
     const v = (record.resultValue ?? "").toLowerCase()
     const high = /(alto|alta|positiv|elevad)/.test(v) || parseInt(v, 10) >= 500
     if (high) {

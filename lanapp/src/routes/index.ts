@@ -15,6 +15,8 @@ import upload from './upload';
 import reports from './reports';
 import importRoutes from './import';
 import farmParameters from './farm-parameters';
+import analysis from './analysis';
+import analysisType from './analysis-type';
 
 const router = Router();
 
@@ -34,5 +36,7 @@ router.use('/upload', upload);
 router.use('/reports', reports);
 router.use('/import', importRoutes);
 router.use('/farm-parameters', farmParameters);
+router.use('/analysis-type', analysisType);
+router.use('/analysis', analysis);
 
 export default router;

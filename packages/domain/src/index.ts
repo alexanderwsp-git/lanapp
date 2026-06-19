@@ -3,6 +3,7 @@ export * from './enums/sheep';
 export * from './enums/mating';
 export * from './enums/medicine';
 export * from './enums/breeding';
+export * from './enums/analysis';
 export * from './mating-lifecycle';
 export * from './reproduction-parameters';
 
@@ -71,6 +72,19 @@ export {
     type WeaningRecordListQuery,
 } from './schemas/weaning-record';
 export * from './schemas/sale-evaluation';
+export * from './schemas/analysis';
+export {
+    AnalysisTypeCreateSchema,
+    AnalysisTypeUpdateSchema,
+    AnalysisCreateSchema,
+    AnalysisUpdateSchema,
+    BulkAnalysisScheduleSchema,
+    type AnalysisTypeCreate,
+    type AnalysisTypeUpdate,
+    type AnalysisCreate,
+    type AnalysisUpdate,
+    type BulkAnalysisSchedule,
+} from './schemas/analysis';
 export * from './schemas/bulk';
 export {
     SheepTargetFiltersSchema,

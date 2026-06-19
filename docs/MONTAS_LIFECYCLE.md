@@ -53,32 +53,31 @@ Ultrasound (ECO) is the most reliable pregnancy check at 30–45 days post-monta
 
 Creates a `mating` row (status **Pendiente**). Category does **not** change until diagnosis.
 
-### 2. Diagnóstico — tipos de chequeo
+### 2. Diagnóstico de preñez — ECO
 
-Pregnancy diagnosis on Montas / Planificador uses **two types only**:
+Pregnancy diagnosis on Montas / Planificador uses **ECO only** (ecógrafo):
 
 | Type | Method |
 |------|--------|
-| **ECO** | Ecógrafo (ultrasound) — primary check ~30–45 days after monta |
-| **FAMACHA** | Manual field check (observation, palpation, follow-up — no equipment) |
+| **ECO** | Ecógrafo (ultrasound) — primary and follow-up checks |
 
-> **Note:** The sheep detail **FAMACHA tab** is a separate health record (anemia score 1–5 on the eyelid). Same name, different purpose.
+> **Note:** **FAMACHA** (anemia score 1–5 on the eyelid) lives under **Análisis** (`/analysis`) — it is **not** a pregnancy test.
 
-Legacy records stored as `Control Monta` display as **FAMACHA** in history.
+Legacy `pregnancy_check` rows with `FAMACHA` or `Control Monta` are migrated to **ECO** in the database.
 
 | Result | Meaning | Same mating | Ewe lock |
 |--------|---------|-------------|----------|
 | **Preñada** | Confirmed pregnant | Follow-up **Revisar** or **Vacía** (loss) | **Locked** — no new montas |
 | **Vacía** | Not pregnant (definitive) | **Terminal** for this mating | Unlocked — Vitasel + **new monta** |
-| **Revisar** | Inconclusive | Another check allowed | Not pregnant until confirmed |
+| **Revisar** | Inconclusive | Another ECO allowed | Not pregnant until confirmed |
 
-**When to use which type**
+**When to use what**
 
-| Situation | Type |
-|-----------|------|
-| First check ~30–45 days with ecógrafo | **ECO** |
-| No ecógrafo, inconclusive ECO, or gestation follow-up | **FAMACHA** |
-| Monthly anemia round (eyelid score) | **FAMACHA tab** (health — not Montas diagnóstico) |
+| Situation | Where |
+|-----------|--------|
+| Pregnancy check ~30–45 days post-monta | **Montas** / **Planificador** → ECO |
+| Gestation follow-up | **Montas** → ECO (Revisar / Vacía) |
+| Monthly anemia round (eyelid score 1–5) | **Análisis** page or sheep **Análisis** tab |
 
 The UI shows a suggested ECO window and warns (soft) if the check date falls outside the configured range.
 
@@ -124,7 +123,7 @@ After confirming a planned cycle, continue on the ewe’s **Montas** tab for ECO
 | Phase | Label | Next action |
 |-------|-------|-------------|
 | `awaiting_diagnosis` | Pendiente diagnóstico | ECO in suggested window |
-| `recheck` | Revisar | FAMACHA or repeat ECO |
+| `recheck` | Revisar | Repeat ECO |
 | `pregnant` | Preñada | Registrar parto |
 | `empty` | Vacía | Vitasel + nueva monta |
 | `delivered` | Parto registrado | — |

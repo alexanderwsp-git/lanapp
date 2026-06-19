@@ -52,14 +52,12 @@ import {
 } from "@/lib/breeding-eligibility"
 import { useReproductionParameters } from "@/lib/hooks/use-reproduction-parameters"
 import { formatDisplayDate, formatAgeDays, toDateInputValue } from "@/lib/format"
-import { labelBreedingResult, labelDiagnosisType, diagnosisTypesForForms } from "@/lib/labels/breeding"
+import { labelBreedingResult } from "@/lib/labels/breeding"
 import { labelMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
 import { labelCategory } from "@/lib/labels/sheep"
 import { HeartIcon, BeakerIcon, SunIcon, ClockIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
-
-const MONTAS_DIAGNOSIS_TYPES = diagnosisTypesForForms
 
 type EcoResult = "Preñada" | "Vacía" | "Revisar"
 
@@ -93,7 +91,6 @@ export function SheepMontasTab({
   const [notes, setNotes] = useState("")
 
   const [ecoFor, setEcoFor] = useState<MatingRow | null>(null)
-  const [ecoType, setEcoType] = useState<DiagnosisType>(DiagnosisType.ECO)
   const [ecoResult, setEcoResult] = useState<EcoResult>("Preñada")
   const [checkDate, setCheckDate] = useState(today())
   const [nextCheckDate, setNextCheckDate] = useState("")
@@ -217,7 +214,6 @@ export function SheepMontasTab({
       today() >= window.min && today() <= window.max ? today() : window.min
     const followUp = isPostPregnancyFollowUp(row.checks)
     setEcoFor(row)
-    setEcoType(followUp || phase === "pregnant" ? DiagnosisType.FAMACHA : DiagnosisType.ECO)
     setEcoResult(options[0] ?? "Preñada")
     setCheckDate(followUp ? today() : defaultDate)
     setNextCheckDate(followUp ? "" : window.max)
@@ -244,7 +240,7 @@ export function SheepMontasTab({
         matingId: ecoFor.id,
         checkDate,
         isPregnant,
-        checkType: ecoType,
+        checkType: DiagnosisType.ECO,
         notes: ecoNotes.trim() || undefined,
         nextCheckDate: ecoResult === "Revisar" && nextCheckDate ? nextCheckDate : undefined,
         vitaselApplied: ecoResult === "Vacía" ? ecoVitasel : undefined,
@@ -598,22 +594,10 @@ export function SheepMontasTab({
           )}
           {ecoFor && isPostPregnancyFollowUp(ecoFor.checks) && (
             <p className="rounded-md bg-pink-50 px-3 py-2 text-sm text-pink-800">
-              Preñez confirmada. <strong>Revisar</strong> programa un control de gestación sin cambiar el
+              Preñez confirmada. <strong>Revisar</strong> programa un control ECO de gestación sin cambiar el
               estado preñada. <strong>Vacía</strong> solo si hubo pérdida o el diagnóstico fue erróneo.
             </p>
           )}
-          <Field label="Tipo" required htmlFor="eco-type">
-            <Select id="eco-type" value={ecoType} onChange={(e) => setEcoType(e.target.value as DiagnosisType)}>
-              {MONTAS_DIAGNOSIS_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {labelDiagnosisType(t)}
-                </option>
-              ))}
-            </Select>
-            <p className="mt-1 text-xs text-gray-500">
-              ECO = ecógrafo · FAMACHA = control manual de preñez (sin equipo).
-            </p>
-          </Field>
           <Field label="Resultado" required>
             <div className="flex gap-2">
               {(ecoFor

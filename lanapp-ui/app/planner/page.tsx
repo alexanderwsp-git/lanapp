@@ -29,9 +29,7 @@ import { labelCategory } from "@/lib/labels/sheep"
 import {
   breedingResultBadgeColor,
   breedingResultToUiOptions,
-  diagnosisTypesForForms,
   labelBreedingResult,
-  labelDiagnosisType,
   uiResultToBreedingResult,
 } from "@/lib/labels/breeding"
 import { isEweBreedingEligible, isRamBreedingEligible } from "@/lib/breeding-eligibility"
@@ -68,7 +66,6 @@ export default function PlannerPage() {
   const [potreroFilter, setPotreroFilter] = useState("")
 
   const [diagFor, setDiagFor] = useState<ApiBreedingCycle | null>(null)
-  const [dType, setDType] = useState<DiagnosisType>(DiagnosisType.ECO)
   const [dDate, setDDate] = useState(today())
   const [dResult, setDResult] = useState<"Preñada" | "Vacía" | "Revisar">("Preñada")
   const [dNotes, setDNotes] = useState("")
@@ -187,7 +184,6 @@ export default function PlannerPage() {
 
   function openDiag(row: ApiBreedingCycle) {
     setDiagFor(row)
-    setDType(DiagnosisType.ECO)
     setDDate(today())
     setDResult("Preñada")
     setDNotes("")
@@ -206,7 +202,7 @@ export default function PlannerPage() {
     setDiagSaving(true)
     try {
       await recordBreedingDiagnosis(diagFor.id, {
-        diagnosisType: dType,
+        diagnosisType: DiagnosisType.ECO,
         diagnosisDate: dDate,
         result: uiResultToBreedingResult(dResult),
         notes: dNotes.trim() || undefined,
@@ -724,18 +720,9 @@ export default function PlannerPage() {
               Se confirmará la monta automáticamente al guardar (requiere reproductor asignado).
             </p>
           )}
-          <Field label="Tipo" required htmlFor="d-type">
-            <Select id="d-type" value={dType} onChange={(e) => setDType(e.target.value as DiagnosisType)}>
-              {diagnosisTypesForForms.map((t) => (
-                <option key={t} value={t}>
-                  {labelDiagnosisType(t)}
-                </option>
-              ))}
-            </Select>
-            <p className="mt-1 text-xs text-gray-500">
-              ECO = ecógrafo · FAMACHA = control manual de preñez (sin equipo).
-            </p>
-          </Field>
+          <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+            Diagnóstico de preñez por ecógrafo (ECO).
+          </p>
           <Field label="Fecha" required htmlFor="d-date">
             <TextInput id="d-date" type="date" value={dDate} onChange={(e) => setDDate(e.target.value)} />
           </Field>

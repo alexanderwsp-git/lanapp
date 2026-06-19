@@ -1,4 +1,4 @@
-import { BreedingCycleStatus, BreedingResult, DiagnosisType } from "@sheep/domain"
+import { BreedingCycleStatus, BreedingResult, DiagnosisType, PREGNANCY_DIAGNOSIS_TYPES } from "@sheep/domain"
 
 const BREEDING_RESULT_LABELS: Record<BreedingResult, string> = {
   [BreedingResult.PREGNANT]: "Preñada",
@@ -13,12 +13,12 @@ const BREEDING_CYCLE_STATUS_LABELS: Record<BreedingCycleStatus, string> = {
 
 const DIAGNOSIS_TYPE_LABELS: Record<DiagnosisType, string> = {
   [DiagnosisType.ECO]: "ECO",
-  [DiagnosisType.CONTROL_MONTA]: "FAMACHA",
-  [DiagnosisType.FAMACHA]: "FAMACHA",
+  [DiagnosisType.CONTROL_MONTA]: "Control manual",
+  [DiagnosisType.FAMACHA]: "ECO",
 }
 
-/** Pregnancy diagnosis options in Montas + Planificador. */
-export const diagnosisTypesForForms = [DiagnosisType.ECO, DiagnosisType.FAMACHA] as const
+/** Pregnancy diagnosis on Montas + Planificador — ECO only. */
+export const diagnosisTypesForForms = PREGNANCY_DIAGNOSIS_TYPES
 
 /** @deprecated Use diagnosisTypesForForms. */
 export const diagnosisTypeOptions = Object.values(DiagnosisType)

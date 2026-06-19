@@ -222,7 +222,9 @@ Mounted under `{API_PREFIX}/`:
 | `/sheep` | Sheep CRUD + filters |
 | `/location` | Locations |
 | `/weight` | Weight history |
-| `/health-check` | FAMACHA |
+| `/health-check` | Legacy FAMACHA (use `/analysis`) |
+| `/analysis` | Análisis — FAMACHA, coprológico, etc. |
+| `/analysis-type` | Analysis type catalog |
 | `/mating` | Matings |
 | `/pregnancy-check` | ECO + delivery |
 | `/breeding-cycle` | Planner cycles |
@@ -275,14 +277,29 @@ Mounted under `{API_PREFIX}/`:
 
 **`dailyGain`:** average g/day since previous pesaje — see §15.3.
 
-### 3.6 Health check (FAMACHA)
+### 3.6 Analysis (Análisis — FAMACHA, coprológico, etc.)
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/health-check/sheep/:sheepId` | History |
+| GET/POST | `/analysis-type` | Catalog of analysis kinds |
+| GET/PUT/DELETE | `/analysis-type/:id` | — |
+| GET | `/analysis` | Paginated list |
+| GET | `/analysis/pending` | Due scheduled analyses |
+| GET | `/analysis/sheep/:sheepId` | Per-sheep history |
+| POST | `/analysis` | Schedule or record one analysis |
+| POST | `/analysis/bulk/schedule` | Bulk schedule by sheepIds or filters |
+| PUT/DELETE | `/analysis/:id` | Update result / cancel |
+
+**FAMACHA** = anemia score **1–5** (`famachaScore`). Lower scores (≤2) trigger desparasitar recommendations.
+
+Legacy `/health-check` API remains for backward compatibility; new data should use `/analysis`.
+
+### 3.6.1 Health check (legacy)
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/health-check/sheep/:sheepId` | History (migrated to analysis on deploy) |
 | POST | `/health-check` | `sheepId`, `checkDate`, `famachaScore` 1–5 |
-| PUT | `/health-check/:id` | partial |
-| DELETE | `/health-check/:id` | — |
 
 ### 3.7 Mating
 
@@ -815,21 +832,21 @@ Examples: Cordero, Cordera destetada (maltona), Borrego, Oveja preñada, Oveja v
 
 ### Diagnosis type (`DiagnosisType` on pregnancy check / planner)
 
-**Forms (Montas + Planificador):** **ECO** and **FAMACHA** only.
+**Forms (Montas + Planificador):** **ECO only**.
 
 | API value | UI label | Purpose |
 |-----------|----------|---------|
-| `ECO` | ECO | Ecógrafo — pregnancy confirmation ~30–45 days post-monta |
-| `FAMACHA` | FAMACHA | Manual pregnancy check (no equipment), follow-up after Preñada |
-| `Control Monta` | FAMACHA | Legacy enum — displayed as FAMACHA in history |
+| `ECO` | ECO | Ecógrafo — pregnancy confirmation and follow-up |
+| `Control Monta` | Control manual | Legacy — migrated to ECO |
+| `FAMACHA` | ECO | Legacy misuse — migrated to ECO; use **Análisis** for anemia |
 
-**Same name, two records:** Montas diagnóstico **FAMACHA** = manual preñez check. Tab **FAMACHA** = anemia score 1–5 (`POST /health-check`).
+**Two separate modules:** Montas **diagnóstico** = pregnancy (ECO). **Análisis** (`/analysis`) = FAMACHA anemia score, coprológico, etc.
 
-### FAMACHA score (health tab only)
+### FAMACHA score (Análisis only)
 
-Integer **1–5**. UI helper: *"1 = rojo oscuro (anémico), 5 = rosa/blanco (sano)"*.
+Integer **1–5** on the **Análisis** page / sheep **Análisis** tab. UI: *"1 = rojo oscuro (anémico), 5 = rosa/blanco (sano)"*.
 
-- Score ≤ 2 → red badge / alert
+- Score ≤ 2 → red badge / alert → desparasitar
 - Score 3 → yellow
 - Score ≥ 4 → green
 
@@ -1389,9 +1406,8 @@ stateDiagram-v2
 | Farm term | UI / system |
 |-----------|-------------|
 | Monta | `POST /mating` |
-| ECO (ecógrafo) | Montas diagnóstico → `checkType: ECO` |
-| Control manual de preñez | Montas diagnóstico → `checkType: FAMACHA` |
-| FAMACHA puntaje (anemia) | Tab FAMACHA → `POST /health-check` |
+| ECO (ecógrafo) | Montas / Planificador diagnóstico → `checkType: ECO` |
+| FAMACHA puntaje (anemia) | Análisis → `POST /analysis` (`famachaScore` 1–5) |
 | Vitasel | `breeding_cycle.vitaselApplied` or medicine application |
 | Parto | `POST …/delivery` |
 | Segunda monta | New mating after ineffective / empty |

@@ -4,14 +4,14 @@ import { Router, Request, Response } from 'express';
 import { verifyToken } from '../middlewares/auth.middleware';
 import { SheepService } from '../services/sheep.service';
 import { MatingService } from '../services/mating.service';
-import { HealthCheckService } from '../services/health-check.service';
 import { BreedingCycleService } from '../services/breeding-cycle.service';
+import { AnalysisService } from '../services/analysis.service';
 
 const router = Router();
 const sheepService = new SheepService();
 const matingService = new MatingService();
-const healthCheckService = new HealthCheckService();
 const breedingCycleService = new BreedingCycleService();
+const analysisService = new AnalysisService();
 
 router.get(
     '/maltonas',
@@ -76,8 +76,8 @@ router.get(
     '/famacha',
     verifyToken,
     asyncHandler(async (req: Request, res: Response) => {
-        const threshold = parseInt(req.query.threshold as string) || 3;
-        const alerts = await healthCheckService.findHighScores(threshold);
+        const threshold = parseInt(req.query.threshold as string) || 2;
+        const alerts = await analysisService.findFamachaAlerts(threshold);
         found(res, {
             title: 'FAMACHA',
             generatedAt: new Date(),
@@ -95,7 +95,7 @@ router.get(
             sheepService.findAll(1, 1),
             sheepService.findPregnant(),
             sheepService.findInQuarantine(),
-            healthCheckService.findHighScores(3),
+            analysisService.findFamachaAlerts(2),
         ]);
 
         found(res, {

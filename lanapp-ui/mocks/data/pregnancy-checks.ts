@@ -21,15 +21,15 @@ export const seedPregnancyChecks: ApiPregnancyCheck[] = [
     kind: PregnancyCheckKind.DIAGNOSIS,
     notes: "Vacía — aplicar Vitasel",
   },
-  // m1 (Luna, preñada): control FAMACHA de seguimiento durante la gestación.
+  // m1 (Luna, preñada): seguimiento ECO durante la gestación.
   {
     id: "p1000001-0000-4000-8000-000000000003",
     matingId: IDS.matings.m1,
     checkDate: "2026-05-10T00:00:00.000Z",
     isPregnant: true,
-    checkType: DiagnosisType.FAMACHA,
+    checkType: DiagnosisType.ECO,
     kind: PregnancyCheckKind.DIAGNOSIS,
-    notes: "FAMACHA 2, condición corporal buena. Dos fetos.",
+    notes: "ECO de seguimiento, condición corporal buena. Dos fetos.",
   },
   // m4 (Luna, ciclo anterior): ECO positivo + parto registrado.
   {

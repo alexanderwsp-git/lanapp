@@ -193,7 +193,7 @@ export default function SettingsPage() {
           <h2 className="text-base font-semibold text-gray-900">Preferencias</h2>
           <div className="mt-6 flex flex-col divide-y divide-gray-100">
             {[
-              { t: "Alertas FAMACHA", d: "Notificar cuando una oveja alcance grado 4 o superior." },
+              { t: "Alertas FAMACHA", d: "Notificar cuando una oveja tenga puntaje 2 o inferior (anemia)." },
               { t: "Recordatorios de monta", d: "Avisar fechas de monta y parto estimado." },
               { t: "Stock de medicamentos", d: "Alertar cuando un medicamento esté bajo stock." },
             ].map((item, i) => (

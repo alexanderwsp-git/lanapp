@@ -3,7 +3,7 @@ import { BreedingResult, DiagnosisType } from '../enums/breeding';
 import { PregnancyCheckKind } from '../enums/breeding';
 
 export const BreedingDiagnosisSchema = z.object({
-    diagnosisType: z.nativeEnum(DiagnosisType),
+    diagnosisType: z.literal(DiagnosisType.ECO),
     diagnosisDate: z.coerce.date(),
     result: z.nativeEnum(BreedingResult),
     vitaselApplied: z.boolean().optional(),
@@ -17,7 +17,7 @@ export const PregnancyCheckSchema = z.object({
     matingId: z.string().uuid(),
     checkDate: z.coerce.date(),
     isPregnant: z.boolean(),
-    checkType: z.nativeEnum(DiagnosisType).optional(),
+    checkType: z.literal(DiagnosisType.ECO).optional().default(DiagnosisType.ECO),
     kind: z.nativeEnum(PregnancyCheckKind).default(PregnancyCheckKind.DIAGNOSIS),
     notes: z.string().optional(),
     nextCheckDate: z.coerce.date().optional(),
