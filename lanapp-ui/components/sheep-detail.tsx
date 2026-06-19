@@ -9,7 +9,8 @@ import {
   BeakerIcon,
   ArrowRightCircleIcon,
 } from "@heroicons/react/24/outline"
-import { StatusBadge } from "@/components/ui/status-badge"
+  import { StatusBadge } from "@/components/ui/status-badge"
+  import { DataTable } from "@/components/ui/data-table"
 import { SheepPesosTab } from "@/components/sheep-pesos-tab"
 import { SheepMontasTab } from "@/components/sheep-montas-tab"
 import { SheepFamachaTab } from "@/components/sheep-famacha-tab"
@@ -213,47 +214,29 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
                 <p className="mt-1 text-sm text-gray-500">
                   Registro oficial de destete. El mismo peso también aparece en la pestaña Pesos.
                 </p>
-                {weaningLoading ? (
-                  <p className="mt-4 text-sm text-gray-500">Cargando destetes…</p>
-                ) : weaningRecords.length === 0 ? (
-                  <p className="mt-4 text-sm text-gray-500">Sin registro de destete.</p>
-                ) : (
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          {["Fecha", "Peso destete (kg)", "Ganancia prom. (g/día)", "Lote", "Notas"].map((h) => (
-                            <th
-                              key={h}
-                              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                            >
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {weaningRecords.map((r) => (
-                          <tr key={r.id}>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
-                              {formatDisplayDate(r.weaningDate)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                              {Number(r.weaningWeight)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                              {formatDailyGain(r.dailyGain != null ? Number(r.dailyGain) : null)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                              {r.lotId || "—"}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700">{r.notes || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <div className="mt-4">
+                  <DataTable
+                    bare
+                    hideFooter
+                    rows={weaningRecords}
+                    rowKey={(r) => r.id}
+                    loading={weaningLoading}
+                    loadingText="Cargando destetes…"
+                    empty={<p className="text-sm text-gray-500">Sin registro de destete.</p>}
+                    columns={[
+                      { key: "date", header: "Fecha", className: "whitespace-nowrap text-gray-900", cell: (r) => formatDisplayDate(r.weaningDate) },
+                      { key: "weight", header: "Peso destete (kg)", className: "whitespace-nowrap", cell: (r) => Number(r.weaningWeight) },
+                      {
+                        key: "gain",
+                        header: "Ganancia prom. (g/día)",
+                        className: "whitespace-nowrap",
+                        cell: (r) => formatDailyGain(r.dailyGain != null ? Number(r.dailyGain) : null),
+                      },
+                      { key: "lot", header: "Lote", className: "whitespace-nowrap", cell: (r) => r.lotId || "—" },
+                      { key: "notes", header: "Notas", cell: (r) => r.notes || "—" },
+                    ]}
+                  />
+                </div>
               </div>
 
               <div className="rounded-lg bg-white p-6 shadow">
@@ -273,49 +256,38 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
                 <p className="mt-1 text-sm text-gray-500">
                   Aplicaciones de fármacos y vacunas registradas para esta oveja.
                 </p>
-                {medLoading ? (
-                  <p className="mt-4 text-sm text-gray-500">Cargando aplicaciones…</p>
-                ) : medApps.length === 0 ? (
-                  <p className="mt-4 text-sm text-gray-500">Sin aplicaciones registradas.</p>
-                ) : (
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          {["Fecha", "Medicamento", "Tipo", "Estado", "Notas"].map((h) => (
-                            <th
-                              key={h}
-                              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                            >
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {medApps.map((a) => (
-                          <tr key={a.id}>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
-                              {formatDisplayDate(a.applicationDate)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                              {a.medicine?.name || "—"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                              {a.medicine?.type ? labelMedicineType(a.medicine.type) : "—"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm">
-                              <StatusBadge color={medicineStatusColor[a.status] ?? "gray"}>
-                                {labelMedicineStatus(a.status)}
-                              </StatusBadge>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700">{a.notes || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <div className="mt-4">
+                  <DataTable
+                    bare
+                    hideFooter
+                    rows={medApps}
+                    rowKey={(a) => a.id}
+                    loading={medLoading}
+                    loadingText="Cargando aplicaciones…"
+                    empty={<p className="text-sm text-gray-500">Sin aplicaciones registradas.</p>}
+                    columns={[
+                      { key: "date", header: "Fecha", className: "whitespace-nowrap text-gray-900", cell: (a) => formatDisplayDate(a.applicationDate) },
+                      { key: "medicine", header: "Medicamento", className: "whitespace-nowrap", cell: (a) => a.medicine?.name || "—" },
+                      {
+                        key: "type",
+                        header: "Tipo",
+                        className: "whitespace-nowrap",
+                        cell: (a) => (a.medicine?.type ? labelMedicineType(a.medicine.type) : "—"),
+                      },
+                      {
+                        key: "status",
+                        header: "Estado",
+                        className: "whitespace-nowrap",
+                        cell: (a) => (
+                          <StatusBadge color={medicineStatusColor[a.status] ?? "gray"}>
+                            {labelMedicineStatus(a.status)}
+                          </StatusBadge>
+                        ),
+                      },
+                      { key: "notes", header: "Notas", cell: (a) => a.notes || "—" },
+                    ]}
+                  />
+                </div>
               </div>
             </div>
           )}

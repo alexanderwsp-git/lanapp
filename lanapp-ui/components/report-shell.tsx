@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { DataTable } from "@/components/ui/data-table"
 import { fetchReport, type ReportType } from "@/lib/api/reports"
 import { statusColor } from "@/mocks/labels"
 import { ArrowDownTrayIcon, DocumentChartBarIcon } from "@heroicons/react/24/outline"
@@ -67,43 +68,26 @@ export function ReportShell({ reportType, description }: { reportType: ReportTyp
         }
       />
 
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        {cfg.rows.length === 0 ? (
+      <DataTable<{ row: (typeof cfg.rows)[number]; i: number }>
+        rows={cfg.rows.map((row, i) => ({ row, i }))}
+        rowKey={({ i }) => String(i)}
+        empty={
           <EmptyState icon={DocumentChartBarIcon} title="Sin datos" description="No hay registros para este reporte." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {cfg.columns.map((c) => (
-                    <th key={c.key} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      {c.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {cfg.rows.map((row, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    {cfg.columns.map((c, j) => {
-                      const value = row[c.key]
-                      return (
-                        <td key={c.key} className="whitespace-nowrap px-4 py-3 text-sm">
-                          {badgeKeys.has(c.key) ? (
-                            <StatusBadge color={statusColor[String(value)] ?? "gray"}>{value}</StatusBadge>
-                          ) : (
-                            <span className={j === 0 ? "font-medium text-gray-900" : "text-gray-700"}>{value}</span>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        }
+        columns={cfg.columns.map((c, j) => ({
+          key: c.key,
+          header: c.label,
+          className: "whitespace-nowrap",
+          cell: ({ row }) => {
+            const value = row[c.key]
+            return badgeKeys.has(c.key) ? (
+              <StatusBadge color={statusColor[String(value)] ?? "gray"}>{value}</StatusBadge>
+            ) : (
+              <span className={j === 0 ? "font-medium text-gray-900" : "text-gray-700"}>{value}</span>
+            )
+          },
+        }))}
+      />
     </DashboardLayout>
   )
 }

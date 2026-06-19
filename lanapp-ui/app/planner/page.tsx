@@ -5,6 +5,7 @@ import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
+import { DataTable } from "@/components/ui/data-table"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -424,116 +425,114 @@ export default function PlannerPage() {
             )}
           </div>
 
-          {loading ? (
-            <p className="p-8 text-center text-sm text-gray-500">Cargando ciclos...</p>
-          ) : visibleRows.length === 0 ? (
-            <EmptyState
-              icon={CalendarDaysIcon}
-              title="Sin ciclos"
-              description="Programa ovejas con Agregar al ciclo. Si olvidaste alguna, ábrelo de nuevo con el mismo nombre de ciclo."
-              action={
-                <button
-                  type="button"
-                  onClick={() => openAddDrawer()}
-                  className="mt-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-                >
-                  Agregar al ciclo
-                </button>
-              }
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {["Oveja", "Reproductor", "Ciclo", "Fecha monta", "Monta", "Resultado", "Vitasel", "Acciones"].map(
-                      (h) => (
-                        <th
-                          key={h}
-                          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                        >
-                          {h}
-                        </th>
-                      ),
+          <DataTable
+            bare
+            rows={visibleRows}
+            rowKey={(r) => r.id}
+            loading={loading}
+            loadingText="Cargando ciclos..."
+            empty={
+              <EmptyState
+                icon={CalendarDaysIcon}
+                title="Sin ciclos"
+                description="Programa ovejas con Agregar al ciclo. Si olvidaste alguna, ábrelo de nuevo con el mismo nombre de ciclo."
+                action={
+                  <button
+                    type="button"
+                    onClick={() => openAddDrawer()}
+                    className="mt-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+                  >
+                    Agregar al ciclo
+                  </button>
+                }
+              />
+            }
+            columns={[
+              { key: "ewe", header: "Oveja", className: "whitespace-nowrap font-medium text-gray-900", cell: (r) => displayEwe(r) },
+              { key: "ram", header: "Reproductor", className: "whitespace-nowrap", cell: (r) => displayRam(r) },
+              { key: "cycle", header: "Ciclo", className: "whitespace-nowrap", cell: (r) => r.cycleName },
+              { key: "matingDate", header: "Fecha monta", className: "whitespace-nowrap", cell: (r) => formatDisplayDate(r.matingDate) },
+              {
+                key: "mating",
+                header: "Monta",
+                className: "whitespace-nowrap",
+                cell: (r) =>
+                  r.matingId ? (
+                    <StatusBadge color="green">Registrada</StatusBadge>
+                  ) : (
+                    <StatusBadge color="yellow">Planificada</StatusBadge>
+                  ),
+              },
+              {
+                key: "result",
+                header: "Resultado",
+                className: "whitespace-nowrap",
+                cell: (r) => (
+                  <>
+                    <StatusBadge color={breedingResultBadgeColor(r.result)}>
+                      {labelBreedingResult(r.result)}
+                    </StatusBadge>
+                    {r.diagnosisType && r.diagnosisDate && (
+                      <span className="ml-2 text-xs text-gray-400">
+                        {labelDiagnosisType(r.diagnosisType)} · {formatDisplayDate(r.diagnosisDate)}
+                      </span>
                     )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {visibleRows.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                        {displayEwe(r)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{displayRam(r)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{r.cycleName}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                        {formatDisplayDate(r.matingDate)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        {r.matingId ? (
-                          <StatusBadge color="green">Registrada</StatusBadge>
-                        ) : (
-                          <StatusBadge color="yellow">Planificada</StatusBadge>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <StatusBadge color={breedingResultBadgeColor(r.result)}>
-                          {labelBreedingResult(r.result)}
-                        </StatusBadge>
-                        {r.diagnosisType && r.diagnosisDate && (
-                          <span className="ml-2 text-xs text-gray-400">
-                            {labelDiagnosisType(r.diagnosisType)} · {formatDisplayDate(r.diagnosisDate)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        {r.vitaselApplied ? (
-                          <StatusBadge color="green">Sí</StatusBadge>
-                        ) : (
-                          <StatusBadge color="gray">No</StatusBadge>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {!r.matingId && (
-                            <button
-                              type="button"
-                              onClick={() => confirmMating(r)}
-                              disabled={confirmingId === r.id}
-                              className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-                            >
-                              <CheckIcon className="size-4" aria-hidden="true" />
-                              {confirmingId === r.id ? "Guardando…" : "Confirmar monta"}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => openDiag(r)}
-                            title="Registrar diagnóstico"
-                            aria-label="Registrar diagnóstico"
-                            className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
-                          >
-                            <BeakerIcon className="size-5" aria-hidden="true" />
-                          </button>
-                          {!r.result && !r.diagnosisDate && (
-                            <button
-                              type="button"
-                              onClick={() => cancelRow(r)}
-                              title="Descartar ciclo"
-                              aria-label="Descartar ciclo"
-                              className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                            >
-                              <TrashIcon className="size-5" aria-hidden="true" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </>
+                ),
+              },
+              {
+                key: "vitasel",
+                header: "Vitasel",
+                className: "whitespace-nowrap",
+                cell: (r) =>
+                  r.vitaselApplied ? (
+                    <StatusBadge color="green">Sí</StatusBadge>
+                  ) : (
+                    <StatusBadge color="gray">No</StatusBadge>
+                  ),
+              },
+              {
+                key: "actions",
+                header: "Acciones",
+                className: "whitespace-nowrap",
+                cell: (r) => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!r.matingId && (
+                      <button
+                        type="button"
+                        onClick={() => confirmMating(r)}
+                        disabled={confirmingId === r.id}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        <CheckIcon className="size-4" aria-hidden="true" />
+                        {confirmingId === r.id ? "Guardando…" : "Confirmar monta"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openDiag(r)}
+                      title="Registrar diagnóstico"
+                      aria-label="Registrar diagnóstico"
+                      className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
+                    >
+                      <BeakerIcon className="size-5" aria-hidden="true" />
+                    </button>
+                    {!r.result && !r.diagnosisDate && (
+                      <button
+                        type="button"
+                        onClick={() => cancelRow(r)}
+                        title="Descartar ciclo"
+                        aria-label="Descartar ciclo"
+                        className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <TrashIcon className="size-5" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                ),
+              },
+            ]}
+          />
         </section>
 
       <Drawer
