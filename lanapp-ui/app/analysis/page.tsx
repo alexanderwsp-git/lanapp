@@ -66,12 +66,6 @@ type TypeForm = {
   recommendedMedicineType: string
 }
 
-type ScheduleForm = {
-  analysisTypeId: string
-  sheepId: string
-  scheduledDate: string
-  notes: string
-}
 
 type ResultForm = {
   completedDate: string
@@ -112,13 +106,6 @@ const emptyTypeForm = (): TypeForm => ({
   recommendedMedicineType: "",
 })
 
-const emptyScheduleForm = (): ScheduleForm => ({
-  analysisTypeId: "",
-  sheepId: "",
-  scheduledDate: today(),
-  notes: "",
-})
-
 const HISTORY_STATUSES = new Set<AnalysisStatus>([
   AnalysisStatus.COMPLETED,
   AnalysisStatus.CANCELLED,
@@ -150,11 +137,6 @@ export default function AnalysisPage() {
   const [savingType, setSavingType] = useState(false)
   const [deletingType, setDeletingType] = useState(false)
   const [typeError, setTypeError] = useState<string | null>(null)
-
-  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(emptyScheduleForm())
-  const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [savingSchedule, setSavingSchedule] = useState(false)
-  const [scheduleError, setScheduleError] = useState<string | null>(null)
 
   const [bulkOpen, setBulkOpen] = useState(false)
   const [bulkTypeId, setBulkTypeId] = useState("")
@@ -277,11 +259,11 @@ export default function AnalysisPage() {
     const params = new URLSearchParams(window.location.search)
     const scheduleSheep = params.get("scheduleSheep")
     if (scheduleSheep) {
-      setScheduleForm({ ...emptyScheduleForm(), sheepId: scheduleSheep })
-      setScheduleOpen(true)
+      openBulk({ sheepId: scheduleSheep })
       setTab("scheduled")
       window.history.replaceState({}, "", "/analysis")
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const typeOptions = useMemo(
@@ -386,44 +368,12 @@ export default function AnalysisPage() {
     }
   }
 
-  // --- Schedule ---
-  function openSchedule() {
-    setScheduleForm(emptyScheduleForm())
-    setScheduleError(null)
-    setScheduleOpen(true)
-  }
-  async function saveSchedule(e: React.FormEvent) {
-    e.preventDefault()
-    setScheduleError(null)
-    if (!scheduleForm.analysisTypeId || !scheduleForm.sheepId || !scheduleForm.scheduledDate) {
-      setScheduleError("Completa tipo, oveja y fecha")
-      return
-    }
-    setSavingSchedule(true)
-    try {
-      await createAnalysis({
-        analysisTypeId: scheduleForm.analysisTypeId,
-        sheepId: scheduleForm.sheepId,
-        scheduledDate: scheduleForm.scheduledDate,
-        status: AnalysisStatus.SCHEDULED,
-        notes: scheduleForm.notes.trim() || undefined,
-      })
-      setScheduleOpen(false)
-      setTab("scheduled")
-      await loadAnalyses()
-    } catch (err) {
-      setScheduleError(err instanceof Error ? err.message : "No se pudo programar")
-    } finally {
-      setSavingSchedule(false)
-    }
-  }
-
-  // --- Bulk ---
-  function openBulk() {
+  // --- Schedule (one or many sheep) ---
+  function openBulk(prefill?: { sheepId?: string }) {
     setBulkTypeId("")
     setBulkDate(today())
     setBulkNotes("")
-    setBulkSelected(new Set())
+    setBulkSelected(prefill?.sheepId ? new Set([prefill.sheepId]) : new Set())
     setBulkError(null)
     setBulkResult(null)
     setBulkOpen(true)
@@ -748,16 +698,18 @@ export default function AnalysisPage() {
             </button>
           ) : (
             <div className="flex items-center gap-2">
+              {tab === "scheduled" && (
+                <button
+                  onClick={openBatch}
+                  disabled={scheduledAnalyses.length === 0}
+                  className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
+                >
+                  <ClipboardDocumentCheckIcon className="h-5 w-5" aria-hidden="true" />
+                  Registrar resultados
+                </button>
+              )}
               <button
-                onClick={openBulk}
-                disabled={types.length === 0 || sheep.length === 0}
-                className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
-              >
-                <UserGroupIcon className="h-5 w-5" aria-hidden="true" />
-                Programar en lote
-              </button>
-              <button
-                onClick={openSchedule}
+                onClick={() => openBulk()}
                 disabled={types.length === 0 || sheep.length === 0}
                 className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
               >
@@ -941,7 +893,7 @@ export default function AnalysisPage() {
                 action={
                   scheduleFilter === "all" && types.length > 0 && sheep.length > 0 ? (
                     <button
-                      onClick={openSchedule}
+                      onClick={() => openBulk()}
                       className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
                     >
                       Programar análisis
@@ -1056,82 +1008,11 @@ export default function AnalysisPage() {
         </form>
       </Drawer>
 
-      {/* Schedule drawer */}
-      <Drawer
-        open={scheduleOpen}
-        onClose={() => setScheduleOpen(false)}
-        title="Programar análisis"
-        description="Crea un análisis pendiente. Registra el resultado cuando lo tengas."
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setScheduleOpen(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="analysis-schedule-form"
-              disabled={savingSchedule || !scheduleForm.analysisTypeId || !scheduleForm.sheepId}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {savingSchedule && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Programar
-            </button>
-          </>
-        }
-      >
-        <form id="analysis-schedule-form" onSubmit={saveSchedule} className="flex flex-col gap-4">
-          {scheduleError && (
-            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{scheduleError}</div>
-          )}
-          <Field label="Tipo de análisis" required htmlFor="sch-type">
-            <Combobox
-              id="sch-type"
-              options={typeOptions}
-              value={scheduleForm.analysisTypeId}
-              onChange={(v) => setScheduleForm({ ...scheduleForm, analysisTypeId: v })}
-              placeholder="Seleccionar tipo"
-            />
-          </Field>
-          <Field label="Oveja" required htmlFor="sch-sheep">
-            <Combobox
-              id="sch-sheep"
-              options={sheepOptions}
-              value={scheduleForm.sheepId}
-              onChange={(v) => setScheduleForm({ ...scheduleForm, sheepId: v })}
-              placeholder="Seleccionar oveja"
-            />
-          </Field>
-          <Field label="Fecha programada" required htmlFor="sch-date">
-            <TextInput
-              id="sch-date"
-              type="date"
-              value={scheduleForm.scheduledDate}
-              onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledDate: e.target.value })}
-              required
-            />
-          </Field>
-          <Field label="Notas" htmlFor="sch-notes">
-            <Textarea
-              id="sch-notes"
-              rows={2}
-              value={scheduleForm.notes}
-              onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
-            />
-          </Field>
-        </form>
-      </Drawer>
-
-      {/* Bulk drawer */}
+      {/* Schedule drawer — one type + date, one or many sheep */}
       <Drawer
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
-        title="Programar en lote"
+        title="Programar análisis"
         description={`${bulkSelected.size} oveja(s) seleccionada(s)`}
         footer={
           <>

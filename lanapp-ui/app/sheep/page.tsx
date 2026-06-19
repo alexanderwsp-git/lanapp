@@ -21,6 +21,7 @@ import {
   statusOptions,
   recordTypeOptions,
   statusColor,
+  categoryColor,
 } from "@/lib/labels/sheep"
 import { formatDisplayDate, formatAgeDays, formatLastWeight } from "@/lib/format"
 import {
@@ -269,11 +270,13 @@ export default function SheepListPage() {
             },
             { key: "age", header: "Edad", className: "whitespace-nowrap text-gray-500", cell: (s) => formatAgeDays(s.birthDate) },
             {
-              key: "category",
-              header: "Categoría",
-              className: "whitespace-nowrap text-gray-500",
-              cell: (s) => labelCategory(s.category),
-            },
+            key: "category",
+            header: "Categoría",
+            className: "whitespace-nowrap",
+            cell: (s) => (
+              <StatusBadge color={categoryColor(s.category)}>{labelCategory(s.category)}</StatusBadge>
+            ),
+          },
             { key: "weight", header: "Último peso", className: "whitespace-nowrap text-gray-500", cell: (s) => formatLastWeight(s) },
             {
               key: "status",

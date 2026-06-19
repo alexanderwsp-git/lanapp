@@ -64,6 +64,30 @@ export const genderOptions = Object.values(Gender)
 export const recordTypeOptions = Object.values(RecordType)
 export const statusOptions = Object.values(SheepStatus)
 
+type BadgeColor = "indigo" | "green" | "yellow" | "red" | "gray" | "blue" | "pink"
+
+// Color del badge de categoría, agrupado por etapa de vida / estado reproductivo.
+const categoryColors: Record<SheepCategory, BadgeColor> = {
+  [SheepCategory.CORDERO]: "blue",
+  [SheepCategory.CORDERA]: "blue",
+  [SheepCategory.CORDERO_DESTETADO]: "indigo",
+  [SheepCategory.CORDERA_DESTETADA]: "indigo",
+  [SheepCategory.BORREGO]: "indigo",
+  [SheepCategory.BORREGA]: "indigo",
+  [SheepCategory.REPRODUCTOR]: "green",
+  [SheepCategory.BORREGA_PRENADA]: "pink",
+  [SheepCategory.OVEJA_PRENADA]: "pink",
+  [SheepCategory.OVEJA_LACTANCIA]: "pink",
+  [SheepCategory.OVEJA_VACIA]: "yellow",
+  [SheepCategory.FAENADO]: "gray",
+  [SheepCategory.FAENADA]: "gray",
+  [SheepCategory.VENTA]: "gray",
+}
+
+export function categoryColor(category: SheepCategory | string): BadgeColor {
+  return categoryColors[category as SheepCategory] ?? "gray"
+}
+
 export const statusColor: Record<string, "green" | "gray" | "blue" | "yellow" | "red"> = {
   Activo: "green",
   Inactivo: "gray",
