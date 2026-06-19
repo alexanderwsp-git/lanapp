@@ -502,10 +502,11 @@ export default function PlannerPage() {
                         type="button"
                         onClick={() => confirmMating(r)}
                         disabled={confirmingId === r.id}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                        title="Confirmar monta"
+                        aria-label="Confirmar monta"
+                        className="rounded-md p-1.5 text-green-600 hover:bg-green-50 hover:text-green-700 disabled:opacity-50"
                       >
-                        <CheckIcon className="size-4" aria-hidden="true" />
-                        {confirmingId === r.id ? "Guardando…" : "Confirmar monta"}
+                        <CheckIcon className="size-5" aria-hidden="true" />
                       </button>
                     )}
                     <button
