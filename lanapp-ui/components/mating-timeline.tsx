@@ -5,7 +5,7 @@ import {
   TagIcon,
 } from "@heroicons/react/20/solid"
 import type { ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
-import { formatDisplayDate } from "@/lib/format"
+import { formatDisplayDate, formatRelativeDate } from "@/lib/format"
 import { labelDiagnosisType } from "@/lib/labels/breeding"
 import {
   PregnancyCheckKind,
@@ -54,9 +54,18 @@ function TypePill({ label }: { label: string }) {
   )
 }
 
-function NoteComment({ note }: { note: string }) {
+function NoteComment({ note, author, date }: { note: string; author?: string; date?: string }) {
   return (
-    <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2">
+    <div className="mt-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm">
+      {(author || date) && (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <span className="text-sm">
+            <span className="font-semibold text-gray-900">{author ?? "Nota"}</span>
+            <span className="text-gray-500"> registró</span>
+          </span>
+          {date && <span className="whitespace-nowrap text-xs text-gray-400">{formatRelativeDate(date)}</span>}
+        </div>
+      )}
       <p className="text-sm whitespace-pre-line text-gray-600">{note}</p>
     </div>
   )
@@ -229,7 +238,11 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                           </p>
                         )}
                         {displayNotes(item.check.notes) && (
-                          <NoteComment note={displayNotes(item.check.notes)!} />
+                          <NoteComment
+                            note={displayNotes(item.check.notes)!}
+                            author={item.check.checkType ? labelDiagnosisType(item.check.checkType) : "Chequeo"}
+                            date={item.check.checkDate}
+                          />
                         )}
                       </div>
                     </>
@@ -251,7 +264,11 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                           </span>
                         </div>
                         {displayNotes(item.check.notes) && (
-                          <NoteComment note={displayNotes(item.check.notes)!} />
+                          <NoteComment
+                            note={displayNotes(item.check.notes)!}
+                            author="Parto"
+                            date={item.check.checkDate}
+                          />
                         )}
                       </div>
                     </>

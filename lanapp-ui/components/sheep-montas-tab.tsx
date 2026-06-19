@@ -69,17 +69,6 @@ function sheepLabel(s: Pick<ApiSheep, "tag" | "name"> | null | undefined, id: st
   return s.name ? `${s.tag} · ${s.name}` : s.tag
 }
 
-/** Most recent non-empty note across a mating's checks (prefix stripped). */
-function latestCheckNote(checks: ApiPregnancyCheck[]): string | undefined {
-  const withNotes = [...checks]
-    .filter((c) => c.notes?.trim())
-    .sort((a, b) => b.checkDate.localeCompare(a.checkDate))
-  const raw = withNotes[0]?.notes
-  if (!raw) return undefined
-  const stripped = raw.replace(/^\[(ECO|FAMACHA|Control Monta)\]\s*/i, "").trim()
-  return stripped || undefined
-}
-
 export function SheepMontasTab({
   sheep,
   onUpdated,
@@ -466,7 +455,6 @@ export function SheepMontasTab({
                   const birth = partoDate(m)
                   const isExpanded = expandedId === m.id
                   const ecoWindow = suggestedEcoWindow(m.matingDate, reproParams)
-                  const noteSnippet = latestCheckNote(m.checks)
                   return (
                     <Fragment key={m.id}>
                       <tr className="hover:bg-gray-50">
@@ -507,14 +495,8 @@ export function SheepMontasTab({
                                 Aplicar Vitasel y registrar nueva monta (~{reproParams.heatCycleDays} días)
                               </p>
                             )}
-                            {noteSnippet && (
-                              <div className="mt-0.5 rounded-md border border-gray-200 bg-gray-50 px-2 py-1">
-                                <p className="line-clamp-2 text-xs text-gray-600">{noteSnippet}</p>
-                              </div>
-                            )}
                             {!phaseInfo.detail &&
                               !birth &&
-                              !noteSnippet &&
                               actions.phase === "awaiting_diagnosis" && (
                                 <span className="text-xs text-gray-400">—</span>
                               )}
