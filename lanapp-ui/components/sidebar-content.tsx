@@ -36,6 +36,7 @@ const reportsNav: NavItem[] = [
   { label: "Preñadas", href: "/reports/prenadas", icon: ChartBarIcon },
   { label: "Montas", href: "/reports/montas", icon: ChartBarIcon },
   { label: "Reproductores", href: "/reports/reproductores", icon: ChartBarIcon },
+  { label: "Madres", href: "/reports/madres", icon: ChartBarIcon },
   { label: "FAMACHA", href: "/reports/famacha", icon: ChartBarIcon },
 ]
 
@@ -65,11 +66,19 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
-        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
-          <Image src="/sheep-mascot.png" alt="" width={32} height={32} className="object-contain" />
-        </div>
-        <span className="text-lg font-bold text-gray-900">Lanapp</span>
+      <div className="flex h-16 items-center border-b border-gray-200 px-6">
+        <Link href="/dashboard" className="group/logo flex items-center gap-3" aria-label="Ir al inicio de Lanapp">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
+            <Image
+              src="/sheep-mascot.png"
+              alt=""
+              width={32}
+              height={32}
+              className="lanapp-logo-img object-contain"
+            />
+          </div>
+          <span className="text-lg font-bold text-gray-900">Lanapp</span>
+        </Link>
       </div>
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-6" onClick={onNavigate}>

@@ -1,6 +1,7 @@
 "use client"
 
 import { type ComponentType, type SVGProps, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -27,7 +28,14 @@ import {
 } from "@heroicons/react/24/outline"
 
 const badgeKeys = new Set(["resultado", "alerta"])
-const dateKeys = new Set(["fecha", "fechaMonta", "fechaParto", "fechaChequeo", "ultimaMonta"])
+const dateKeys = new Set([
+  "fecha",
+  "fechaMonta",
+  "fechaParto",
+  "fechaChequeo",
+  "ultimaMonta",
+  "ultimoParto",
+])
 
 type ReportRow = ReportConfig["rows"][number]
 type StatItem = {
@@ -114,6 +122,26 @@ const reportMeta: Record<ReportType, ReportMeta> = {
         { label: "Hembras cubiertas", value: totalHembras, icon: HeartIcon, hint: "Total de hembras montadas" },
         { label: "Montas totales", value: totalMontas, icon: CalendarDaysIcon, hint: "En el periodo" },
         { label: "Tasa de preñez", value: `${tasa}%`, icon: ChartBarIcon, hint: "Promedio del plantel" },
+      ]
+    },
+  },
+  madres: {
+    icon: HeartIcon,
+    stats: (rows) => {
+      const totalCrias = nums(rows, "crias").reduce((s, n) => s + n, 0)
+      const totalPartos = nums(rows, "partos").reduce((s, n) => s + n, 0)
+      const totalMontas = nums(rows, "montas").reduce((s, n) => s + n, 0)
+      const prenadas = rows.reduce((s, r) => {
+        const tasa = Number(String(r.tasa).replace("%", ""))
+        const montas = Number(r.montas)
+        return s + (Number.isFinite(tasa) && Number.isFinite(montas) ? (tasa / 100) * montas : 0)
+      }, 0)
+      const tasaProm = totalMontas ? Math.round((prenadas / totalMontas) * 100) : 0
+      return [
+        { label: "Madres activas", value: rows.length, icon: UsersIcon, hint: "Con partos registrados" },
+        { label: "Crías totales", value: totalCrias, icon: HeartIcon, hint: "Producidas por el grupo" },
+        { label: "Partos totales", value: totalPartos, icon: CalendarDaysIcon, hint: "Acumulados" },
+        { label: "Tasa de preñez", value: `${tasaProm}%`, icon: ChartBarIcon, hint: "Promedio del grupo" },
       ]
     },
   },
@@ -260,6 +288,17 @@ export function ReportShell({ reportType, description }: { reportType: ReportTyp
                 return <StatusBadge color={statusColor[String(value)] ?? "gray"}>{value}</StatusBadge>
               }
               const display = dateKeys.has(c.key) && value ? formatDisplayDate(String(value)) : value
+              const sheepId = row.id ? String(row.id) : null
+              if (j === 0 && sheepId) {
+                return (
+                  <Link
+                    href={`/sheep/${sheepId}`}
+                    className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline"
+                  >
+                    {display}
+                  </Link>
+                )
+              }
               return (
                 <span className={j === 0 ? "font-medium text-gray-900" : "text-gray-700"}>{display}</span>
               )

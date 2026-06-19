@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import type { Gender, SheepStatus } from "@sheep/domain"
+import type { Gender, SheepStatus, RecordType } from "@sheep/domain"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -16,8 +16,10 @@ import {
   labelCategory,
   labelGender,
   labelStatus,
+  labelRecordType,
   genderOptions,
   statusOptions,
+  recordTypeOptions,
   statusColor,
 } from "@/lib/labels/sheep"
 import { formatDisplayDate, formatAgeDays, formatLastWeight } from "@/lib/format"
@@ -38,6 +40,8 @@ export default function SheepListPage() {
   const [query, setQuery] = useState("")
   const [gender, setGender] = useState<Gender | "">("")
   const [status, setStatus] = useState<SheepStatus | "">("")
+  const [origin, setOrigin] = useState<RecordType | "">("")
+  const [category, setCategory] = useState("")
   const [toDelete, setToDelete] = useState<ApiSheep | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
@@ -90,14 +94,24 @@ export default function SheepListPage() {
     load()
   }, [load])
 
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(rows.map((s) => s.category))).sort(),
+    [rows],
+  )
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim()
-    if (!q) return rows
     return rows.filter((s) => {
-      const name = (s.name ?? "").toLowerCase()
-      return s.tag.toLowerCase().includes(q) || name.includes(q) || s.breed.toLowerCase().includes(q)
+      if (origin && s.recordType !== origin) return false
+      if (category && s.category !== category) return false
+      if (q) {
+        const name = (s.name ?? "").toLowerCase()
+        if (!(s.tag.toLowerCase().includes(q) || name.includes(q) || s.breed.toLowerCase().includes(q)))
+          return false
+      }
+      return true
     })
-  }, [rows, query])
+  }, [rows, query, origin, category])
 
   async function confirmDelete() {
     if (!toDelete) return
@@ -131,8 +145,8 @@ export default function SheepListPage() {
         }
       />
 
-      <div className="flex flex-col gap-3 rounded-lg bg-white p-4 shadow sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 rounded-lg bg-white p-4 shadow sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative min-w-[12rem] flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           <input
             type="search"
@@ -163,6 +177,32 @@ export default function SheepListPage() {
           {statusOptions.map((s) => (
             <option key={s} value={s}>
               {labelStatus(s)}
+            </option>
+          ))}
+        </select>
+        <select
+          value={origin}
+          onChange={(e) => setOrigin(e.target.value as RecordType | "")}
+          aria-label="Filtrar por origen"
+          className="rounded-md border-0 py-2 pl-3 pr-8 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600"
+        >
+          <option value="">Todo origen</option>
+          {recordTypeOptions.map((r) => (
+            <option key={r} value={r}>
+              {labelRecordType(r)}
+            </option>
+          ))}
+        </select>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          aria-label="Filtrar por categoría"
+          className="rounded-md border-0 py-2 pl-3 pr-8 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600"
+        >
+          <option value="">Toda categoría</option>
+          {categoryOptions.map((c) => (
+            <option key={c} value={c}>
+              {labelCategory(c)}
             </option>
           ))}
         </select>

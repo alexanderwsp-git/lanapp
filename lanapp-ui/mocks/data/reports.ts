@@ -1,4 +1,12 @@
-export type ReportType = "maltonas" | "prenadas" | "montas" | "famacha" | "reproductores"
+import { IDS } from "../ids"
+
+export type ReportType =
+  | "maltonas"
+  | "prenadas"
+  | "montas"
+  | "famacha"
+  | "reproductores"
+  | "madres"
 
 export type ReportConfig = {
   title: string
@@ -69,9 +77,27 @@ export const seedReports: Record<ReportType, ReportConfig> = {
       { key: "ultimaMonta", label: "Última monta" },
     ],
     rows: [
-      { carnero: "SA-055 Toro", hembras: 5, montas: 8, prenadas: 4, tasa: "80%", ultimaMonta: "2026-03-16" },
-      { carnero: "SA-042 Negro", hembras: 3, montas: 4, prenadas: 1, tasa: "33%", ultimaMonta: "2026-02-28" },
+      { id: IDS.sheep.toro, carnero: "SA-055 Toro", hembras: 5, montas: 8, prenadas: 4, tasa: "80%", ultimaMonta: "2026-03-16" },
+      { id: IDS.sheep.negro, carnero: "SA-042 Negro", hembras: 3, montas: 4, prenadas: 1, tasa: "33%", ultimaMonta: "2026-02-28" },
       { carnero: "SA-091 Rayo", hembras: 2, montas: 2, prenadas: 1, tasa: "50%", ultimaMonta: "2026-01-20" },
+    ],
+  },
+  madres: {
+    title: "Maternidad por oveja",
+    total: 4,
+    columns: [
+      { key: "madre", label: "Madre" },
+      { key: "crias", label: "Crías" },
+      { key: "partos", label: "Partos" },
+      { key: "montas", label: "Montas totales" },
+      { key: "tasa", label: "Tasa de preñez" },
+      { key: "ultimoParto", label: "Último parto" },
+    ],
+    rows: [
+      { id: IDS.sheep.luna, madre: "SA-103 Luna", crias: 6, partos: 4, montas: 5, tasa: "80%", ultimoParto: "2026-02-20" },
+      { id: IDS.sheep.estrella, madre: "SA-088 Estrella", crias: 4, partos: 3, montas: 4, tasa: "75%", ultimoParto: "2025-12-10" },
+      { id: IDS.sheep.blanca, madre: "SA-001 Blanca", crias: 2, partos: 2, montas: 3, tasa: "67%", ultimoParto: "2025-09-02" },
+      { madre: "SA-120 Perla", crias: 1, partos: 1, montas: 2, tasa: "50%", ultimoParto: "2025-07-18" },
     ],
   },
   famacha: {
