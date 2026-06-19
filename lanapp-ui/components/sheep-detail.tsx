@@ -145,7 +145,7 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
           ))}
         </dl>
         {sheep.isPregnant && (
-          <div className="mt-4 rounded-md bg-pink-50 px-4 py-3 text-sm font-medium text-pink-700">
+          <div className="mt-4 rounded-md bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-700">
             Oveja preñada
             {sheep.pregnancyConfirmedAt
               ? ` · confirmada ${formatDisplayDate(sheep.pregnancyConfirmedAt)}`

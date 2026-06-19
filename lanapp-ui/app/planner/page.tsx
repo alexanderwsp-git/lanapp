@@ -43,6 +43,7 @@ import {
   CheckIcon,
   XMarkIcon,
   BeakerIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
@@ -493,24 +494,23 @@ export default function PlannerPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           {!r.matingId && (
                             <button
                               type="button"
                               onClick={() => confirmMating(r)}
                               disabled={confirmingId === r.id}
-                              title="Confirmar monta"
-                              aria-label="Confirmar monta"
-                              className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                             >
-                              <CheckIcon className="size-5" aria-hidden="true" />
+                              <CheckIcon className="size-4" aria-hidden="true" />
+                              {confirmingId === r.id ? "Guardando…" : "Confirmar monta"}
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => openDiag(r)}
-                            title="Diagnóstico"
-                            aria-label="Diagnóstico"
+                            title="Registrar diagnóstico"
+                            aria-label="Registrar diagnóstico"
                             className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
                           >
                             <BeakerIcon className="size-5" aria-hidden="true" />
@@ -519,11 +519,11 @@ export default function PlannerPage() {
                             <button
                               type="button"
                               onClick={() => cancelRow(r)}
-                              title="Cancelar ciclo"
-                              aria-label="Cancelar ciclo"
-                              className="rounded-md p-1.5 text-red-700 hover:bg-red-50"
+                              title="Descartar ciclo"
+                              aria-label="Descartar ciclo"
+                              className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
                             >
-                              <XMarkIcon className="size-5" aria-hidden="true" />
+                              <TrashIcon className="size-5" aria-hidden="true" />
                             </button>
                           )}
                         </div>

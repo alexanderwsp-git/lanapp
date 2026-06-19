@@ -330,7 +330,7 @@ export function SheepMontasTab({
         </div>
       )}
       {isPregnantEwe && (
-        <div className="rounded-md bg-pink-50 px-4 py-3 text-sm font-medium text-pink-800">
+        <div className="rounded-md bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-700">
           Oveja preñada — monta bloqueada hasta el parto.
           {sheep.pregnancyConfirmedAt &&
             ` Confirmada ${formatDisplayDate(sheep.pregnancyConfirmedAt)}.`}
@@ -504,7 +504,7 @@ export function SheepMontasTab({
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex flex-wrap items-center gap-1">
-                            {actions.canDiagnose ? (
+                            {actions.canDiagnose && (
                               <button
                                 type="button"
                                 onClick={() => openEco(m)}
@@ -514,12 +514,8 @@ export function SheepMontasTab({
                               >
                                 <BeakerIcon className="size-5" aria-hidden="true" />
                               </button>
-                            ) : (
-                              <span className="text-xs text-gray-400" title={actions.diagnoseBlockedReason}>
-                                {actions.diagnoseBlockedReason}
-                              </span>
                             )}
-                            {actions.canDeliver ? (
+                            {actions.canDeliver && (
                               <button
                                 type="button"
                                 onClick={() => openParto(m)}
@@ -529,9 +525,7 @@ export function SheepMontasTab({
                               >
                                 <SunIcon className="size-5" aria-hidden="true" />
                               </button>
-                            ) : actions.phase === "pregnant" ? null : actions.deliverBlockedReason ? (
-                              <span className="text-xs text-gray-400">{actions.deliverBlockedReason}</span>
-                            ) : null}
+                            )}
                             {m.checks.length > 0 && (
                               <button
                                 type="button"
@@ -544,6 +538,9 @@ export function SheepMontasTab({
                                 <ClockIcon className="size-5" aria-hidden="true" />
                                 <span className="text-xs font-medium">{m.checks.length}</span>
                               </button>
+                            )}
+                            {!actions.canDiagnose && !actions.canDeliver && m.checks.length === 0 && (
+                              <span className="text-xs text-gray-400">—</span>
                             )}
                           </div>
                         </td>

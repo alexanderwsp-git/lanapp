@@ -35,7 +35,7 @@ import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import type { ApiLocation, ApiMedicine, ApiMedicineApplication, ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
-import { toDateInputValue } from "@/lib/format"
+import { toDateInputValue, formatDisplayDate } from "@/lib/format"
 import {
   labelMedicineStatus,
   labelMedicineType,
@@ -557,28 +557,26 @@ export default function MedicinesPage() {
               return (
                 <tr key={a.id} className={due ? "bg-amber-50/60 hover:bg-amber-50" : "hover:bg-gray-50"}>
                   <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                    {a.medicine?.name ?? medDisplayName(a.medicineId)}
+                    <div className="flex items-center gap-2">
+                      <BeakerIcon className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                      {a.medicine?.name ?? medDisplayName(a.medicineId)}
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    {a.sheep?.tag ?? sheepDisplayTag(a.sheepId)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    <div>{toDateInputValue(a.applicationDate)}</div>
-                    <span
-                      className={`text-xs ${
-                        mode === "scheduled" && due
-                          ? "font-medium text-amber-700"
-                          : mode === "scheduled" && toDateInputValue(a.applicationDate) > today()
-                            ? "text-gray-400"
-                            : "invisible"
-                      }`}
-                    >
-                      {mode === "scheduled" && due
-                        ? "Vence hoy"
-                        : mode === "scheduled" && toDateInputValue(a.applicationDate) > today()
-                          ? "Futura"
-                          : "\u00a0"}
+                  <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                      {a.sheep?.tag ?? sheepDisplayTag(a.sheepId)}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                    <div className="font-medium text-gray-900">{formatDisplayDate(a.applicationDate)}</div>
+                    {mode === "scheduled" && due ? (
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        <ClockIcon className="size-3.5" aria-hidden="true" />
+                        Vence hoy
+                      </span>
+                    ) : mode === "scheduled" && toDateInputValue(a.applicationDate) > today() ? (
+                      <span className="mt-1 inline-block text-xs text-gray-400">Próxima</span>
+                    ) : null}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-sm">
                     <StatusBadge
