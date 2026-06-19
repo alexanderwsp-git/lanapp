@@ -574,10 +574,11 @@ export default function MedicinesPage() {
                 <>
                   <div className="font-medium text-gray-900">{formatDisplayDate(a.applicationDate)}</div>
                   {mode === "scheduled" && due ? (
-                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                      <ClockIcon className="size-3.5" aria-hidden="true" />
-                      Vence hoy
-                    </span>
+                    <div className="mt-1">
+                      <StatusBadge color="yellow" icon={ClockIcon}>
+                        Vence hoy
+                      </StatusBadge>
+                    </div>
                   ) : mode === "scheduled" && toDateInputValue(a.applicationDate) > today() ? (
                     <span className="mt-1 inline-block text-xs text-gray-400">Próxima</span>
                   ) : null}
