@@ -14,7 +14,7 @@ import { fetchWeaningAlerts, bulkRecordWeaning } from "@/lib/api/weaning"
 import type { ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
 import { displayKgValue, formatDisplayDate, formatAgeDays, toKg } from "@/lib/format"
-import { BellAlertIcon, CheckCircleIcon, ScaleIcon } from "@heroicons/react/24/outline"
+import { AcademicCapIcon, BellAlertIcon, CheckCircleIcon, ScaleIcon } from "@heroicons/react/24/outline"
 
 const WEANING_THRESHOLD = 70
 
@@ -170,8 +170,8 @@ export default function WeaningPage() {
               disabled={selected.size === 0}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
             >
-              <CheckCircleIcon className="h-5 w-5" aria-hidden="true" />
-              Destetar seleccionados ({selected.size})
+                  <AcademicCapIcon className="h-5 w-5" aria-hidden="true" />
+                  Destetar seleccionados ({selected.size})
             </button>
           ) : undefined
         }
@@ -279,10 +279,11 @@ export default function WeaningPage() {
               cell: (s) => (
                 <button
                   onClick={() => openDrawer([s.id])}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+                  title="Destetar"
+                  aria-label="Destetar"
+                  className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
                 >
-                  <CheckCircleIcon className="h-4 w-4" aria-hidden="true" />
-                  Destetar
+                  <AcademicCapIcon className="h-5 w-5" aria-hidden="true" />
                 </button>
               ),
             },
