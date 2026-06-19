@@ -503,15 +503,16 @@ export function SheepMontasTab({
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap items-center gap-1">
                             {actions.canDiagnose ? (
                               <button
                                 type="button"
                                 onClick={() => openEco(m)}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline"
+                                title="Diagnóstico"
+                                aria-label="Diagnóstico"
+                                className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
                               >
-                                <BeakerIcon className="size-4" aria-hidden="true" />
-                                Diagnóstico
+                                <BeakerIcon className="size-5" aria-hidden="true" />
                               </button>
                             ) : (
                               <span className="text-xs text-gray-400" title={actions.diagnoseBlockedReason}>
@@ -522,10 +523,11 @@ export function SheepMontasTab({
                               <button
                                 type="button"
                                 onClick={() => openParto(m)}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline"
+                                title="Registrar parto"
+                                aria-label="Registrar parto"
+                                className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
                               >
-                                <SunIcon className="size-4" aria-hidden="true" />
-                                Registrar parto
+                                <SunIcon className="size-5" aria-hidden="true" />
                               </button>
                             ) : actions.phase === "pregnant" ? null : actions.deliverBlockedReason ? (
                               <span className="text-xs text-gray-400">{actions.deliverBlockedReason}</span>
@@ -534,10 +536,13 @@ export function SheepMontasTab({
                               <button
                                 type="button"
                                 onClick={() => setExpandedId(isExpanded ? null : m.id)}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:underline"
+                                title={isExpanded ? "Ocultar historial" : "Ver historial"}
+                                aria-label={isExpanded ? "Ocultar historial" : "Ver historial"}
+                                aria-expanded={isExpanded}
+                                className="inline-flex items-center gap-1 rounded-md p-1.5 text-gray-600 hover:bg-gray-100"
                               >
-                                <ClockIcon className="size-4" aria-hidden="true" />
-                                {isExpanded ? "Ocultar historial" : `Historial (${m.checks.length})`}
+                                <ClockIcon className="size-5" aria-hidden="true" />
+                                <span className="text-xs font-medium">{m.checks.length}</span>
                               </button>
                             )}
                           </div>

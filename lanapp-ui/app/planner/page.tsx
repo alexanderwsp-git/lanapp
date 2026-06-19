@@ -42,6 +42,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   XMarkIcon,
+  BeakerIcon,
 } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
@@ -492,31 +493,37 @@ export default function PlannerPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-1">
                           {!r.matingId && (
                             <button
                               type="button"
                               onClick={() => confirmMating(r)}
                               disabled={confirmingId === r.id}
-                              className="text-xs font-medium text-indigo-600 hover:underline disabled:opacity-50"
+                              title="Confirmar monta"
+                              aria-label="Confirmar monta"
+                              className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
                             >
-                              {confirmingId === r.id ? "Guardando…" : "Confirmar monta"}
+                              <CheckIcon className="size-5" aria-hidden="true" />
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => openDiag(r)}
-                            className="text-xs font-medium text-indigo-600 hover:underline"
+                            title="Diagnóstico"
+                            aria-label="Diagnóstico"
+                            className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
                           >
-                            Diagnóstico
+                            <BeakerIcon className="size-5" aria-hidden="true" />
                           </button>
                           {!r.result && !r.diagnosisDate && (
                             <button
                               type="button"
                               onClick={() => cancelRow(r)}
-                              className="text-xs font-medium text-red-700 hover:underline"
+                              title="Cancelar ciclo"
+                              aria-label="Cancelar ciclo"
+                              className="rounded-md p-1.5 text-red-700 hover:bg-red-50"
                             >
-                              Cancelar
+                              <XMarkIcon className="size-5" aria-hidden="true" />
                             </button>
                           )}
                         </div>
