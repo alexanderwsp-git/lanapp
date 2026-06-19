@@ -106,7 +106,7 @@ export function DataTable<T>({
         <>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead>
                 <tr>
                   {selection && (
                     <th className="px-4 py-3 text-left">
@@ -124,7 +124,7 @@ export function DataTable<T>({
                       key={col.key}
                       scope="col"
                       className={cn(
-                        "px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500",
+                        "px-4 py-3 text-sm font-semibold text-gray-900",
                         alignClass[col.align ?? "left"],
                         col.headerClassName,
                       )}
