@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { EmptyState } from "@/components/ui/empty-state"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { DataTable } from "@/components/ui/data-table"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { Combobox } from "@/components/ui/combobox"
 import { useSheepFilter } from "@/components/ui/sheep-filter"
@@ -532,106 +533,124 @@ export default function MedicinesPage() {
   function renderAppTable(
     rows: ApiMedicineApplication[],
     mode: "scheduled" | "history",
+    opts: { loading: boolean; empty: ReactNode; loadingText?: string },
   ) {
-    if (rows.length === 0) return null
-
     return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {["Medicamento", "Oveja", "Fecha", "Estado", "Notas", ""].map((h, i) => (
-                <th
-                  key={`${h}-${i}`}
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                >
-                  {h || "\u00a0"}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {rows.map((a) => {
+      <DataTable
+        rows={rows}
+        rowKey={(a) => a.id}
+        loading={opts.loading}
+        loadingText={opts.loadingText ?? "Cargando..."}
+        empty={opts.empty}
+        rowClassName={(a) => (isDue(a) ? "bg-amber-50/60" : undefined)}
+        columns={[
+          {
+            key: "medicine",
+            header: "Medicamento",
+            className: "whitespace-nowrap font-medium text-gray-900",
+            cell: (a) => (
+              <div className="flex items-center gap-2">
+                <BeakerIcon className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                {a.medicine?.name ?? medDisplayName(a.medicineId)}
+              </div>
+            ),
+          },
+          {
+            key: "sheep",
+            header: "Oveja",
+            className: "whitespace-nowrap",
+            cell: (a) => (
+              <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                {a.sheep?.tag ?? sheepDisplayTag(a.sheepId)}
+              </span>
+            ),
+          },
+          {
+            key: "date",
+            header: "Fecha",
+            className: "whitespace-nowrap",
+            cell: (a) => {
               const due = isDue(a)
+              return (
+                <>
+                  <div className="font-medium text-gray-900">{formatDisplayDate(a.applicationDate)}</div>
+                  {mode === "scheduled" && due ? (
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      <ClockIcon className="size-3.5" aria-hidden="true" />
+                      Vence hoy
+                    </span>
+                  ) : mode === "scheduled" && toDateInputValue(a.applicationDate) > today() ? (
+                    <span className="mt-1 inline-block text-xs text-gray-400">Próxima</span>
+                  ) : null}
+                </>
+              )
+            },
+          },
+          {
+            key: "status",
+            header: "Estado",
+            className: "whitespace-nowrap",
+            cell: (a) => {
               const statusLabel = labelMedicineStatus(a.status)
               return (
-                <tr key={a.id} className={due ? "bg-amber-50/60 hover:bg-amber-50" : "hover:bg-gray-50"}>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                    <div className="flex items-center gap-2">
-                      <BeakerIcon className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
-                      {a.medicine?.name ?? medDisplayName(a.medicineId)}
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                      {a.sheep?.tag ?? sheepDisplayTag(a.sheepId)}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                    <div className="font-medium text-gray-900">{formatDisplayDate(a.applicationDate)}</div>
-                    {mode === "scheduled" && due ? (
-                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                        <ClockIcon className="size-3.5" aria-hidden="true" />
-                        Vence hoy
-                      </span>
-                    ) : mode === "scheduled" && toDateInputValue(a.applicationDate) > today() ? (
-                      <span className="mt-1 inline-block text-xs text-gray-400">Próxima</span>
-                    ) : null}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm">
-                    <StatusBadge
-                      color={
-                        medicineStatusColor[
-                          mode === "scheduled" ? "Programado" : statusLabel
-                        ] ?? "gray"
-                      }
-                    >
-                      {mode === "scheduled" ? "Programado" : statusLabel}
-                    </StatusBadge>
-                  </td>
-                  <td className="max-w-[12rem] truncate px-4 py-3 text-sm text-gray-500" title={a.notes ?? undefined}>
-                    {a.notes || "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                    <div className="flex items-center justify-end gap-1">
-                      {mode === "scheduled" && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={statusUpdating === a.id}
-                            onClick={() => openApply(a)}
-                            className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-500 disabled:opacity-50"
-                          >
-                            <CheckIcon className="h-4 w-4" />
-                            Aplicado
-                          </button>
-                          <button
-                            type="button"
-                            disabled={statusUpdating === a.id}
-                            onClick={() => setAppStatus(a, MedicineStatus.CANCELLED)}
-                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
-                            title="Cancelar"
-                            aria-label="Cancelar"
-                          >
-                            <XMarkIcon className="h-5 w-5" />
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => setAppToDelete(a)}
-                        className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                        aria-label="Eliminar"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <StatusBadge
+                  color={medicineStatusColor[mode === "scheduled" ? "Programado" : statusLabel] ?? "gray"}
+                >
+                  {mode === "scheduled" ? "Programado" : statusLabel}
+                </StatusBadge>
               )
-            })}
-          </tbody>
-        </table>
-      </div>
+            },
+          },
+          {
+            key: "notes",
+            header: "Notas",
+            className: "max-w-[12rem] truncate text-gray-500",
+            cell: (a) => (
+              <span title={a.notes ?? undefined}>{a.notes || "—"}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            className: "whitespace-nowrap",
+            cell: (a) => (
+              <div className="flex items-center justify-end gap-1">
+                {mode === "scheduled" && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={statusUpdating === a.id}
+                      onClick={() => openApply(a)}
+                      className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-500 disabled:opacity-50"
+                    >
+                      <CheckIcon className="h-4 w-4" />
+                      Aplicado
+                    </button>
+                    <button
+                      type="button"
+                      disabled={statusUpdating === a.id}
+                      onClick={() => setAppStatus(a, MedicineStatus.CANCELLED)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                      title="Cancelar"
+                      aria-label="Cancelar"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setAppToDelete(a)}
+                  className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  aria-label="Eliminar"
+                >
+                  <TrashIcon className="h-5 w-5" />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
     )
   }
 
@@ -720,10 +739,12 @@ export default function MedicinesPage() {
 
       <div className="mt-6">
         <div className={tab === "meds" ? undefined : "hidden"}>
-          <div className="overflow-hidden rounded-lg bg-white shadow">
-            {loadingMeds ? (
-              <p className="p-8 text-center text-sm text-gray-500">Cargando fármacos...</p>
-            ) : meds.length === 0 ? (
+          <DataTable
+            rows={meds}
+            rowKey={(m) => m.id}
+            loading={loadingMeds}
+            loadingText="Cargando fármacos..."
+            empty={
               <EmptyState
                 icon={BeakerIcon}
                 title="Sin medicamentos"
@@ -737,57 +758,48 @@ export default function MedicinesPage() {
                   </button>
                 }
               />
-            ) : (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {["Nombre", "Tipo", "Dosis", "Descripción", ""].map((h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {meds.map((m) => (
-                    <tr key={m.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                        {m.name}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <StatusBadge color="indigo">{labelMedicineType(m.type)}</StatusBadge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{m.dosage}</td>
-                      <td className="max-w-xs truncate px-4 py-3 text-sm text-gray-500">
-                        {m.description ?? "—"}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => openEditMed(m)}
-                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                            aria-label={`Editar ${m.name}`}
-                          >
-                            <PencilSquareIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => setMedToDelete(m)}
-                            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                            aria-label={`Eliminar ${m.name}`}
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+            }
+            columns={[
+              { key: "name", header: "Nombre", className: "whitespace-nowrap font-medium text-gray-900", cell: (m) => m.name },
+              {
+                key: "type",
+                header: "Tipo",
+                className: "whitespace-nowrap",
+                cell: (m) => <StatusBadge color="indigo">{labelMedicineType(m.type)}</StatusBadge>,
+              },
+              { key: "dosage", header: "Dosis", className: "whitespace-nowrap", cell: (m) => m.dosage },
+              {
+                key: "description",
+                header: "Descripción",
+                className: "max-w-xs truncate text-gray-500",
+                cell: (m) => m.description ?? "—",
+              },
+              {
+                key: "actions",
+                header: "",
+                align: "right",
+                className: "whitespace-nowrap",
+                cell: (m) => (
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => openEditMed(m)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                      aria-label={`Editar ${m.name}`}
+                    >
+                      <PencilSquareIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setMedToDelete(m)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Eliminar ${m.name}`}
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </div>
 
         <div className={tab === "scheduled" ? undefined : "hidden"}>
@@ -809,10 +821,9 @@ export default function MedicinesPage() {
                 <option value="due">Pendientes hoy ({dueApps.length})</option>
               </select>
             </div>
-            <div className="overflow-hidden rounded-lg bg-white shadow">
-              {loadingApps ? (
-                <p className="p-8 text-center text-sm text-gray-500">Cargando...</p>
-              ) : visibleScheduled.length === 0 ? (
+            {renderAppTable(visibleScheduled, "scheduled", {
+              loading: loadingApps,
+              empty: (
                 <EmptyState
                   icon={ClipboardDocumentCheckIcon}
                   title={scheduleFilter === "due" ? "Sin pendientes" : "Sin programaciones"}
@@ -832,27 +843,23 @@ export default function MedicinesPage() {
                     ) : undefined
                   }
                 />
-              ) : (
-                renderAppTable(visibleScheduled, "scheduled")
-              )}
-            </div>
+              ),
+            })}
           </div>
         </div>
 
         <div className={tab === "history" ? undefined : "hidden"}>
-          <div className="overflow-hidden rounded-lg bg-white shadow">
-            {loadingApps ? (
-              <p className="p-8 text-center text-sm text-gray-500">Cargando historial...</p>
-            ) : historyApps.length === 0 ? (
+          {renderAppTable(historyApps, "history", {
+            loading: loadingApps,
+            loadingText: "Cargando historial...",
+            empty: (
               <EmptyState
                 icon={ClipboardDocumentCheckIcon}
                 title="Sin historial"
                 description="Las aplicaciones marcadas como Aplicado, Cancelado u Omitido aparecerán aquí."
               />
-            ) : (
-              renderAppTable(historyApps, "history")
-            )}
-          </div>
+            ),
+          })}
         </div>
       </div>
 

@@ -5,7 +5,8 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { EmptyState } from "@/components/ui/empty-state"
+  import { EmptyState } from "@/components/ui/empty-state"
+  import { DataTable } from "@/components/ui/data-table"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import { BREEDS } from "@/mocks/labels"
 import { ReproductionParametersForm } from "@/components/reproduction-parameters-form"
@@ -130,56 +131,61 @@ export default function SettingsPage() {
               Nueva raza
             </button>
           </div>
-          {razas.length === 0 ? (
-            <EmptyState
-              icon={TagIcon}
-              title="Sin razas"
-              description="Agrega razas para clasificar tus ovejas."
-              action={
-                <button onClick={openNew} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                  Nueva raza
-                </button>
-              }
-            />
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {["Nombre", "Notas", ""].map((h) => (
-                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {razas.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-6 py-3 text-sm font-medium text-gray-900">{r.nombre}</td>
-                    <td className="max-w-md truncate px-6 py-3 text-sm text-gray-500">{r.notas || "—"}</td>
-                    <td className="whitespace-nowrap px-6 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEdit(r)}
-                          className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                          aria-label={`Editar ${r.nombre}`}
-                        >
-                          <PencilSquareIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => setToDelete(r)}
-                          className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                          aria-label={`Eliminar ${r.nombre}`}
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            bare
+            rows={razas}
+            rowKey={(r) => r.id}
+            empty={
+              <EmptyState
+                icon={TagIcon}
+                title="Sin razas"
+                description="Agrega razas para clasificar tus ovejas."
+                action={
+                  <button onClick={openNew} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                    Nueva raza
+                  </button>
+                }
+              />
+            }
+            columns={[
+              {
+                key: "nombre",
+                header: "Nombre",
+                className: "whitespace-nowrap font-medium text-gray-900",
+                cell: (r) => r.nombre,
+              },
+              {
+                key: "notas",
+                header: "Notas",
+                className: "max-w-md truncate text-gray-500",
+                cell: (r) => r.notas || "—",
+              },
+              {
+                key: "actions",
+                header: "",
+                align: "right",
+                className: "whitespace-nowrap",
+                cell: (r) => (
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => openEdit(r)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                      aria-label={`Editar ${r.nombre}`}
+                    >
+                      <PencilSquareIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setToDelete(r)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Eliminar ${r.nombre}`}
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </section>
 
         {/* Preferencias */}

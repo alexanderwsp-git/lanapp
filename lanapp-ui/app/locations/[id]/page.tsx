@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { EmptyState } from "@/components/ui/empty-state"
+import { DataTable } from "@/components/ui/data-table"
 import { fetchLocationById } from "@/lib/api/location"
 import { fetchSheep } from "@/lib/api/sheep"
 import type { ApiLocation, ApiSheep } from "@/lib/api/types"
@@ -97,41 +98,41 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
       </div>
 
       <h2 className="mt-8 text-base font-semibold text-gray-900">Ovejas en esta ubicación</h2>
-      <div className="mt-3 overflow-hidden rounded-lg bg-white shadow">
-        {assigned.length === 0 ? (
-          <EmptyState icon={Squares2X2Icon} title="Sin ovejas" description="No hay ovejas asignadas a este potrero." />
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {["Arete", "Nombre", "Categoría", "Estado"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {assigned.map((s) => {
+      <div className="mt-3">
+        <DataTable
+          rows={assigned}
+          rowKey={(s) => s.id}
+          empty={
+            <EmptyState icon={Squares2X2Icon} title="Sin ovejas" description="No hay ovejas asignadas a este potrero." />
+          }
+          columns={[
+            {
+              key: "tag",
+              header: "Arete",
+              className: "font-medium text-indigo-600",
+              cell: (s) => <Link href={`/sheep/${s.id}`}>{s.tag}</Link>,
+            },
+            { key: "name", header: "Nombre", className: "text-gray-900", cell: (s) => s.name ?? "—" },
+            {
+              key: "category",
+              header: "Categoría",
+              className: "text-gray-500",
+              cell: (s) => labelCategory(s.category as SheepCategory),
+            },
+            {
+              key: "status",
+              header: "Estado",
+              cell: (s) => {
                 const statusLabel = labelStatus(s.status)
                 return (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-indigo-600">
-                      <Link href={`/sheep/${s.id}`}>{s.tag}</Link>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{s.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{labelCategory(s.category as SheepCategory)}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <StatusBadge color={statusColor[statusLabel] ?? statusColor[s.status] ?? "gray"}>
-                        {statusLabel}
-                      </StatusBadge>
-                    </td>
-                  </tr>
+                  <StatusBadge color={statusColor[statusLabel] ?? statusColor[s.status] ?? "gray"}>
+                    {statusLabel}
+                  </StatusBadge>
                 )
-              })}
-            </tbody>
-          </table>
-        )}
+              },
+            },
+          ]}
+        />
       </div>
     </DashboardLayout>
   )

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
-import { StatusBadge } from "@/components/ui/status-badge"
+  import { StatusBadge } from "@/components/ui/status-badge"
+  import { DataTable } from "@/components/ui/data-table"
 import { PlusIcon } from "@heroicons/react/24/outline"
 import { LANAPP_ROLES, type LanappRole } from "@/lib/auth/constants"
 import { getAccessToken } from "@/lib/auth/session"
@@ -116,68 +117,51 @@ export default function UsersPage() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {["Usuario", "Email", "Rol", "Estado"].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
-                    Cargando…
-                  </td>
-                </tr>
-              ) : usuarios.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
-                    No hay usuarios con acceso a Lanapp
-                  </td>
-                </tr>
-              ) : (
-                usuarios.map((u) => {
-                  const primaryRole = u.roles[0] ?? "operario"
-                  return (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
-                            {u.initials || "?"}
-                          </span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {u.username || u.email}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{u.email}</td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <StatusBadge color={rolColor[primaryRole] ?? "gray"}>
-                          {rolLabel[primaryRole] ?? primaryRole}
-                        </StatusBadge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <StatusBadge color={u.status === "Activo" ? "green" : "gray"}>
-                          {u.status}
-                        </StatusBadge>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        rows={usuarios}
+        rowKey={(u) => u.id}
+        loading={loading}
+        empty={
+          <p className="p-8 text-center text-sm text-gray-500">No hay usuarios con acceso a Lanapp</p>
+        }
+        columns={[
+          {
+            key: "user",
+            header: "Usuario",
+            className: "whitespace-nowrap",
+            cell: (u) => (
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
+                  {u.initials || "?"}
+                </span>
+                <span className="text-sm font-medium text-gray-900">{u.username || u.email}</span>
+              </div>
+            ),
+          },
+          { key: "email", header: "Email", className: "whitespace-nowrap", cell: (u) => u.email },
+          {
+            key: "role",
+            header: "Rol",
+            className: "whitespace-nowrap",
+            cell: (u) => {
+              const primaryRole = u.roles[0] ?? "operario"
+              return (
+                <StatusBadge color={rolColor[primaryRole] ?? "gray"}>
+                  {rolLabel[primaryRole] ?? primaryRole}
+                </StatusBadge>
+              )
+            },
+          },
+          {
+            key: "status",
+            header: "Estado",
+            className: "whitespace-nowrap",
+            cell: (u) => (
+              <StatusBadge color={u.status === "Activo" ? "green" : "gray"}>{u.status}</StatusBadge>
+            ),
+          },
+        ]}
+      />
 
       {showInvite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

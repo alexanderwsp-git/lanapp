@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { EmptyState } from "@/components/ui/empty-state"
+import { DataTable } from "@/components/ui/data-table"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, TextInput } from "@/components/ui/form-fields"
@@ -227,78 +228,66 @@ export default function WeaningPage() {
         </div>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-lg bg-white shadow">
-        {loading ? (
-          <p className="p-8 text-center text-sm text-gray-500">Cargando alertas...</p>
-        ) : rows.length === 0 ? (
-          <EmptyState
-            icon={CheckCircleIcon}
-            title="Sin alertas de destete"
-            description="No hay corderos pendientes de destete en este momento."
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                      aria-label="Seleccionar todos"
-                    />
-                  </th>
-                  {["Arete", "Nombre", "F. nacimiento", "Categoría", "Edad (días)", "Último peso (kg)", ""].map((h, i) => (
-                    <th
-                      key={`${h}-${i}`}
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                      {h || "\u00a0"}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {rows.map((s) => (
-                    <tr key={s.id} className={selected.has(s.id) ? "bg-indigo-50/50" : "hover:bg-gray-50"}>
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(s.id)}
-                          onChange={() => toggleOne(s.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                          aria-label={`Seleccionar ${s.tag}`}
-                        />
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{s.tag}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{s.name || "—"}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                        {formatDisplayDate(s.birthDate)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        <StatusBadge color="indigo">{labelCategory(s.category)}</StatusBadge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{formatAgeDays(s.birthDate)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                        {displayKgValue(s.latestWeight ?? s.weight)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right">
-                        <button
-                          onClick={() => openDrawer([s.id])}
-                          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
-                        >
-                          <CheckCircleIcon className="h-4 w-4" aria-hidden="true" />
-                          Destetar
-                        </button>
-                      </td>
-                    </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="mt-6">
+        <DataTable
+          rows={rows}
+          rowKey={(s) => s.id}
+          loading={loading}
+          loadingText="Cargando alertas..."
+          rowClassName={(s) => (selected.has(s.id) ? "bg-indigo-50/50" : undefined)}
+          selection={{
+            selectedKeys: selected,
+            onToggleRow: toggleOne,
+            onToggleAll: toggleAll,
+            allSelected,
+            ariaLabel: (s) => `Seleccionar ${s.tag}`,
+          }}
+          empty={
+            <EmptyState
+              icon={CheckCircleIcon}
+              title="Sin alertas de destete"
+              description="No hay corderos pendientes de destete en este momento."
+            />
+          }
+          columns={[
+            { key: "tag", header: "Arete", className: "whitespace-nowrap font-medium text-gray-900", cell: (s) => s.tag },
+            { key: "name", header: "Nombre", className: "whitespace-nowrap", cell: (s) => s.name || "—" },
+            {
+              key: "birth",
+              header: "F. nacimiento",
+              className: "whitespace-nowrap",
+              cell: (s) => formatDisplayDate(s.birthDate),
+            },
+            {
+              key: "category",
+              header: "Categoría",
+              className: "whitespace-nowrap",
+              cell: (s) => <StatusBadge color="indigo">{labelCategory(s.category)}</StatusBadge>,
+            },
+            { key: "age", header: "Edad (días)", className: "whitespace-nowrap", cell: (s) => formatAgeDays(s.birthDate) },
+            {
+              key: "weight",
+              header: "Último peso (kg)",
+              className: "whitespace-nowrap",
+              cell: (s) => displayKgValue(s.latestWeight ?? s.weight),
+            },
+            {
+              key: "actions",
+              header: "",
+              align: "right",
+              className: "whitespace-nowrap",
+              cell: (s) => (
+                <button
+                  onClick={() => openDrawer([s.id])}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+                >
+                  <CheckCircleIcon className="h-4 w-4" aria-hidden="true" />
+                  Destetar
+                </button>
+              ),
+            },
+          ]}
+        />
       </div>
 
       <Drawer
