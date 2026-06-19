@@ -29,7 +29,7 @@ export const seedPregnancyChecks: ApiPregnancyCheck[] = [
     isPregnant: true,
     checkType: DiagnosisType.FAMACHA,
     kind: PregnancyCheckKind.DIAGNOSIS,
-    notes: "FAMACHA 2, condición corporal buena. Se observan dos fetos en la ecografía de control; sin novedades.",
+    notes: "FAMACHA 2, condición corporal buena. Dos fetos.",
   },
   // m4 (Luna, ciclo anterior): ECO positivo + parto registrado.
   {
