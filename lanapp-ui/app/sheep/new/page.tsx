@@ -1,19 +1,7 @@
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { PageHeader } from "@/components/ui/page-header"
-import { Breadcrumb } from "@/components/ui/breadcrumb"
-import { SheepForm } from "@/components/sheep-form"
+import { redirect } from "next/navigation"
 
+// Sheep creation now happens in a drawer on the inventory page.
+// Keep this route as a deep-link redirect for backwards compatibility.
 export default function NewSheepPage() {
-  return (
-    <DashboardLayout>
-      <Breadcrumb
-        items={[
-          { label: "Ovejas", href: "/sheep" },
-          { label: "Nueva oveja" },
-        ]}
-      />
-      <PageHeader title="Nueva oveja" description="Registra un nuevo animal en el rebaño" />
-      <SheepForm mode="new" />
-    </DashboardLayout>
-  )
+  redirect("/sheep?new=1")
 }

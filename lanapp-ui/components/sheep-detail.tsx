@@ -1,15 +1,23 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { PencilSquareIcon } from "@heroicons/react/24/outline"
+import Link from "next/link"
+import {
+  PencilSquareIcon,
+  ClipboardDocumentListIcon,
+  ScaleIcon,
+  BeakerIcon,
+  ArrowRightCircleIcon,
+} from "@heroicons/react/24/outline"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { ClipboardDocumentListIcon } from "@heroicons/react/24/outline"
 import { SheepPesosTab } from "@/components/sheep-pesos-tab"
 import { SheepMontasTab } from "@/components/sheep-montas-tab"
 import { SheepFamachaTab } from "@/components/sheep-famacha-tab"
 import { SheepFormDrawer } from "@/components/sheep-form-drawer"
-import type { ApiSheep } from "@/lib/api/types"
+import type { ApiSheep, ApiMedicineApplication } from "@/lib/api/types"
 import { fetchWeaningRecordsBySheep, type ApiWeaningRecord } from "@/lib/api/weaning"
+import { fetchMedicineApplicationsBySheep } from "@/lib/api/medicine"
+import { labelMedicineStatus, labelMedicineType, medicineStatusColor } from "@/lib/labels/medicine"
 import { formatDisplayDate, formatAgeDays, formatDailyGain, formatLastWeight } from "@/lib/format"
 import { reproductorStatus } from "@/lib/reproductor-status"
 import {
@@ -31,6 +39,8 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("general")
   const [weaningRecords, setWeaningRecords] = useState<ApiWeaningRecord[]>([])
   const [weaningLoading, setWeaningLoading] = useState(true)
+  const [medApps, setMedApps] = useState<ApiMedicineApplication[]>([])
+  const [medLoading, setMedLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
 
   // Support deep-link redirects from the legacy /sheep/[id]/edit route.
@@ -64,6 +74,29 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
     }
   }, [sheep.id])
 
+  useEffect(() => {
+    let cancelled = false
+    setMedLoading(true)
+    fetchMedicineApplicationsBySheep(sheep.id)
+      .then((apps) => {
+        if (!cancelled) {
+          const sorted = [...apps].sort(
+            (a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime(),
+          )
+          setMedApps(sorted)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMedApps([])
+      })
+      .finally(() => {
+        if (!cancelled) setMedLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [sheep.id])
+
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-lg bg-white p-6 shadow">
@@ -74,12 +107,14 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
               Arete {sheep.tag} · {sheep.breed}
             </p>
           </div>
-          <Link
-            href={`/sheep/${sheep.id}/edit`}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
           >
+            <PencilSquareIcon className="h-5 w-5" aria-hidden="true" />
             Editar
-          </Link>
+          </button>
         </div>
         <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <div>
@@ -171,7 +206,10 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
               </div>
 
               <div className="rounded-lg bg-white p-6 shadow">
-                <h3 className="text-base font-semibold text-gray-900">Historial de destete</h3>
+                <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                  <ScaleIcon className="h-5 w-5 text-gray-400" />
+                  Historial de destete
+                </h3>
                 <p className="mt-1 text-sm text-gray-500">
                   Registro oficial de destete. El mismo peso también aparece en la pestaña Pesos.
                 </p>
@@ -217,6 +255,68 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
                   </div>
                 )}
               </div>
+
+              <div className="rounded-lg bg-white p-6 shadow">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                    <BeakerIcon className="h-5 w-5 text-gray-400" />
+                    Historial de medicina
+                  </h3>
+                  <Link
+                    href="/medicines"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                  >
+                    Programar aplicación
+                    <ArrowRightCircleIcon className="h-4 w-4" />
+                  </Link>
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  Aplicaciones de fármacos y vacunas registradas para esta oveja.
+                </p>
+                {medLoading ? (
+                  <p className="mt-4 text-sm text-gray-500">Cargando aplicaciones…</p>
+                ) : medApps.length === 0 ? (
+                  <p className="mt-4 text-sm text-gray-500">Sin aplicaciones registradas.</p>
+                ) : (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {["Fecha", "Medicamento", "Tipo", "Estado", "Notas"].map((h) => (
+                            <th
+                              key={h}
+                              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {medApps.map((a) => (
+                          <tr key={a.id}>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+                              {formatDisplayDate(a.applicationDate)}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                              {a.medicine?.name || "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                              {a.medicine?.type ? labelMedicineType(a.medicine.type) : "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-3 text-sm">
+                              <StatusBadge color={medicineStatusColor[a.status] ?? "gray"}>
+                                {labelMedicineStatus(a.status)}
+                              </StatusBadge>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700">{a.notes || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -229,6 +329,14 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
           {tab === "famacha" && <SheepFamachaTab sheepId={sheep.id} />}
         </div>
       </div>
+
+      <SheepFormDrawer
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        mode="edit"
+        initial={sheep}
+        onSaved={() => onRefresh?.()}
+      />
     </div>
   )
 }
