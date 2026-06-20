@@ -9,18 +9,48 @@
 | ALB host | `lanapp.myxperiences.org` |
 | Target group | `mexp-lanapp-front-tg` (port **3000**) |
 | CloudWatch logs | `/ecs/mexp-lanapp-front` (Terraform) |
-| Health check | `GET /` → 200 |
+| Health check | `GET /api/health` → 200 |
 
 API is at `lanapp-api.myxperiences.org`. The UI proxies `/api/v1/lanapp/*` to that host via Next.js rewrites.
 
-## 1. Build & push image
+## Deploy (recommended)
+
+From [`webapp-infra/ecs-lanapp/`](../../webapp-infra/ecs-lanapp/):
+
+```bash
+cd webapp-infra/ecs-lanapp
+cp .env_backend.example .env_backend    # first time only
+cp .env_frontend.example .env_frontend  # first time only
+# edit .env_* with Cognito, DATABASE_URL, etc.
+
+make deploy          # backend + frontend
+make deploy-front    # UI only
+make deploy-back     # API only
+```
+
+The Makefile:
+
+1. Builds and pushes Docker images to ECR (tag = first 7 chars of `git rev-parse HEAD` in `webapp/`)
+2. Updates `IMAGE_TAG` in `.env_backend` / `.env_frontend`
+3. Runs `update-backend.sh` / `update-frontend.sh` (register task definition + ECS rollout)
+
+ECS-only (image already pushed):
+
+```bash
+make update-front
+make update-back
+```
+
+See [`ecs-lanapp/README.md`](../../webapp-infra/ecs-lanapp/README.md) for all targets.
+
+## Manual build (alternative)
 
 Build context is the **`webapp/`** monorepo root.
 
 ```bash
 cd webapp
-chmod +x scripts/build-lanapp-ui-image.sh
 ./scripts/build-lanapp-ui-image.sh
+./scripts/build-lanapp-image.sh
 ```
 
 `LANAPP_SERVICE_URL` is **baked in at build time** (default `https://lanapp-api.myxperiences.org`). Override if needed:
@@ -29,55 +59,75 @@ chmod +x scripts/build-lanapp-ui-image.sh
 LANAPP_SERVICE_URL=https://lanapp-api.myxperiences.org ./scripts/build-lanapp-ui-image.sh
 ```
 
-## 2. Task definition
+Then sync the tag and update ECS:
 
-Edit `webapp-infra/ecs/lanapp-front-task-definition.json` — set the image tag to match the build.
+```bash
+cd webapp-infra/ecs-lanapp
+make update-front   # or update-back / update-all
+```
 
-Runtime env vars (only these):
+## Task definition
+
+Templates: [`webapp-infra/ecs-lanapp/lanapp-front-task-definition.json`](../../webapp-infra/ecs-lanapp/lanapp-front-task-definition.json) and `lanapp-back-task-definition.json`.
+
+Runtime env vars come from `.env_frontend` / `.env_backend` (see `.env_*.example`).
+
+**Frontend** (`.env_frontend`):
 
 | Variable | Value |
 |----------|--------|
 | `PORT` | `3000` |
 | `NODE_ENV` | `production` |
 | `HOSTNAME` | `0.0.0.0` |
+| `AWS_REGION` | e.g. `us-east-1` |
+| `COGNITO_USER_POOL_ID` | Terraform output |
+| `COGNITO_CLIENT_ID` | Terraform output |
+| `COGNITO_CLIENT_SECRET` | Terraform output |
+| `IMAGE_TAG` | Set by `make` from git |
 
-## 3. Deploy
+**No** `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` — login uses `InitiateAuth` with only `COGNITO_*`. Inviting users uses the **task role** `mexp-lanapp-front-task-role`.
 
-**First time:**
+See [`docs/AUTH.md`](AUTH.md) for the full auth flow.
+
+## First-time ECS services
 
 ```bash
-cd webapp-infra/ecs
-chmod +x create-frontend.sh update-frontend.sh
-./create-frontend.sh
+cd webapp-infra/ecs-lanapp
+make create-back
+make create-front
 ```
 
-**Updates (new image tag):**
+## Rollout (ECS)
+
+Configured in [`deploy-flags.sh`](../../webapp-infra/ecs-lanapp/deploy-flags.sh) and applied by create/update scripts:
+
+| Setting | Value |
+|---------|--------|
+| `desired-count` | 2 |
+| `minimumHealthyPercent` | 100 |
+| `maximumPercent` | 200 |
+| Circuit breaker + rollback | enabled |
+| `healthCheckGracePeriodSeconds` | 120 |
+
+Rolling deploy: ECS starts new tasks before draining old ones. If the new revision fails health checks, **circuit breaker rolls back** to the previous task definition. The UI liveness probe is `GET /api/health` (200 only).
+
+After changing the ALB target group health path, run **`terraform apply`** in `webapp-infra/iac/src/v1/` before deploying a UI image that exposes `/api/health`.
+
+## Verify
 
 ```bash
-cd webapp-infra/ecs
-./update-frontend.sh
-```
-
-## 4. Verify
-
-```bash
-curl -sI https://lanapp.myxperiences.org/
+curl -s https://lanapp.myxperiences.org/api/health
 curl -s https://lanapp-api.myxperiences.org/api/v1/lanapp/health
 ```
 
 Open the UI in a browser and confirm API calls work (Network tab → `/api/v1/lanapp/...`).
 
-## Auth (current: disabled)
+## Auth
 
-Production uses **`SKIP_AUTH=true` on the lanapp API** task (`lanapp-back-task-definition.json`). No JWT or auth service required.
-
-The UI login page is a stub (does not call `/api/v1/g/*`). `NEXT_PUBLIC_SKIP_AUTH` in `.env` is **not read by the app** — only the API flag matters.
-
-When you deploy the `auth` service later:
-
-1. Deploy `auth/` to ECS and set `AUTH_SERVICE_URL` at UI image build
-2. Wire `app/login/page.tsx` to `POST /api/v1/g/auth/login`
-3. Remove `SKIP_AUTH` from the API task and add `AUTH0_*` env vars
+- UI auth: Cognito via Next.js API routes (`/api/auth/*`). See [`docs/AUTH.md`](AUTH.md).
+- Login/forgot/reset: only `COGNITO_*` env vars in the container.
+- Invite users (`/users`): ECS task role `mexp-lanapp-front-task-role` (no access keys in env).
+- API JWT validation: set `SKIP_AUTH=false` on the lanapp API task and configure matching `COGNITO_*` vars.
 
 ## Notes
 

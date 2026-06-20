@@ -12,6 +12,10 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: monorepoRoot,
   transpilePackages: ["@sheep/domain"],
+  serverExternalPackages: [
+    "@aws-sdk/client-cognito-identity-provider",
+    "@aws-sdk/credential-providers",
+  ],
   typescript: {
     ignoreBuildErrors: true,
   },

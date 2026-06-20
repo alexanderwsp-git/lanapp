@@ -11,7 +11,14 @@ const PUBLIC_PATHS = [
   '/register',
 ];
 
-const PUBLIC_API = ['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/auth/set-password'];
+const PUBLIC_API = [
+  '/api/health',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/auth/set-password',
+];
 
 export function proxy(request: NextRequest) {
   if (SKIP) {

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 
 import { jsonError, jsonOk } from '@/lib/auth/api-response';
 import { cognitoErrorMessage, resetPassword } from '@/lib/auth/cognito-service';
+import { isSkipAuthEnabled } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,10 @@ export async function POST(request: NextRequest) {
 
     if (!username || !code || !newPassword) {
       return jsonError('Datos incompletos', 400);
+    }
+
+    if (isSkipAuthEnabled()) {
+      return jsonOk({}, 'Contraseña restablecida (modo dev). Ya puedes iniciar sesión.');
     }
 
     await resetPassword(username, code, newPassword);

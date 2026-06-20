@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -7,7 +8,6 @@ import {
   HomeIcon,
   Squares2X2Icon,
   MapPinIcon,
-  CalendarDaysIcon,
   Cog6ToothIcon,
   ChartBarIcon,
   BellAlertIcon,
@@ -16,6 +16,7 @@ import {
 import type { IconType } from "react-icons"
 import { IconAnalysis, IconMedicine } from "@/lib/icons/analysis-medicine"
 import { GiSheep } from "react-icons/gi"
+import { getAccessToken } from "@/lib/auth/session"
 
 type NavItem = {
   label: string
@@ -63,7 +64,22 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+  const [isAdmin, setIsAdmin] = useState(false)
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/")
+
+  useEffect(() => {
+    const token = getAccessToken()
+    fetch("/api/auth/me", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => res.json())
+      .then((body) => {
+        if (body.success && body.data?.roles?.includes("admin")) {
+          setIsAdmin(true)
+        }
+      })
+      .catch(() => undefined)
+  }, [])
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -100,10 +116,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="flex flex-col gap-1 border-t border-gray-200 p-4">
-        <NavLink
-          item={{ label: "Usuarios", href: "/users", icon: UsersIcon }}
-          active={isActive("/users")}
-        />
+        {isAdmin && (
+          <NavLink
+            item={{ label: "Usuarios", href: "/users", icon: UsersIcon }}
+            active={isActive("/users")}
+          />
+        )}
         <NavLink
           item={{ label: "Configuración", href: "/settings", icon: Cog6ToothIcon }}
           active={isActive("/settings")}

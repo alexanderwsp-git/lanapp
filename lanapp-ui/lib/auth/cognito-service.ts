@@ -2,11 +2,11 @@ import {
   AdminAddUserToGroupCommand,
   AdminCreateUserCommand,
   AdminDisableUserCommand,
-  AdminInitiateAuthCommand,
   AdminListGroupsForUserCommand,
   ConfirmForgotPasswordCommand,
   ForgotPasswordCommand,
   GlobalSignOutCommand,
+  InitiateAuthCommand,
   ListUsersCommand,
   RespondToAuthChallengeCommand,
   type UserType,
@@ -15,7 +15,8 @@ import { CognitoJwtVerifier } from 'aws-jwt-verify';
 
 import { lanappGroupForRole, rolesFromGroups, type LanappRole } from './constants';
 import {
-  getCognitoClient,
+  getAdminCognitoClient,
+  getPublicCognitoClient,
   mapAuthResult,
   requireCognitoConfig,
   secretHash,
@@ -32,14 +33,13 @@ export class CognitoAuthError extends Error {
 }
 
 export async function loginWithPassword(username: string, password: string) {
-  const { userPoolId, clientId, clientSecret } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const { clientId, clientSecret } = requireCognitoConfig();
+  const client = getPublicCognitoClient();
 
   const response = await client.send(
-    new AdminInitiateAuthCommand({
-      UserPoolId: userPoolId,
+    new InitiateAuthCommand({
       ClientId: clientId,
-      AuthFlow: 'ADMIN_NO_SRP_AUTH',
+      AuthFlow: 'USER_PASSWORD_AUTH',
       AuthParameters: {
         USERNAME: username,
         PASSWORD: password,
@@ -72,7 +72,7 @@ export async function completeNewPassword(
   session: string
 ) {
   const { clientId, clientSecret } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const client = getPublicCognitoClient();
 
   const response = await client.send(
     new RespondToAuthChallengeCommand({
@@ -95,12 +95,11 @@ export async function completeNewPassword(
 }
 
 export async function refreshAccessToken(username: string, refreshToken: string) {
-  const { userPoolId, clientId, clientSecret } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const { clientId, clientSecret } = requireCognitoConfig();
+  const client = getPublicCognitoClient();
 
   const response = await client.send(
-    new AdminInitiateAuthCommand({
-      UserPoolId: userPoolId,
+    new InitiateAuthCommand({
       ClientId: clientId,
       AuthFlow: 'REFRESH_TOKEN_AUTH',
       AuthParameters: {
@@ -119,7 +118,7 @@ export async function refreshAccessToken(username: string, refreshToken: string)
 
 export async function forgotPassword(username: string) {
   const { clientId, clientSecret } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const client = getPublicCognitoClient();
 
   await client.send(
     new ForgotPasswordCommand({
@@ -136,7 +135,7 @@ export async function resetPassword(
   newPassword: string
 ) {
   const { clientId, clientSecret } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const client = getPublicCognitoClient();
 
   await client.send(
     new ConfirmForgotPasswordCommand({
@@ -150,7 +149,7 @@ export async function resetPassword(
 }
 
 export async function logout(accessToken: string) {
-  const client = getCognitoClient();
+  const client = getPublicCognitoClient();
   await client.send(new GlobalSignOutCommand({ AccessToken: accessToken }));
 }
 
@@ -170,7 +169,7 @@ export async function inviteUser(input: {
   preferredUsername?: string;
 }) {
   const { userPoolId } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const client = getAdminCognitoClient();
   const username = input.email;
 
   const attributes = [
@@ -218,14 +217,14 @@ function mapCognitoUser(user: UserType, groups: string[]) {
       .split(/[.\s@]/)
       .filter(Boolean)
       .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? '')
+      .map((p: string) => p[0]?.toUpperCase() ?? '')
       .join(''),
   };
 }
 
 export async function listLanappUsers(limit = 60) {
   const { userPoolId } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const client = getAdminCognitoClient();
 
   const response = await client.send(
     new ListUsersCommand({
@@ -254,7 +253,7 @@ export async function listLanappUsers(limit = 60) {
 
 export async function disableUser(username: string) {
   const { userPoolId } = requireCognitoConfig();
-  const client = getCognitoClient();
+  const client = getAdminCognitoClient();
   await client.send(
     new AdminDisableUserCommand({
       UserPoolId: userPoolId,
@@ -263,7 +262,7 @@ export async function disableUser(username: string) {
   );
 }
 
-export function cognitoErrorMessage(err: unknown): string {
+export function cognitoErrorMessage(err: unknown, context: 'public' | 'admin' = 'public'): string {
   if (err instanceof CognitoAuthError) return err.message;
   if (err && typeof err === 'object' && 'name' in err) {
     const name = String((err as { name: string }).name);
@@ -275,6 +274,12 @@ export function cognitoErrorMessage(err: unknown): string {
     if (name === 'ExpiredCodeException') return 'El código ha expirado';
     if (name === 'InvalidPasswordException') return 'La contraseña no cumple los requisitos';
     if (name === 'UsernameExistsException') return 'El usuario ya existe';
+    if (name === 'CredentialsProviderError' || message.includes('Could not load credentials')) {
+      if (context === 'admin') {
+        return 'Invitar usuarios requiere IAM. En prod: task role ECS. En local: ejecuta `aws configure` o define AWS_PROFILE en .env (no hace falta en el contenedor).';
+      }
+      return 'Error de autenticación con Cognito. Verifica COGNITO_* y que el pool tenga ALLOW_USER_PASSWORD_AUTH.';
+    }
     return message;
   }
   return 'Error de autenticación';

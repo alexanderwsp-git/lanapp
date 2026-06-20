@@ -1,4 +1,4 @@
-import { storeTokens } from './session';
+import { clearSession, storeTokens } from './session';
 
 type AuthEnvelope<T> = {
   success: boolean;
@@ -91,4 +91,5 @@ export async function logout() {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   }).catch(() => undefined);
+  clearSession();
 }

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const users = await listLanappUsers();
     return jsonOk(users);
   } catch (err) {
-    return jsonError(cognitoErrorMessage(err), 500);
+    return jsonError(cognitoErrorMessage(err, 'admin'), 500);
   }
 }
 
@@ -47,6 +47,6 @@ export async function POST(request: NextRequest) {
 
     return jsonOk(created, 'Invitación enviada por email', 201);
   } catch (err) {
-    return jsonError(cognitoErrorMessage(err), 400);
+    return jsonError(cognitoErrorMessage(err, 'admin'), 400);
   }
 }

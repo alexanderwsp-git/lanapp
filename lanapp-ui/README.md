@@ -21,6 +21,8 @@ Or without Make: `npm install && npm run build:packages`, then `npm run dev:api`
 
 Copy `.env.example` → `.env` for local settings. API proxy: `next.config.mjs` → `LANAPP_SERVICE_URL`.
 
+**Auth (Cognito, invite-only):** see [`docs/AUTH.md`](docs/AUTH.md).
+
 ## v0
 
 Import the **`webapp`** repo in v0 (not this folder alone). Edit only `lanapp-ui/` paths. See [`../README.md`](../README.md) § v0 workflow.

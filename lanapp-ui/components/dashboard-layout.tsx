@@ -12,11 +12,24 @@ import {
   ArrowRightStartOnRectangleIcon,
 } from "@heroicons/react/24/outline"
 import { SidebarContent } from "@/components/sidebar-content"
+import { logout } from "@/lib/auth/client"
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const router = useRouter()
+
+  async function handleLogout() {
+    setUserMenuOpen(false)
+    setLoggingOut(true)
+    try {
+      await logout()
+    } finally {
+      router.push("/login")
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -96,14 +109,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     </Link>
                     <button
                       type="button"
-                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50"
-                      onClick={() => {
-                        setUserMenuOpen(false)
-                        router.push("/login")
-                      }}
+                      disabled={loggingOut}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50 disabled:opacity-60"
+                      onClick={() => void handleLogout()}
                     >
                       <ArrowRightStartOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
-                      Cerrar sesión
+                      {loggingOut ? "Cerrando sesión…" : "Cerrar sesión"}
                     </button>
                   </div>
                 </>
