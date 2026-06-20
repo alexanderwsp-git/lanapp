@@ -53,10 +53,12 @@ cd webapp
 ./scripts/build-lanapp-image.sh
 ```
 
-`LANAPP_SERVICE_URL` is **baked in at build time** (default `https://lanapp-api.myxperiences.org`). Override if needed:
+`LANAPP_SERVICE_URL`, `NEXT_PUBLIC_API_PREFIX` and `NEXT_PUBLIC_SKIP_AUTH` are **baked in at build time** (Dockerfile build-args). `make build-front` loads them from `.env_frontend`. Override manually:
 
 ```bash
-LANAPP_SERVICE_URL=https://lanapp-api.myxperiences.org ./scripts/build-lanapp-ui-image.sh
+cd webapp-infra/ecs-lanapp
+set -a && source .env_frontend && set +a
+cd ../../webapp && ./scripts/build-lanapp-ui-image.sh
 ```
 
 Then sync the tag and update ECS:
@@ -74,16 +76,20 @@ Runtime env vars come from `.env_frontend` / `.env_backend` (see `.env_*.example
 
 **Frontend** (`.env_frontend`):
 
-| Variable | Value |
-|----------|--------|
-| `PORT` | `3000` |
-| `NODE_ENV` | `production` |
-| `HOSTNAME` | `0.0.0.0` |
-| `AWS_REGION` | e.g. `us-east-1` |
-| `COGNITO_USER_POOL_ID` | Terraform output |
-| `COGNITO_CLIENT_ID` | Terraform output |
-| `COGNITO_CLIENT_SECRET` | Terraform output |
-| `IMAGE_TAG` | Set by `make` from git |
+| Variable | Build / runtime | Value (prod) |
+|----------|-----------------|--------------|
+| `PORT` | runtime | `3000` |
+| `NODE_ENV` | runtime | `production` |
+| `HOSTNAME` | runtime | `0.0.0.0` |
+| `NEXT_PUBLIC_API_PREFIX` | build + runtime | `/api/v1` |
+| `LANAPP_SERVICE_URL` | build (rewrites) + runtime | `https://lanapp-api.myxperiences.org` |
+| `AUTH_SERVICE_URL` | runtime | optional (unused by UI today) |
+| `NEXT_PUBLIC_SKIP_AUTH` | build + runtime | `false` |
+| `AWS_REGION` | runtime | e.g. `us-east-1` |
+| `COGNITO_USER_POOL_ID` | runtime | Terraform output |
+| `COGNITO_CLIENT_ID` | runtime | Terraform output |
+| `COGNITO_CLIENT_SECRET` | runtime | Terraform output |
+| `IMAGE_TAG` | deploy script | Set by `make` from git |
 
 **No** `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` — login uses `InitiateAuth` with only `COGNITO_*`. Inviting users uses the **task role** `mexp-lanapp-front-task-role`.
 

@@ -21,6 +21,10 @@
 
 | Document | Purpose |
 |----------|---------|
+| [`GUIA_USUARIO.md`](GUIA_USUARIO.md) | **User guide (ES)** — flows, diagrams, role summary |
+| [`ROLES.md`](ROLES.md) | Role matrix (current vs target), RBAC roadmap (ES/EN) |
+| [`VALIDACIONES.md`](VALIDACIONES.md) | Form fields, ranges, Zod validation tables |
+| [`AUTH.md`](AUTH.md) | Cognito invite-only auth, env vars |
 | [`../docs/ANALYSIS_MEDICINE_DIAGNOSIS.md`](../docs/ANALYSIS_MEDICINE_DIAGNOSIS.md) | **Análisis vs Medicina vs diagnóstico preñez** — three workflows |
 | [`../sheep/docs/ARCHITECTURE_PLAN.md`](../sheep/docs/ARCHITECTURE_PLAN.md) | Category engine, use cases, long-term architecture |
 | [`../sheep/README.md`](../sheep/README.md) | Monorepo dev commands |

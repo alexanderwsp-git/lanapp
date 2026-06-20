@@ -12,6 +12,8 @@ Single repo for API, UI, auth, and shared packages. No duplicated `@sheep/domain
 
 UI contract for v0: [`lanapp-ui/docs/APP_CONTEXT.md`](lanapp-ui/docs/APP_CONTEXT.md)
 
+**User guide (operators, ES):** [`lanapp-ui/docs/GUIA_USUARIO.md`](lanapp-ui/docs/GUIA_USUARIO.md) — flows, roles, validations: [`ROLES.md`](lanapp-ui/docs/ROLES.md) · [`VALIDACIONES.md`](lanapp-ui/docs/VALIDACIONES.md)
+
 **Manual testing (lifecycle, dates, destete, breeding):** [`docs/TESTING_SHEEP_LIFECYCLE.md`](docs/TESTING_SHEEP_LIFECYCLE.md)
 
 ## Local development
