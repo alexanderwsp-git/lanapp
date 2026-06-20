@@ -33,19 +33,25 @@ export async function updateMedicineApplicationStatus(
 
 export async function markApplicationApplied(
   app: ApiMedicineApplication,
-  opts: { appliedDate?: string; nextScheduledDate?: string; notes?: string } = {},
+  opts: {
+    appliedDate?: string
+    nextScheduledDate?: string
+    notes?: string
+    nextNotes?: string
+  } = {},
 ): Promise<void> {
   await api.updateMedicineApplication(app.id, {
     status: MedicineStatus.APPLIED,
-    applicationDate: opts.appliedDate ?? toDateInputValue(app.applicationDate),
+    applicationDate: new Date(opts.appliedDate ?? toDateInputValue(app.applicationDate)),
     notes: opts.notes?.trim() || app.notes || undefined,
   })
   if (opts.nextScheduledDate) {
     await api.createMedicineApplication({
       medicineId: app.medicineId,
       sheepId: app.sheepId,
-      applicationDate: opts.nextScheduledDate,
+      applicationDate: new Date(opts.nextScheduledDate),
       status: MedicineStatus.SCHEDULED,
+      notes: opts.nextNotes?.trim() || undefined,
     })
   }
 }

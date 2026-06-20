@@ -139,7 +139,7 @@ Sections (when not schedule-only):
 - **Resultado**: Pendiente (gray)
 - **Fecha**: scheduled date + “Programado” subline; **Vence hoy** badge when due
 - Subtitle: `N programado(s).`
-- Row icon: **Agregar diagnóstico** (`BeakerIcon`)
+- Row icon: **Agregar diagnóstico** (`FaUserDoctor` / `IconDiagnosis`)
 
 **Individual vs bulk:**
 

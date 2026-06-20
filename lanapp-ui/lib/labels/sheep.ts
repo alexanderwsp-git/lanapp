@@ -55,6 +55,10 @@ export function labelGender(gender: Gender | string): string {
   return genderLabels[gender as Gender] ?? String(gender)
 }
 
+export function genderColor(gender: Gender | string): BadgeColor {
+  return gender === Gender.MALE ? "blue" : gender === Gender.FEMALE ? "pink" : "gray"
+}
+
 export function labelRecordType(recordType: RecordType | string): string {
   return recordTypeLabels[recordType as RecordType] ?? String(recordType)
 }

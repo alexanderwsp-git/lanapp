@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
+import { SwitchField } from "@/components/ui/switch"
 import { markApplicationApplied } from "@/lib/api/medicine"
 import type { ApiMedicineApplication } from "@/lib/api/types"
 import { toDateInputValue } from "@/lib/format"
@@ -14,6 +15,10 @@ type MedicineApplyDrawerProps = {
   medicineName: string
   sheepLabel: string
   onSaved: () => void
+}
+
+function Separator() {
+  return <hr className="border-gray-200" />
 }
 
 export function MedicineApplyDrawer({
@@ -28,6 +33,7 @@ export function MedicineApplyDrawer({
   const [appliedDate, setAppliedDate] = useState(today())
   const [scheduleNext, setScheduleNext] = useState(false)
   const [nextScheduledDate, setNextScheduledDate] = useState("")
+  const [nextNotes, setNextNotes] = useState("")
   const [notes, setNotes] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -38,6 +44,7 @@ export function MedicineApplyDrawer({
     setAppliedDate(scheduled <= today() ? today() : scheduled)
     setScheduleNext(false)
     setNextScheduledDate("")
+    setNextNotes("")
     setNotes(application.notes ?? "")
     setError(null)
   }, [application, open])
@@ -55,7 +62,8 @@ export function MedicineApplyDrawer({
       await markApplicationApplied(application, {
         appliedDate,
         nextScheduledDate: scheduleNext ? nextScheduledDate : undefined,
-        notes,
+        notes: notes.trim() || undefined,
+        nextNotes: scheduleNext ? nextNotes.trim() || undefined : undefined,
       })
       onSaved()
       onClose()
@@ -106,34 +114,7 @@ export function MedicineApplyDrawer({
             required
           />
         </Field>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={scheduleNext}
-            onChange={(e) => {
-              const checked = e.target.checked
-              setScheduleNext(checked)
-              if (checked && !nextScheduledDate) {
-                const d = new Date(appliedDate)
-                d.setDate(d.getDate() + 7)
-                setNextScheduledDate(d.toISOString().slice(0, 10))
-              }
-            }}
-            className="rounded border-gray-300 text-indigo-600"
-          />
-          Programar próxima dosis
-        </label>
-        {scheduleNext && (
-          <Field label="Fecha próxima dosis" required htmlFor="apply-next">
-            <TextInput
-              id="apply-next"
-              type="date"
-              value={nextScheduledDate}
-              onChange={(e) => setNextScheduledDate(e.target.value)}
-              required
-            />
-          </Field>
-        )}
+
         <Field label="Notas" htmlFor="apply-notes">
           <Textarea
             id="apply-notes"
@@ -143,6 +124,45 @@ export function MedicineApplyDrawer({
             placeholder="Opcional"
           />
         </Field>
+
+        <Separator />
+
+        <SwitchField
+          label="Programar próxima dosis"
+          description="Crea una aplicación programada en Medicina"
+          checked={scheduleNext}
+          onChange={(checked) => {
+            setScheduleNext(checked)
+            if (checked && !nextScheduledDate) {
+              const d = new Date(appliedDate)
+              d.setDate(d.getDate() + 7)
+              setNextScheduledDate(d.toISOString().slice(0, 10))
+            }
+          }}
+          aria-label="Programar próxima dosis"
+        />
+        {scheduleNext && (
+          <>
+            <Field label="Fecha próxima dosis" required htmlFor="apply-next">
+              <TextInput
+                id="apply-next"
+                type="date"
+                value={nextScheduledDate}
+                onChange={(e) => setNextScheduledDate(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Notas (próxima dosis)" htmlFor="apply-next-notes">
+              <Textarea
+                id="apply-next-notes"
+                rows={2}
+                value={nextNotes}
+                onChange={(e) => setNextNotes(e.target.value)}
+                placeholder="Opcional — recordatorio para la siguiente aplicación"
+              />
+            </Field>
+          </>
+        )}
       </form>
     </Drawer>
   )

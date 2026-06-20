@@ -44,6 +44,8 @@ export type BreedingCycleCreatePayload = {
   notes?: string
 }
 
+export type BreedingCycleUpdatePayload = Partial<BreedingCycleCreatePayload>
+
 export type BreedingDiagnosisPayload = {
   diagnosisType: DiagnosisType
   diagnosisDate: string
@@ -58,6 +60,7 @@ export const {
   fetchBreedingCycles,
   confirmBreedingCycleMating,
   createBreedingCycle,
+  updateBreedingCycle,
   bulkScheduleBreedingCycles,
   recordBreedingDiagnosis,
   cancelBreedingCycle,

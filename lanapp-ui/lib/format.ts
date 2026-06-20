@@ -119,3 +119,8 @@ export function formatLastWeight(sheep: {
   return kg != null ? `${kg} kg` : "—"
 }
 
+/** Notes for medicine application tables (strips legacy analysis prefix). */
+export function formatMedicineNotes(notes: string | null | undefined): string {
+  if (!notes?.trim()) return "—"
+  return notes.replace(/^Desde análisis:\s*/u, "").trim() || "—"
+}

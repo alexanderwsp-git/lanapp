@@ -44,7 +44,7 @@ export const seedMedicineApplications: ApiMedicineApplication[] = [
     analysisId: "01100001-0000-4000-8000-000000000001",
     applicationDate: `${today()}T00:00:00.000Z`,
     status: MedicineStatus.SCHEDULED,
-    notes: "Desde análisis: FAMACHA — Anemia — desparasitar",
+    notes: "FAMACHA — Anemia — desparasitar",
   },
   {
     id: "01200001-0000-4000-8000-000000000002",

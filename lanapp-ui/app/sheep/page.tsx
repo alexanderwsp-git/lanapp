@@ -18,6 +18,7 @@ import {
   labelStatus,
   labelRecordType,
   genderOptions,
+  genderColor,
   statusOptions,
   recordTypeOptions,
   statusColor,
@@ -260,7 +261,14 @@ export default function SheepListPage() {
               className: "whitespace-nowrap text-gray-900",
               cell: (s) => s.name ?? "—",
             },
-            { key: "gender", header: "Sexo", className: "whitespace-nowrap text-gray-500", cell: (s) => labelGender(s.gender) },
+            {
+              key: "gender",
+              header: "Sexo",
+              className: "whitespace-nowrap",
+              cell: (s) => (
+                <StatusBadge color={genderColor(s.gender)}>{labelGender(s.gender)}</StatusBadge>
+              ),
+            },
             { key: "breed", header: "Raza", className: "whitespace-nowrap text-gray-500", cell: (s) => s.breed },
             {
               key: "birth",

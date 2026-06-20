@@ -1,9 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import Link from "next/link"
-import { BeakerIcon, CheckCircleIcon, PlusIcon } from "@heroicons/react/24/outline"
-import { MedicineStatus } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
 import { MedicineApplyDrawer } from "@/components/medicine-apply-drawer"
@@ -13,8 +10,10 @@ import {
   fetchMedicines,
 } from "@/lib/api/medicine"
 import type { ApiMedicine, ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
+import { IconAdd, IconApplyMedicine, IconMedicine } from "@/lib/icons/analysis-medicine"
 import { labelMedicineStatus, labelMedicineType, medicineStatusColor } from "@/lib/labels/medicine"
-import { formatDisplayDate } from "@/lib/format"
+import { MedicineStatus } from "@sheep/domain"
+import { formatDisplayDate, formatMedicineNotes } from "@/lib/format"
 
 const isScheduled = (status: string) =>
   status === MedicineStatus.SCHEDULED || String(status).toLowerCase() === "scheduled"
@@ -66,7 +65,7 @@ export function SheepMedicineTab({
     <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-          <BeakerIcon className="h-5 w-5 text-gray-400" />
+          <IconMedicine className="h-5 w-5 text-gray-400" aria-hidden="true" />
           Medicina
         </h3>
         <button
@@ -74,7 +73,7 @@ export function SheepMedicineTab({
           onClick={() => setScheduleOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
         >
-          <PlusIcon className="h-4 w-4" />
+          <IconApplyMedicine className="h-4 w-4" aria-hidden="true" />
           Nueva aplicación
         </button>
       </div>
@@ -130,33 +129,23 @@ export function SheepMedicineTab({
             {
               key: "notes",
               header: "Notas",
-              cell: (a) => (
-                <span className="flex flex-col gap-0.5">
-                  {a.notes ? <span>{a.notes}</span> : <span>—</span>}
-                  {a.analysisId ? (
-                    <Link
-                      href="/analysis"
-                      className="text-xs font-medium text-indigo-600 hover:text-indigo-500"
-                    >
-                      Desde análisis
-                    </Link>
-                  ) : null}
-                </span>
-              ),
+              cell: (a) => formatMedicineNotes(a.notes),
             },
             {
               key: "actions",
-              header: "Acciones",
+              header: "",
               align: "right",
+              className: "whitespace-nowrap",
               cell: (a) =>
                 isScheduled(a.status) ? (
                   <button
                     type="button"
                     onClick={() => setApplyTarget(a)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-indigo-50"
+                    className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                    title="Registrar aplicación"
+                    aria-label="Registrar aplicación"
                   >
-                    <CheckCircleIcon className="h-4 w-4" />
-                    Registrar aplicación
+                    <IconApplyMedicine className="h-5 w-5" aria-hidden="true" />
                   </button>
                 ) : (
                   <span className="text-xs text-gray-400">—</span>

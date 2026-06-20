@@ -8,6 +8,8 @@ import { SwitchField } from "@/components/ui/switch"
 import { AnalysisStatus, AnalysisType, type ApiAnalysis, type ApiAnalysisType } from "@/lib/analysis/types"
 import type { ApiMedicine } from "@/lib/api/types"
 import {
+  defaultFollowUpNotes,
+  defaultMedicineNotes,
   diagnosisFormFromAnalysis,
   emptyDiagnosisForm,
   FAMACHA_SCORES,
@@ -126,6 +128,20 @@ export function AnalysisDiagnosisDrawer({
     }
   }, [liveRecommendation?.needsTreatment, suggestedMeds, form.suggestedMedicineTouched, form.suggestedMedicineId])
 
+  const typeLabel = activeType?.name ?? "Análisis"
+
+  useEffect(() => {
+    if (!form.scheduleTreatment || form.medicineNotesTouched) return
+    const suggested = defaultMedicineNotes(typeLabel, form.diagnosis)
+    setForm((prev) => (prev.medicineNotes === suggested ? prev : { ...prev, medicineNotes: suggested }))
+  }, [form.scheduleTreatment, form.medicineNotesTouched, form.diagnosis, typeLabel])
+
+  useEffect(() => {
+    if (!form.scheduleFollowUp || form.followUpNotesTouched) return
+    const suggested = defaultFollowUpNotes(typeLabel)
+    setForm((prev) => (prev.followUpNotes === suggested ? prev : { ...prev, followUpNotes: suggested }))
+  }, [form.scheduleFollowUp, form.followUpNotesTouched, typeLabel])
+
   function selectScore(score: number) {
     setForm((prev) => ({
       ...prev,
@@ -188,7 +204,6 @@ export function AnalysisDiagnosisDrawer({
     }
   }
 
-  const typeLabel = activeType?.name ?? "Análisis"
   const { title, submit } = drawerMeta(record, isAdHoc, form.scheduleOnly)
 
   return (
@@ -298,7 +313,14 @@ export function AnalysisDiagnosisDrawer({
                       id="diag-date"
                       type="date"
                       value={form.completedDate}
-                      onChange={(e) => setForm({ ...form, completedDate: e.target.value })}
+                      onChange={(e) => {
+                        const completedDate = e.target.value
+                        setForm((prev) => ({
+                          ...prev,
+                          completedDate,
+                          treatmentDate: prev.treatmentDateTouched ? prev.treatmentDate : completedDate,
+                        }))
+                      }}
                       required
                     />
                   </Field>
@@ -398,11 +420,28 @@ export function AnalysisDiagnosisDrawer({
                       <>
                         <SwitchField
                           label="Aplicar ahora"
-                          description="Si está desactivado, queda programado en Medicina"
+                          description="Registra la dosis como aplicada en la fecha del análisis"
                           checked={form.applyTreatmentNow}
                           onChange={(checked) => setForm({ ...form, applyTreatmentNow: checked })}
                           aria-label="Aplicar medicamento ahora"
                         />
+                        {!form.applyTreatmentNow && (
+                          <Field label="Fecha programada" required htmlFor="diag-treatment-date">
+                            <TextInput
+                              id="diag-treatment-date"
+                              type="date"
+                              value={form.treatmentDate}
+                              onChange={(e) =>
+                                setForm({
+                                  ...form,
+                                  treatmentDate: e.target.value,
+                                  treatmentDateTouched: true,
+                                })
+                              }
+                              required
+                            />
+                          </Field>
+                        )}
                         <Field label="Medicamento" htmlFor="diag-suggested-med">
                           <Select
                             id="diag-suggested-med"
@@ -423,6 +462,21 @@ export function AnalysisDiagnosisDrawer({
                             ))}
                           </Select>
                         </Field>
+                        <Field label="Notas de la aplicación" htmlFor="diag-medicine-notes">
+                          <Textarea
+                            id="diag-medicine-notes"
+                            rows={2}
+                            value={form.medicineNotes}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                medicineNotes: e.target.value,
+                                medicineNotesTouched: true,
+                              })
+                            }
+                            placeholder="Observaciones de esta dosis"
+                          />
+                        </Field>
                       </>
                     )}
                   </div>
@@ -439,15 +493,32 @@ export function AnalysisDiagnosisDrawer({
                 />
 
                 {form.scheduleFollowUp && (
-                  <Field label="Fecha del seguimiento" htmlFor="diag-followup">
-                    <TextInput
-                      id="diag-followup"
-                      type="date"
-                      value={form.followUpDate}
-                      onChange={(e) => setForm({ ...form, followUpDate: e.target.value })}
-                      required
-                    />
-                  </Field>
+                  <div className="flex flex-col gap-3">
+                    <Field label="Fecha del seguimiento" htmlFor="diag-followup">
+                      <TextInput
+                        id="diag-followup"
+                        type="date"
+                        value={form.followUpDate}
+                        onChange={(e) => setForm({ ...form, followUpDate: e.target.value })}
+                        required
+                      />
+                    </Field>
+                    <Field label="Notas del seguimiento" htmlFor="diag-followup-notes">
+                      <Textarea
+                        id="diag-followup-notes"
+                        rows={2}
+                        value={form.followUpNotes}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            followUpNotes: e.target.value,
+                            followUpNotesTouched: true,
+                          })
+                        }
+                        placeholder="Motivo o recordatorio del próximo estudio"
+                      />
+                    </Field>
+                  </div>
                 )}
               </>
             )}

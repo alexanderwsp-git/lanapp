@@ -8,6 +8,7 @@ export type MedicineApplicationFormState = {
   scheduleOnly: boolean
   scheduleNext: boolean
   nextScheduledDate: string
+  nextNotes: string
 }
 
 export function emptyMedicineApplicationForm(
@@ -21,6 +22,7 @@ export function emptyMedicineApplicationForm(
     scheduleOnly,
     scheduleNext: false,
     nextScheduledDate: "",
+    nextNotes: "",
   }
 }
 
@@ -34,6 +36,8 @@ export async function saveMedicineApplication(input: {
   if (!form.medicineId) throw new Error("Selecciona un medicamento")
   if (!form.applicationDate) throw new Error("Indica la fecha")
 
+  const notes = form.notes.trim() || undefined
+
   if (form.scheduleOnly) {
     await createMedicineApplication({
       medicineId: form.medicineId,
@@ -41,7 +45,7 @@ export async function saveMedicineApplication(input: {
       analysisId,
       applicationDate: new Date(form.applicationDate),
       status: MedicineStatus.SCHEDULED,
-      notes: form.notes.trim() || undefined,
+      notes,
     })
     return { successMessage: `Aplicación programada para ${sheepLabel}.` }
   }
@@ -52,15 +56,17 @@ export async function saveMedicineApplication(input: {
     analysisId,
     applicationDate: new Date(form.applicationDate),
     status: MedicineStatus.APPLIED,
-    notes: form.notes.trim() || undefined,
+    notes,
   })
 
   if (form.scheduleNext && form.nextScheduledDate) {
+    const nextNotes = form.nextNotes.trim() || undefined
     await createMedicineApplication({
       medicineId: form.medicineId,
       sheepId,
-      applicationDate: form.nextScheduledDate,
+      applicationDate: new Date(form.nextScheduledDate),
       status: MedicineStatus.SCHEDULED,
+      notes: nextNotes,
     })
     return {
       successMessage: `Aplicación registrada para ${sheepLabel}. Próxima dosis programada.`,

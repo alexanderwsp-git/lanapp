@@ -27,8 +27,14 @@ export type DiagnosisFormState = {
   scheduleTreatment: boolean
   scheduleTreatmentTouched: boolean
   applyTreatmentNow: boolean
+  treatmentDate: string
+  treatmentDateTouched: boolean
+  medicineNotes: string
+  medicineNotesTouched: boolean
   scheduleFollowUp: boolean
   followUpDate: string
+  followUpNotes: string
+  followUpNotesTouched: boolean
   scheduleOnly: boolean
 }
 
@@ -48,8 +54,14 @@ export function emptyDiagnosisForm(completedDate?: string): DiagnosisFormState {
     scheduleTreatment: false,
     scheduleTreatmentTouched: false,
     applyTreatmentNow: false,
+    treatmentDate: d,
+    treatmentDateTouched: false,
+    medicineNotes: "",
+    medicineNotesTouched: false,
     scheduleFollowUp: false,
     followUpDate: followUp.toISOString().slice(0, 10),
+    followUpNotes: "",
+    followUpNotesTouched: false,
     scheduleOnly: false,
   }
 }
@@ -76,7 +88,15 @@ export function diagnosisFormFromAnalysis(record: ApiAnalysis): DiagnosisFormSta
 
 export function treatmentNotes(typeName: string, diagnosis: string | null | undefined): string {
   const dx = diagnosis?.trim()
-  return dx ? `Desde análisis: ${typeName} — ${dx}` : `Desde análisis: ${typeName}`
+  return dx ? `${typeName} — ${dx}` : typeName
+}
+
+export function defaultMedicineNotes(typeName: string, diagnosis: string | null | undefined): string {
+  return treatmentNotes(typeName, diagnosis)
+}
+
+export function defaultFollowUpNotes(typeName: string): string {
+  return `Seguimiento de ${typeName}`
 }
 
 export function medsForType(meds: ApiMedicine[], medicineType?: string): ApiMedicine[] {
@@ -129,15 +149,19 @@ async function appendMedicineAndFollowUp(
   let successMsg = baseMessage
 
   if (form.scheduleTreatment && form.suggestedMedicineId) {
+    if (!form.applyTreatmentNow && !form.treatmentDate) {
+      throw new Error("Indica la fecha programada del medicamento")
+    }
     const chosenMed = meds.find((m) => m.id === form.suggestedMedicineId)
     const applied = form.applyTreatmentNow
+    const applicationDate = applied ? form.completedDate : form.treatmentDate
     await createMedicineApplication({
       medicineId: form.suggestedMedicineId,
       sheepId: saved.sheepId,
       analysisId: saved.id,
-      applicationDate: new Date(form.completedDate),
+      applicationDate: new Date(applicationDate),
       status: applied ? MedicineStatus.APPLIED : MedicineStatus.SCHEDULED,
-      notes: treatmentNotes(typeNameLabel, form.diagnosis),
+      notes: form.medicineNotes.trim() || treatmentNotes(typeNameLabel, form.diagnosis),
     })
     if (applied) {
       successMsg = `${baseMessage} Medicamento aplicado para ${sheepLabel}${
@@ -146,7 +170,7 @@ async function appendMedicineAndFollowUp(
     } else {
       successMsg = `${baseMessage} Medicamento programado para ${sheepLabel}${
         chosenMed ? ` (${chosenMed.name})` : ""
-      }.`
+      } el ${applicationDate}.`
     }
   }
 
@@ -155,7 +179,7 @@ async function appendMedicineAndFollowUp(
       analysisTypeId: record.analysisTypeId,
       sheepId: record.sheepId,
       scheduledDate: form.followUpDate,
-      notes: `Seguimiento de ${typeNameLabel}`,
+      notes: form.followUpNotes.trim() || defaultFollowUpNotes(typeNameLabel),
     })
     successMsg += ` Seguimiento programado para ${form.followUpDate}.`
   }

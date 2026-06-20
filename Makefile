@@ -10,6 +10,14 @@ API_PORT ?= 4001
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
+clean:
+	rm -rf node_modules
+	rm -rf packages/domain/node_modules
+	rm -rf packages/server/node_modules
+	rm -rf lanapp/node_modules
+	rm -rf auth/node_modules
+	rm -rf lanapp-ui/node_modules
+
 install: ## npm install (workspaces)
 	npm install
 

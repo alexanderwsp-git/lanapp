@@ -34,7 +34,7 @@ import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import type { ApiLocation, ApiMedicine, ApiMedicineApplication, ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
-import { toDateInputValue, formatDisplayDate } from "@/lib/format"
+import { toDateInputValue, formatDisplayDate, formatMedicineNotes } from "@/lib/format"
 import {
   labelMedicineStatus,
   labelMedicineType,
@@ -42,15 +42,15 @@ import {
   medicineTypeOptions,
 } from "@/lib/labels/medicine"
 import {
-  PlusIcon,
-  BeakerIcon,
-  PencilSquareIcon,
-  TrashIcon,
-  ClipboardDocumentCheckIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-} from "@heroicons/react/24/outline"
+  IconAdd,
+  IconApplyMedicine,
+  IconCancel,
+  IconDelete,
+  IconDue,
+  IconEdit,
+  IconMedicine,
+  IconSchedule,
+} from "@/lib/icons/analysis-medicine"
 
 type MedForm = {
   type: MedicineType
@@ -64,6 +64,7 @@ type ApplyForm = {
   appliedDate: string
   scheduleNext: boolean
   nextScheduledDate: string
+  nextNotes: string
   notes: string
 }
 
@@ -126,6 +127,7 @@ export default function MedicinesPage() {
     appliedDate: today(),
     scheduleNext: false,
     nextScheduledDate: "",
+    nextNotes: "",
     notes: "",
   })
   const [savingApply, setSavingApply] = useState(false)
@@ -444,6 +446,7 @@ export default function MedicinesPage() {
       appliedDate: scheduled <= today() ? today() : scheduled,
       scheduleNext: false,
       nextScheduledDate: "",
+      nextNotes: "",
       notes: app.notes ?? "",
     })
     setApplyError(null)
@@ -465,6 +468,7 @@ export default function MedicinesPage() {
         appliedDate: applyForm.appliedDate,
         nextScheduledDate: applyForm.scheduleNext ? applyForm.nextScheduledDate : undefined,
         notes: applyForm.notes,
+        nextNotes: applyForm.scheduleNext ? applyForm.nextNotes : undefined,
       })
       setApplyTarget(null)
       await loadApps()
@@ -521,7 +525,7 @@ export default function MedicinesPage() {
             className: "whitespace-nowrap font-medium text-gray-900",
             cell: (a) => (
               <div className="flex items-center gap-2">
-                <BeakerIcon className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                <IconMedicine className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
                 {a.medicine?.name ?? medDisplayName(a.medicineId)}
               </div>
             ),
@@ -547,7 +551,7 @@ export default function MedicinesPage() {
                   <div className="font-medium text-gray-900">{formatDisplayDate(a.applicationDate)}</div>
                   {mode === "scheduled" && due ? (
                     <div className="mt-1">
-                      <StatusBadge color="yellow" icon={ClockIcon}>
+                      <StatusBadge color="yellow" icon={IconDue}>
                         Vence hoy
                       </StatusBadge>
                     </div>
@@ -578,7 +582,7 @@ export default function MedicinesPage() {
             header: "Notas",
             className: "max-w-[12rem] truncate text-gray-500",
             cell: (a) => (
-              <span title={a.notes ?? undefined}>{a.notes || "—"}</span>
+              <span title={a.notes ?? undefined}>{formatMedicineNotes(a.notes)}</span>
             ),
           },
           {
@@ -596,7 +600,7 @@ export default function MedicinesPage() {
                       onClick={() => openApply(a)}
                       className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
                     >
-                      <CheckCircleIcon className="h-4 w-4" />
+                      <IconApplyMedicine className="h-5 w-5" aria-hidden="true" />
                       Registrar aplicación
                     </button>
                     <button
@@ -607,7 +611,7 @@ export default function MedicinesPage() {
                       title="Cancelar"
                       aria-label="Cancelar"
                     >
-                      <XCircleIcon className="h-5 w-5" />
+                      <IconCancel className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </>
                 )}
@@ -616,7 +620,7 @@ export default function MedicinesPage() {
                   className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
                   aria-label="Eliminar"
                 >
-                  <TrashIcon className="h-5 w-5" />
+                  <IconDelete className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
             ),
@@ -637,7 +641,7 @@ export default function MedicinesPage() {
               onClick={openNewMed}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
-              <PlusIcon className="h-5 w-5" aria-hidden="true" />
+              <IconAdd className="h-5 w-5" aria-hidden="true" />
               Nuevo medicamento
             </button>
           ) : (
@@ -648,7 +652,7 @@ export default function MedicinesPage() {
                   disabled={scheduledApps.length === 0}
                   className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
                 >
-                  <ClipboardDocumentCheckIcon className="h-5 w-5" aria-hidden="true" />
+                  <IconApplyMedicine className="h-5 w-5" aria-hidden="true" />
                   Registrar aplicaciones
                 </button>
               )}
@@ -657,7 +661,7 @@ export default function MedicinesPage() {
                 disabled={meds.length === 0 || sheep.length === 0}
                 className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
               >
-                <PlusIcon className="h-5 w-5" aria-hidden="true" />
+                <IconSchedule className="h-5 w-5" aria-hidden="true" />
                 Programar aplicación
               </button>
             </div>
@@ -720,7 +724,7 @@ export default function MedicinesPage() {
             loadingText="Cargando fármacos..."
             empty={
               <EmptyState
-                icon={BeakerIcon}
+                icon={IconMedicine}
                 title="Sin medicamentos"
                 description="Agrega fármacos y vacunas al inventario."
                 action={
@@ -760,14 +764,14 @@ export default function MedicinesPage() {
                       className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                       aria-label={`Editar ${m.name}`}
                     >
-                      <PencilSquareIcon className="h-5 w-5" />
+                      <IconEdit className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => setMedToDelete(m)}
                       className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
                       aria-label={`Eliminar ${m.name}`}
                     >
-                      <TrashIcon className="h-5 w-5" />
+                      <IconDelete className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </div>
                 ),
@@ -780,7 +784,7 @@ export default function MedicinesPage() {
           <div>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex items-start gap-3">
-                <ClockIcon className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
+                <IconSchedule className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" aria-hidden="true" />
                 <p className="text-sm text-gray-600">
                   Programa tratamientos aquí. Cuando los apliques en campo, marca{" "}
                   <strong>Aplicado</strong>.
@@ -799,7 +803,7 @@ export default function MedicinesPage() {
               loading: loadingApps,
               empty: (
                 <EmptyState
-                  icon={ClipboardDocumentCheckIcon}
+                  icon={IconApplyMedicine}
                   title={scheduleFilter === "due" ? "Sin pendientes" : "Sin programaciones"}
                   description={
                     scheduleFilter === "due"
@@ -828,7 +832,7 @@ export default function MedicinesPage() {
             loadingText: "Cargando historial...",
             empty: (
               <EmptyState
-                icon={ClipboardDocumentCheckIcon}
+                icon={IconApplyMedicine}
                 title="Sin historial"
                 description="Las aplicaciones marcadas como Aplicado, Cancelado u Omitido aparecerán aquí."
               />
@@ -1106,15 +1110,26 @@ export default function MedicinesPage() {
             Programar próxima dosis (nuevo registro)
           </label>
           {applyForm.scheduleNext && (
-            <Field label="Fecha próxima dosis" required htmlFor="apply-next">
-              <TextInput
-                id="apply-next"
-                type="date"
-                value={applyForm.nextScheduledDate}
-                onChange={(e) => setApplyForm({ ...applyForm, nextScheduledDate: e.target.value })}
-                required
-              />
-            </Field>
+            <>
+              <Field label="Fecha próxima dosis" required htmlFor="apply-next">
+                <TextInput
+                  id="apply-next"
+                  type="date"
+                  value={applyForm.nextScheduledDate}
+                  onChange={(e) => setApplyForm({ ...applyForm, nextScheduledDate: e.target.value })}
+                  required
+                />
+              </Field>
+              <Field label="Notas (próxima dosis)" htmlFor="apply-next-notes">
+                <Textarea
+                  id="apply-next-notes"
+                  rows={2}
+                  value={applyForm.nextNotes}
+                  onChange={(e) => setApplyForm({ ...applyForm, nextNotes: e.target.value })}
+                  placeholder="Opcional — recordatorio para la siguiente aplicación"
+                />
+              </Field>
+            </>
           )}
           <Field label="Notas" htmlFor="apply-notes">
             <Textarea

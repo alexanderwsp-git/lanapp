@@ -46,16 +46,16 @@ import {
   labelAnalysisType,
 } from "@/lib/labels/analysis"
 import {
-  PlusIcon,
-  BeakerIcon,
-  PencilSquareIcon,
-  TrashIcon,
-  ClipboardDocumentCheckIcon,
-  CheckBadgeIcon,
-  XCircleIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline"
+  IconAdd,
+  IconAnalysis,
+  IconCancel,
+  IconDelete,
+  IconDiagnosis,
+  IconDue,
+  IconEdit,
+  IconSchedule,
+} from "@/lib/icons/analysis-medicine"
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline"
 
 type TypeForm = {
   type: AnalysisType
@@ -639,7 +639,7 @@ export default function AnalysisPage() {
             className: "whitespace-nowrap font-medium text-gray-900",
             cell: (a) => (
               <div className="flex items-center gap-2">
-                <BeakerIcon className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                <IconAnalysis className="size-4 shrink-0 text-gray-400" aria-hidden="true" />
                 {a.analysisType?.name ?? typeName(a.analysisTypeId)}
               </div>
             ),
@@ -667,7 +667,7 @@ export default function AnalysisPage() {
                   </div>
                   {mode === "scheduled" && due ? (
                     <div className="mt-1">
-                      <StatusBadge color="yellow" icon={ClockIcon}>
+                      <StatusBadge color="yellow" icon={IconDue}>
                         Vence hoy
                       </StatusBadge>
                     </div>
@@ -707,7 +707,7 @@ export default function AnalysisPage() {
                       title="Registrar diagnóstico"
                       aria-label="Registrar diagnóstico"
                     >
-                      <CheckBadgeIcon className="h-5 w-5" />
+                      <IconDiagnosis className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
@@ -717,7 +717,7 @@ export default function AnalysisPage() {
                       title="Cancelar"
                       aria-label="Cancelar"
                     >
-                      <XCircleIcon className="h-5 w-5" />
+                      <IconCancel className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </>
                 )}
@@ -726,7 +726,7 @@ export default function AnalysisPage() {
                   className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
                   aria-label="Eliminar"
                 >
-                  <TrashIcon className="h-5 w-5" />
+                  <IconDelete className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
             ),
@@ -747,7 +747,7 @@ export default function AnalysisPage() {
               onClick={openNewType}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
-              <PlusIcon className="h-5 w-5" aria-hidden="true" />
+              <IconAdd className="h-5 w-5" aria-hidden="true" />
               Nuevo tipo
             </button>
           ) : (
@@ -758,7 +758,7 @@ export default function AnalysisPage() {
                   disabled={scheduledAnalyses.length === 0}
                   className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
                 >
-                  <ClipboardDocumentCheckIcon className="h-5 w-5" aria-hidden="true" />
+                  <IconDiagnosis className="h-5 w-5" aria-hidden="true" />
                   Registrar diagnósticos
                 </button>
               )}
@@ -767,7 +767,7 @@ export default function AnalysisPage() {
                 disabled={types.length === 0 || sheep.length === 0}
                 className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
               >
-                <PlusIcon className="h-5 w-5" aria-hidden="true" />
+                <IconSchedule className="h-5 w-5" aria-hidden="true" />
                 Programar análisis
               </button>
             </div>
@@ -784,7 +784,7 @@ export default function AnalysisPage() {
             className="shrink-0 self-start rounded-md p-1 text-green-700 hover:bg-green-100 sm:self-center"
             aria-label="Cerrar"
           >
-            <XCircleIcon className="h-5 w-5" />
+            <IconCancel className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       )}
@@ -844,7 +844,7 @@ export default function AnalysisPage() {
             loadingText="Cargando tipos..."
             empty={
               <EmptyState
-                icon={BeakerIcon}
+                icon={IconAnalysis}
                 title="Sin tipos de análisis"
                 description="Crea tipos como FAMACHA o coprológico para programar diagnósticos."
                 action={
@@ -884,14 +884,14 @@ export default function AnalysisPage() {
                       className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                       aria-label={`Editar ${t.name}`}
                     >
-                      <PencilSquareIcon className="h-5 w-5" />
+                      <IconEdit className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => setTypeToDelete(t)}
                       className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
                       aria-label={`Eliminar ${t.name}`}
                     >
-                      <TrashIcon className="h-5 w-5" />
+                      <IconDelete className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </div>
                 ),
@@ -903,7 +903,7 @@ export default function AnalysisPage() {
         <div className={tab === "scheduled" ? undefined : "hidden"}>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex items-start gap-3">
-              <ClockIcon className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
+              <IconSchedule className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" aria-hidden="true" />
               <p className="text-sm text-gray-600">
                 Programa análisis aquí. Cuando obtengas el valor, registra el{" "}
                 <strong>diagnóstico</strong>.
@@ -922,7 +922,7 @@ export default function AnalysisPage() {
             loading: loadingAnalyses,
             empty: (
               <EmptyState
-                icon={ClipboardDocumentCheckIcon}
+                icon={IconDiagnosis}
                 title={scheduleFilter === "due" ? "Sin pendientes" : "Sin análisis programados"}
                 description={
                   scheduleFilter === "due"
@@ -950,7 +950,7 @@ export default function AnalysisPage() {
             loadingText: "Cargando historial...",
             empty: (
               <EmptyState
-                icon={ClipboardDocumentCheckIcon}
+                icon={IconDiagnosis}
                 title="Sin historial"
                 description="Los análisis realizados, cancelados u omitidos aparecerán aquí."
               />

@@ -8,29 +8,29 @@ import {
   Squares2X2Icon,
   MapPinIcon,
   CalendarDaysIcon,
-  BeakerIcon,
-  ClipboardDocumentCheckIcon,
   Cog6ToothIcon,
   ChartBarIcon,
   BellAlertIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline"
-import type { ComponentType, SVGProps } from "react"
+import type { IconType } from "react-icons"
+import { IconAnalysis, IconMedicine } from "@/lib/icons/analysis-medicine"
+import { GiSheep } from "react-icons/gi"
 
 type NavItem = {
   label: string
   href: string
-  icon: ComponentType<SVGProps<SVGSVGElement>>
+  icon: IconType | typeof HomeIcon
 }
 
 const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { label: "Ovejas", href: "/sheep", icon: Squares2X2Icon },
   { label: "Ubicaciones", href: "/locations", icon: MapPinIcon },
-  { label: "Planificador", href: "/planner", icon: CalendarDaysIcon },
+  { label: "Montas", href: "/planner", icon: GiSheep },
   { label: "Alertas destete", href: "/weaning", icon: BellAlertIcon },
-  { label: "Medicamentos", href: "/medicines", icon: BeakerIcon },
-  { label: "Análisis", href: "/analysis", icon: ClipboardDocumentCheckIcon },
+  { label: "Medicamentos", href: "/medicines", icon: IconMedicine },
+  { label: "Análisis", href: "/analysis", icon: IconAnalysis },
 ]
 
 const reportsNav: NavItem[] = [

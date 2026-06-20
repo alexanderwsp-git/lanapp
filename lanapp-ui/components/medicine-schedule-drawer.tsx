@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, Select, TextInput, Textarea } from "@/components/ui/form-fields"
+import { SwitchField } from "@/components/ui/switch"
 import type { ApiMedicine } from "@/lib/api/types"
 import { labelMedicineType } from "@/lib/labels/medicine"
 import {
@@ -21,6 +22,17 @@ type MedicineScheduleDrawerProps = {
   defaultDate?: string
   analysisId?: string
   onSaved: (message: string) => void
+}
+
+function Separator() {
+  return <hr className="border-gray-200" />
+}
+
+function drawerMeta(scheduleOnly: boolean) {
+  if (scheduleOnly) {
+    return { title: "Programar aplicación", submit: "Programar" }
+  }
+  return { title: "Nueva aplicación", submit: "Confirmar aplicado" }
 }
 
 export function MedicineScheduleDrawer({
@@ -55,12 +67,12 @@ export function MedicineScheduleDrawer({
     setSaving(true)
     setError(null)
     try {
-      if (form.scheduleNext && !form.nextScheduledDate) {
+      if (!form.scheduleOnly && form.scheduleNext && !form.nextScheduledDate) {
         throw new Error("Indica la fecha de la próxima dosis")
       }
       const { successMessage } = await saveMedicineApplication({
         sheepId,
-        form: { ...form, scheduleOnly: false },
+        form,
         analysisId,
         sheepLabel,
       })
@@ -73,11 +85,13 @@ export function MedicineScheduleDrawer({
     }
   }
 
+  const { title, submit } = drawerMeta(form.scheduleOnly)
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
-      title="Nueva aplicación"
+      title={title}
       description={sheepLabel}
       footer={
         <>
@@ -97,7 +111,7 @@ export function MedicineScheduleDrawer({
             {saving && (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             )}
-            Confirmar aplicado
+            {submit}
           </button>
         </>
       }
@@ -108,6 +122,20 @@ export function MedicineScheduleDrawer({
           <p className="text-sm text-gray-500">No hay medicamentos en el catálogo.</p>
         ) : (
           <>
+            <SwitchField
+              label="Programar para después"
+              description="Sin registrar aplicación ahora — queda pendiente en la tabla"
+              checked={form.scheduleOnly}
+              onChange={(checked) =>
+                setForm((prev) => ({
+                  ...prev,
+                  scheduleOnly: checked,
+                  scheduleNext: checked ? false : prev.scheduleNext,
+                }))
+              }
+              aria-label="Programar para después"
+            />
+
             <Field label="Medicamento" required htmlFor="med-sched-med">
               <Select
                 id="med-sched-med"
@@ -122,7 +150,12 @@ export function MedicineScheduleDrawer({
                 ))}
               </Select>
             </Field>
-            <Field label="Fecha en que se aplicó" required htmlFor="med-sched-date">
+
+            <Field
+              label={form.scheduleOnly ? "Fecha programada" : "Fecha en que se aplicó"}
+              required
+              htmlFor="med-sched-date"
+            >
               <TextInput
                 id="med-sched-date"
                 type="date"
@@ -133,42 +166,7 @@ export function MedicineScheduleDrawer({
                 required
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.scheduleNext}
-                onChange={(e) => {
-                  const checked = e.target.checked
-                  setForm((prev) => ({
-                    ...prev,
-                    scheduleNext: checked,
-                    nextScheduledDate:
-                      checked && !prev.nextScheduledDate
-                        ? (() => {
-                            const d = new Date(prev.applicationDate)
-                            d.setDate(d.getDate() + 7)
-                            return d.toISOString().slice(0, 10)
-                          })()
-                        : prev.nextScheduledDate,
-                  }))
-                }}
-                className="rounded border-gray-300 text-indigo-600"
-              />
-              Programar próxima dosis
-            </label>
-            {form.scheduleNext && (
-              <Field label="Fecha próxima dosis" required htmlFor="med-sched-next">
-                <TextInput
-                  id="med-sched-next"
-                  type="date"
-                  value={form.nextScheduledDate}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, nextScheduledDate: e.target.value }))
-                  }
-                  required
-                />
-              </Field>
-            )}
+
             <Field label="Notas" htmlFor="med-sched-notes">
               <Textarea
                 id="med-sched-notes"
@@ -178,6 +176,59 @@ export function MedicineScheduleDrawer({
                 placeholder="Opcional"
               />
             </Field>
+
+            {!form.scheduleOnly && (
+              <>
+                <Separator />
+
+                <SwitchField
+                  label="Programar próxima dosis"
+                  description="Crea otra aplicación programada después de esta"
+                  checked={form.scheduleNext}
+                  onChange={(checked) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      scheduleNext: checked,
+                      nextScheduledDate:
+                        checked && !prev.nextScheduledDate
+                          ? (() => {
+                              const d = new Date(prev.applicationDate)
+                              d.setDate(d.getDate() + 7)
+                              return d.toISOString().slice(0, 10)
+                            })()
+                          : prev.nextScheduledDate,
+                    }))
+                  }}
+                  aria-label="Programar próxima dosis"
+                />
+                {form.scheduleNext && (
+                  <>
+                    <Field label="Fecha próxima dosis" required htmlFor="med-sched-next">
+                      <TextInput
+                        id="med-sched-next"
+                        type="date"
+                        value={form.nextScheduledDate}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, nextScheduledDate: e.target.value }))
+                        }
+                        required
+                      />
+                    </Field>
+                    <Field label="Notas (próxima dosis)" htmlFor="med-sched-next-notes">
+                      <Textarea
+                        id="med-sched-next-notes"
+                        rows={2}
+                        value={form.nextNotes}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, nextNotes: e.target.value }))
+                        }
+                        placeholder="Opcional — recordatorio para la siguiente aplicación"
+                      />
+                    </Field>
+                  </>
+                )}
+              </>
+            )}
           </>
         )}
       </form>

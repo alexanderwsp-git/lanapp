@@ -3,6 +3,7 @@ import type { BulkResult } from "../types"
 import type {
   ApiBreedingCycle,
   BreedingCycleCreatePayload,
+  BreedingCycleUpdatePayload,
   BreedingDiagnosisPayload,
   BulkBreedingCycleSchedulePayload,
 } from "../breeding-cycle"
@@ -46,6 +47,14 @@ export async function createBreedingCycle(
   payload: BreedingCycleCreatePayload,
 ): Promise<ApiBreedingCycle> {
   const res = await lanapp.post<ApiBreedingCycle>("breeding-cycle", payload)
+  return res.data
+}
+
+export async function updateBreedingCycle(
+  id: string,
+  payload: BreedingCycleUpdatePayload,
+): Promise<ApiBreedingCycle> {
+  const res = await lanapp.put<ApiBreedingCycle>(`breeding-cycle/${id}`, payload)
   return res.data
 }
 

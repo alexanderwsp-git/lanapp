@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ScaleIcon } from "@heroicons/react/24/outline"
+import { AcademicCapIcon, ScaleIcon } from "@heroicons/react/24/outline"
 import { StatusBadge } from "@/components/ui/status-badge"
 import {
   bulkRecordWeaning,
@@ -111,7 +111,7 @@ export function SheepWeaningAction({
         }}
         className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
       >
-        <ScaleIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+        <AcademicCapIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
         Destetar
       </button>
     )

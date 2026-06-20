@@ -1,13 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import {
-  BeakerIcon,
-  ClipboardDocumentCheckIcon,
-  ClockIcon,
-  PencilSquareIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
 import { AnalysisDiagnosisDrawer } from "@/components/analysis-diagnosis-drawer"
@@ -17,12 +10,20 @@ import { fetchMedicines } from "@/lib/api/medicine"
 import type { ApiMedicine, ApiSheep } from "@/lib/api/types"
 import { AnalysisStatus, AnalysisType, type ApiAnalysis, type ApiAnalysisType } from "@/lib/analysis/types"
 import {
+  IconAdd,
+  IconAnalysis,
+  IconDiagnosis,
+  IconDue,
+  IconEdit,
+} from "@/lib/icons/analysis-medicine"
+import {
   analysisStatusColor,
   famachaColor,
   labelAnalysisStatus,
   labelAnalysisType,
 } from "@/lib/labels/analysis"
 import { formatDisplayDate, toDateInputValue } from "@/lib/format"
+import { MdOutlineAnalytics } from "react-icons/md"
 
 function resultCell(a: ApiAnalysis) {
   if (a.status === AnalysisStatus.SCHEDULED) {
@@ -111,7 +112,7 @@ export function SheepAnalysisTab({
     <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-          <ClipboardDocumentCheckIcon className="h-5 w-5 text-gray-400" />
+          <IconAnalysis className="h-5 w-5 text-gray-400" aria-hidden="true" />
           Análisis y diagnósticos
         </h3>
         <button
@@ -119,7 +120,7 @@ export function SheepAnalysisTab({
           onClick={openNewAnalysis}
           className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
         >
-          <PlusIcon className="h-4 w-4" />
+          <IconAnalysis className="h-4 w-4" aria-hidden="true" />
           Registrar análisis
         </button>
       </div>
@@ -162,7 +163,7 @@ export function SheepAnalysisTab({
                     )}
                     {due && (
                       <div className="mt-1">
-                        <StatusBadge color="yellow" icon={ClockIcon}>
+                        <StatusBadge color="yellow" icon={IconDue}>
                           Vence hoy
                         </StatusBadge>
                       </div>
@@ -208,7 +209,7 @@ export function SheepAnalysisTab({
                       title="Agregar diagnóstico"
                       aria-label="Agregar diagnóstico"
                     >
-                      <BeakerIcon title="Agregar diagnóstico" aria-label="Agregar diagnóstico" className="h-5 w-5" />
+                      <IconDiagnosis className="h-5 w-5" aria-hidden="true" />
                     </button>
                   )}
                   {a.status === AnalysisStatus.COMPLETED && (
@@ -219,7 +220,7 @@ export function SheepAnalysisTab({
                       title="Actualizar diagnóstico"
                       aria-label="Actualizar diagnóstico"
                     >
-                      <BeakerIcon title="Actualizar diagnóstico" aria-label="Actualizar diagnóstico" className="h-5 w-5" />
+                      <IconDiagnosis className="h-5 w-5" aria-hidden="true" />
                     </button>
                   )}
                 </div>

@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode, SVGProps } from "react"
+import type { IconType } from "react-icons"
 
 /**
  * Paleta central de colores para los badges de estado.
@@ -46,7 +47,7 @@ export function StatusBadge({
   children: ReactNode
   color?: BadgeColor
   /** Si se provee, reemplaza el punto indicador por este icono. */
-  icon?: ComponentType<SVGProps<SVGSVGElement>>
+  icon?: IconType | ComponentType<SVGProps<SVGSVGElement>>
 }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-700">

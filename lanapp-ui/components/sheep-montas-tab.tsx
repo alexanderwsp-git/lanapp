@@ -1,6 +1,6 @@
 "use client"
 
-  import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Gender,
   DiagnosisType,
@@ -8,27 +8,24 @@ import {
   SheepStatus,
   BreedingCycleStatus,
   deliveryCheck,
-  expectedBirthFromMating,
   isOutsideEcoWindow,
   suggestedEcoWindow,
   suggestedRemateDate,
 } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
-  import { EmptyState } from "@/components/ui/empty-state"
-  import { DataTable } from "@/components/ui/data-table"
+import { DataTable } from "@/components/ui/data-table"
 import { Drawer } from "@/components/ui/drawer"
-import { Combobox, type ComboboxOption } from "@/components/ui/combobox"
-import { Field, Select, TextInput, Textarea } from "@/components/ui/form-fields"
+import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
+import type { ComboboxOption } from "@/components/ui/combobox"
+import { MatingRegisterDrawer } from "@/components/mating-register-drawer"
 import {
   MatingActivityFeed,
   matingPhaseSummary,
 } from "@/components/mating-timeline"
 import { diagnoseOptionsForPhase, isPostPregnancyFollowUp, matingActions } from "@/lib/mating-actions"
 import {
-  createMating,
   fetchMatingsBySheep,
   type ApiMating,
-  type MatingCreatePayload,
 } from "@/lib/api/mating"
 import {
   fetchPregnancyChecksByMating,
@@ -38,7 +35,6 @@ import {
   type PregnancyCheckCreatePayload,
 } from "@/lib/api/pregnancy-check"
 import {
-  confirmBreedingCycleMating,
   fetchBreedingCyclesByEwe,
   type ApiBreedingCycle,
 } from "@/lib/api/breeding-cycle"
@@ -51,11 +47,12 @@ import {
   ramBreedingEligibility,
 } from "@/lib/breeding-eligibility"
 import { useReproductionParameters } from "@/lib/hooks/use-reproduction-parameters"
-import { formatDisplayDate, formatAgeDays, toDateInputValue } from "@/lib/format"
-import { labelBreedingResult } from "@/lib/labels/breeding"
+import { formatDisplayDate, toDateInputValue } from "@/lib/format"
+import { breedingResultBadgeColor, labelBreedingResult } from "@/lib/labels/breeding"
 import { labelMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
 import { labelCategory } from "@/lib/labels/sheep"
-import { HeartIcon, BeakerIcon, SunIcon, ClockIcon } from "@heroicons/react/24/outline"
+import { IconMating } from "@/lib/icons/analysis-medicine"
+import { BeakerIcon, SunIcon, ClockIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
@@ -63,7 +60,25 @@ type EcoResult = "Preñada" | "Vacía" | "Revisar"
 
 type MatingRow = ApiMating & { checks: ApiPregnancyCheck[] }
 
-function sheepLabel(s: Pick<ApiSheep, "tag" | "name"> | null | undefined, id: string): string {
+type MontasTableRow =
+  | { kind: "planned"; cycle: ApiBreedingCycle }
+  | { kind: "mating"; row: MatingRow }
+
+function sortMontasRows(items: MontasTableRow[]): MontasTableRow[] {
+  return [...items].sort((a, b) => {
+    const aPending = a.kind === "planned" ? 0 : 1
+    const bPending = b.kind === "planned" ? 0 : 1
+    if (aPending !== bPending) return aPending - bPending
+    const aDate = a.kind === "planned" ? a.cycle.matingDate : a.row.matingDate
+    const bDate = b.kind === "planned" ? b.cycle.matingDate : b.row.matingDate
+    return bDate.localeCompare(aDate)
+  })
+}
+
+function formatSheepLabel(
+  s: { tag: string; name?: string | null } | null | undefined,
+  id: string,
+): string {
   if (!s) return id
   return s.name ? `${s.tag} · ${s.name}` : s.tag
 }
@@ -77,6 +92,7 @@ export function SheepMontasTab({
 }) {
   const sheepId = sheep.id
   const isFemale = sheep.gender === Gender.FEMALE
+  const sheepLabel = sheep.name ? `${sheep.tag} · ${sheep.name}` : sheep.tag
 
   const [rows, setRows] = useState<MatingRow[]>([])
   const [cycles, setCycles] = useState<ApiBreedingCycle[]>([])
@@ -84,11 +100,10 @@ export function SheepMontasTab({
   const [partners, setPartners] = useState<ApiSheep[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-
-  const [partner, setPartner] = useState("")
-  const [matingDate, setMatingDate] = useState(today())
-  const [notes, setNotes] = useState("")
+  const [registerOpen, setRegisterOpen] = useState(false)
+  const [plannedTarget, setPlannedTarget] = useState<ApiBreedingCycle | null>(null)
 
   const [ecoFor, setEcoFor] = useState<MatingRow | null>(null)
   const [ecoResult, setEcoResult] = useState<EcoResult>("Preñada")
@@ -107,7 +122,6 @@ export function SheepMontasTab({
   const registerBlockReason = isFemale
     ? eweBreedingEligibility(sheep)
     : ramBreedingEligibility(sheep)
-  const canRegister = !registerBlockReason
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -156,10 +170,33 @@ export function SheepMontasTab({
       }))
   }, [isFemale, partners, sheepId])
 
-  const expectedBirth = useMemo(
-    () => (matingDate ? expectedBirthFromMating(matingDate, reproParams) : ""),
-    [matingDate, reproParams],
+  const plannedCycles = useMemo(
+    () =>
+      isFemale
+        ? cycles.filter(
+            (c) =>
+              c.status !== BreedingCycleStatus.CANCELLED &&
+              !c.actualBirthDate &&
+              !c.matingId,
+          )
+        : [],
+    [cycles, isFemale],
   )
+
+  const tableRows = useMemo(
+    () =>
+      sortMontasRows([
+        ...plannedCycles.map((cycle) => ({ kind: "planned" as const, cycle })),
+        ...rows.map((row) => ({ kind: "mating" as const, row })),
+      ]),
+    [plannedCycles, rows],
+  )
+
+  function cyclePartnerDisplay(cycle: ApiBreedingCycle): string {
+    if (!isFemale) return sheepLabel
+    if (!cycle.ramId) return "—"
+    return formatSheepLabel(cycle.ram, cycle.ramId)
+  }
 
   const ecoOutsideWindow = useMemo(() => {
     if (!ecoFor || !checkDate) return false
@@ -172,7 +209,7 @@ export function SheepMontasTab({
 
   function partnerDisplay(row: MatingRow) {
     const s = isFemale ? row.male : row.female
-    return sheepLabel(s, partnerOf(row))
+    return formatSheepLabel(s, partnerOf(row))
   }
 
   function partoDate(row: MatingRow): string | null {
@@ -180,30 +217,19 @@ export function SheepMontasTab({
     return d ? toDateInputValue(String(d.checkDate)) : null
   }
 
-  async function handleRegister(e: React.FormEvent) {
-    e.preventDefault()
-    if (!partner || !matingDate) return
-    setSaving(true)
-    try {
-      const femaleId = isFemale ? sheepId : partner
-      const maleId = isFemale ? partner : sheepId
-      await createMating({
-        maleId,
-        femaleId,
-        matingDate,
-        expectedBirthDate: expectedBirth || undefined,
-        notes: notes.trim() || undefined,
-      } satisfies MatingCreatePayload)
-      setPartner("")
-      setMatingDate(today())
-      setNotes("")
-      await load()
-      onUpdated?.()
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "No se pudo registrar la monta")
-    } finally {
-      setSaving(false)
-    }
+  async function confirmCycleMating(cycle: ApiBreedingCycle) {
+    setPlannedTarget(cycle)
+    setRegisterOpen(true)
+  }
+
+  function openNewMating() {
+    setPlannedTarget(null)
+    setRegisterOpen(true)
+  }
+
+  function closeMatingDrawer() {
+    setRegisterOpen(false)
+    setPlannedTarget(null)
   }
 
   function openEco(row: MatingRow) {
@@ -255,26 +281,6 @@ export function SheepMontasTab({
     }
   }
 
-  async function confirmCycleMating(cycle: ApiBreedingCycle) {
-    try {
-      await confirmBreedingCycleMating(cycle.id)
-      await load()
-      onUpdated?.()
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : "No se pudo confirmar la monta")
-    }
-  }
-
-  const activeCycles = useMemo(
-    () =>
-      isFemale
-        ? cycles.filter(
-            (c) => c.status !== BreedingCycleStatus.CANCELLED && !c.actualBirthDate,
-          )
-        : [],
-    [cycles, isFemale],
-  )
-
   function openParto(row: MatingRow) {
     setPartoFor(row)
     setDeliveryDate(today())
@@ -300,11 +306,6 @@ export function SheepMontasTab({
     }
   }
 
-  function partnerBirth(row: MatingRow): string {
-    const s = isFemale ? row.male : row.female
-    return s?.birthDate ? formatDisplayDate(s.birthDate) : "—"
-  }
-
   const inLactancia = isFemale && sheep.category === SheepCategory.OVEJA_LACTANCIA
   const isPregnantEwe =
     isFemale &&
@@ -313,29 +314,47 @@ export function SheepMontasTab({
       sheep.category === SheepCategory.BORREGA_PRENADA)
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-gray-600">
-        <span className="font-medium text-gray-900">{sheep.tag}</span>
-        {" · Nacimiento "}
-        {formatDisplayDate(sheep.birthDate)}
-        {" · "}
-        {formatAgeDays(sheep.birthDate)}
+    <div className="rounded-lg bg-white p-6 shadow">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
+          <IconMating className="h-5 w-5 text-gray-400" aria-hidden="true" />
+          Montas
+        </h3>
+        <button
+          type="button"
+          onClick={openNewMating}
+          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+        >
+          <IconMating className="h-4 w-4" aria-hidden="true" />
+          Registrar monta
+        </button>
+      </div>
+      <p className="mt-1 text-sm text-gray-500">
+        Montas y diagnósticos de preñez (ECO).
+        {plannedCycles.length > 0 ? ` ${plannedCycles.length} programada(s).` : ""}
       </p>
+
       {inLactancia && (
-        <div className="rounded-md bg-pink-50 px-4 py-3 text-sm font-medium text-pink-700">
+        <div className="mt-3 rounded-md bg-pink-50 px-3 py-2 text-sm font-medium text-pink-700">
           Oveja en lactancia — no apta para monta hasta destete.
         </div>
       )}
       {isPregnantEwe && (
-        <div className="rounded-md bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-700">
+        <div className="mt-3 rounded-md bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700">
           Oveja preñada — monta bloqueada hasta el parto.
           {sheep.pregnancyConfirmedAt &&
             ` Confirmada ${formatDisplayDate(sheep.pregnancyConfirmedAt)}.`}
         </div>
       )}
 
+      {success && (
+        <div className="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          {success}
+        </div>
+      )}
+
       {loadError && (
-        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           {loadError}
           <button type="button" onClick={load} className="ml-2 font-semibold underline">
             Reintentar
@@ -343,220 +362,232 @@ export function SheepMontasTab({
         </div>
       )}
 
-      {activeCycles.length > 0 && (
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h3 className="text-sm font-semibold text-gray-900">Ciclos planificados</h3>
-          <p className="mt-1 text-xs text-gray-500">
-            Desde el planificador. Confirma la monta y registra diagnósticos en la tabla de abajo.
-          </p>
-          <ul className="mt-3 divide-y divide-gray-100">
-            {activeCycles.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <div className="text-sm text-gray-700">
-                  <span className="font-medium">{c.cycleName}</span>
-                  {" · "}
-                  {formatDisplayDate(c.matingDate)}
-                  {" · "}
-                  {labelBreedingResult(c.result)}
-                </div>
-                <div className="flex gap-2">
-                  {!c.matingId && (
+      <div className="mt-4">
+        <DataTable
+          bare
+          hideFooter
+          rows={tableRows}
+          rowKey={(item) => (item.kind === "planned" ? `cycle-${item.cycle.id}` : item.row.id)}
+          loading={loading}
+          loadingText="Cargando montas…"
+          empty={<p className="text-sm text-gray-500">Sin montas registradas.</p>}
+          expand={{
+            isExpanded: (item) => item.kind === "mating" && expandedId === item.row.id,
+            render: (item) => {
+              if (item.kind !== "mating") return null
+              const m = item.row
+              return (
+                <>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Historial
+                  </p>
+                  <MatingActivityFeed
+                    checks={m.checks}
+                    mating={{ matingDate: m.matingDate, partnerLabel: partnerDisplay(m) }}
+                  />
+                </>
+              )
+            },
+          }}
+          columns={[
+            {
+              key: "date",
+              header: "Fecha",
+              className: "whitespace-nowrap",
+              cell: (item) => {
+                const date =
+                  item.kind === "planned" ? item.cycle.matingDate : item.row.matingDate
+                const upcoming =
+                  item.kind === "planned" &&
+                  toDateInputValue(item.cycle.matingDate) > today()
+                return (
+                  <>
+                    <div className="font-medium text-gray-900">{formatDisplayDate(date)}</div>
+                    {item.kind === "planned" && (
+                      <div className="mt-1 text-xs text-gray-400">Programada</div>
+                    )}
+                    {upcoming && <div className="mt-1 text-xs text-gray-400">Próxima</div>}
+                  </>
+                )
+              },
+            },
+            {
+              key: "partner",
+              header: "Pareja",
+              className: "whitespace-nowrap",
+              cell: (item) =>
+                item.kind === "planned"
+                  ? cyclePartnerDisplay(item.cycle)
+                  : partnerDisplay(item.row),
+            },
+            {
+              key: "cycle",
+              header: "Ciclo",
+              className: "whitespace-nowrap text-gray-500",
+              cell: (item) =>
+                item.kind === "planned" ? item.cycle.cycleName : "—",
+            },
+            {
+              key: "status",
+              header: "Estado",
+              className: "whitespace-nowrap",
+              cell: (item) => {
+                if (item.kind === "planned") {
+                  return <StatusBadge color="yellow">Programada</StatusBadge>
+                }
+                const m = item.row
+                const phaseInfo = matingPhaseSummary(m.checks)
+                return (
+                  <div className="flex flex-col gap-1">
+                    <StatusBadge color={phaseInfo.color}>{phaseInfo.label}</StatusBadge>
+                    <StatusBadge color={matingStatusBadgeColor(m.status)}>
+                      {labelMatingStatus(m.status)}
+                    </StatusBadge>
+                  </div>
+                )
+              },
+            },
+            {
+              key: "diagnosis",
+              header: "Diagnóstico",
+              className: "align-top",
+              cell: (item) => {
+                if (item.kind === "planned") {
+                  const c = item.cycle
+                  return (
+                    <div className="flex max-w-xs flex-col gap-1">
+                      <StatusBadge color={breedingResultBadgeColor(c.result)}>
+                        {labelBreedingResult(c.result)}
+                      </StatusBadge>
+                      {c.notes ? (
+                        <p className="text-xs text-gray-500">{c.notes}</p>
+                      ) : (
+                        <p className="text-xs text-gray-400">Desde planificador</p>
+                      )}
+                    </div>
+                  )
+                }
+                const m = item.row
+                const phaseInfo = matingPhaseSummary(m.checks)
+                const actions = matingActions(m.checks)
+                const birth = partoDate(m)
+                const ecoWindow = suggestedEcoWindow(m.matingDate, reproParams)
+                return (
+                  <div className="flex max-w-xs flex-col gap-1.5">
+                    {phaseInfo.detail && (
+                      <p className="text-sm font-medium text-gray-700">{phaseInfo.detail}</p>
+                    )}
+                    {actions.phase === "awaiting_diagnosis" && (
+                      <p className="text-xs text-indigo-700">
+                        ECO sugerido: {formatDisplayDate(ecoWindow.min)} –{" "}
+                        {formatDisplayDate(ecoWindow.max)}
+                      </p>
+                    )}
+                    {m.expectedBirthDate && actions.phase === "pregnant" && !birth && (
+                      <p className="text-xs text-gray-500">
+                        Parto esperado: {formatDisplayDate(m.expectedBirthDate)}
+                      </p>
+                    )}
+                    {birth && (
+                      <p className="text-xs text-gray-500">Parto: {formatDisplayDate(birth)}</p>
+                    )}
+                    {actions.phase === "empty" && (
+                      <p className="text-xs text-amber-700">
+                        Aplicar Vitasel y registrar nueva monta (~{reproParams.heatCycleDays} días)
+                      </p>
+                    )}
+                    {!phaseInfo.detail && !birth && actions.phase === "awaiting_diagnosis" && (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </div>
+                )
+              },
+            },
+            {
+              key: "actions",
+              header: "",
+              align: "right",
+              className: "whitespace-nowrap",
+              cell: (item) => {
+                if (item.kind === "planned") {
+                  return (
                     <button
                       type="button"
-                      onClick={() => confirmCycleMating(c)}
-                      className="text-xs font-medium text-indigo-600 hover:underline"
+                      onClick={() => confirmCycleMating(item.cycle)}
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                      title="Registrar monta"
+                      aria-label="Registrar monta"
                     >
-                      Confirmar monta
+                      <IconMating className="h-5 w-5" aria-hidden="true" />
                     </button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+                  )
+                }
+                const m = item.row
+                const actions = matingActions(m.checks)
+                const isExpanded = expandedId === m.id
+                return (
+                  <div className="flex flex-wrap items-center justify-end gap-1">
+                    {actions.canDiagnose && (
+                      <button
+                        type="button"
+                        onClick={() => openEco(m)}
+                        title="Diagnóstico"
+                        aria-label="Diagnóstico"
+                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                      >
+                        <BeakerIcon className="size-5" aria-hidden="true" />
+                      </button>
+                    )}
+                    {actions.canDeliver && (
+                      <button
+                        type="button"
+                        onClick={() => openParto(m)}
+                        title="Registrar parto"
+                        aria-label="Registrar parto"
+                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                      >
+                        <SunIcon className="size-5" aria-hidden="true" />
+                      </button>
+                    )}
+                    {m.checks.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isExpanded ? null : m.id)}
+                        title={isExpanded ? "Ocultar historial" : "Ver historial"}
+                        aria-label={isExpanded ? "Ocultar historial" : "Ver historial"}
+                        aria-expanded={isExpanded}
+                        className="inline-flex items-center gap-1 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                      >
+                        <ClockIcon className="size-5" aria-hidden="true" />
+                        <span className="text-xs font-medium">{m.checks.length}</span>
+                      </button>
+                    )}
+                    {!actions.canDiagnose && !actions.canDeliver && m.checks.length === 0 && (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </div>
+                )
+              },
+            },
+          ]}
+        />
+      </div>
 
-      {canRegister ? (
-        <form onSubmit={handleRegister} className="rounded-lg bg-white p-4 shadow">
-          <div className="flex flex-wrap items-start gap-4">
-            <Field label={partnerLabel} htmlFor="partner" required className="w-64">
-              <Combobox
-                id="partner"
-                options={partnerOptions}
-                value={partner}
-                onChange={setPartner}
-                placeholder={`Seleccionar ${partnerLabel.toLowerCase()}`}
-                searchPlaceholder="Buscar por arete o nombre…"
-                emptyMessage={`Sin ${partnerLabel.toLowerCase()}es aptos`}
-              />
-            </Field>
-            <Field label="Fecha monta" htmlFor="fecha-monta" required className="w-48">
-              <TextInput
-                id="fecha-monta"
-                type="date"
-                value={matingDate}
-                onChange={(e) => setMatingDate(e.target.value)}
-              />
-              {expectedBirth && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Parto esperado (~{reproParams.gestationDays} días): {expectedBirth}
-                </p>
-              )}
-            </Field>
-            <Field label="Notas (opcional)" htmlFor="monta-notes" className="w-64">
-              <TextInput id="monta-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </Field>
-            <button
-              type="submit"
-              disabled={!partner || !matingDate || saving}
-              className="mt-7 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-            >
-              {saving ? "Guardando…" : "Registrar monta"}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">
-          {registerBlockReason ?? "No apta para registrar monta."}
-        </div>
-      )}
-
-      <DataTable
-        rows={rows}
-        rowKey={(m) => m.id}
-        loading={loading}
-        loadingText="Cargando montas…"
-        empty={
-          <EmptyState
-            icon={HeartIcon}
-            title="Sin montas"
-            description="No hay montas registradas para esta oveja."
-          />
-        }
-        expand={{
-          isExpanded: (m) => expandedId === m.id,
-          render: (m) => (
-            <>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Historial</p>
-              <MatingActivityFeed
-                checks={m.checks}
-                mating={{ matingDate: m.matingDate, partnerLabel: partnerDisplay(m) }}
-              />
-            </>
-          ),
+      <MatingRegisterDrawer
+        open={registerOpen}
+        onClose={closeMatingDrawer}
+        sheepId={sheepId}
+        sheepLabel={sheepLabel}
+        isFemale={isFemale}
+        partnerLabel={partnerLabel}
+        partnerOptions={partnerOptions}
+        blockReason={registerBlockReason}
+        plannedCycle={plannedTarget}
+        onSaved={async (message) => {
+          setSuccess(message)
+          await load()
+          await onUpdated?.()
         }}
-        columns={[
-          {
-            key: "date",
-            header: "Fecha",
-            className: "whitespace-nowrap text-gray-900",
-            cell: (m) => formatDisplayDate(m.matingDate),
-          },
-          { key: "partner", header: "Pareja", cell: (m) => partnerDisplay(m) },
-          { key: "partnerBirth", header: "Nac. pareja", className: "whitespace-nowrap text-gray-500", cell: (m) => partnerBirth(m) },
-          {
-            key: "status",
-            header: "Estado",
-            cell: (m) => {
-              const phaseInfo = matingPhaseSummary(m.checks)
-              return (
-                <div className="flex flex-col gap-1">
-                  <StatusBadge color={phaseInfo.color}>{phaseInfo.label}</StatusBadge>
-                  <StatusBadge color={matingStatusBadgeColor(m.status)}>
-                    {labelMatingStatus(m.status)}
-                  </StatusBadge>
-                </div>
-              )
-            },
-          },
-          {
-            key: "diagnosis",
-            header: "Diagnóstico",
-            className: "align-top",
-            cell: (m) => {
-              const phaseInfo = matingPhaseSummary(m.checks)
-              const actions = matingActions(m.checks)
-              const birth = partoDate(m)
-              const ecoWindow = suggestedEcoWindow(m.matingDate, reproParams)
-              return (
-                <div className="flex max-w-xs flex-col gap-1.5">
-                  {phaseInfo.detail && (
-                    <p className="text-sm font-medium text-gray-700">{phaseInfo.detail}</p>
-                  )}
-                  {actions.phase === "awaiting_diagnosis" && (
-                    <p className="text-xs text-indigo-700">
-                      ECO sugerido: {formatDisplayDate(ecoWindow.min)} – {formatDisplayDate(ecoWindow.max)}
-                    </p>
-                  )}
-                  {m.expectedBirthDate && actions.phase === "pregnant" && !birth && (
-                    <p className="text-xs text-gray-500">
-                      Parto esperado: {formatDisplayDate(m.expectedBirthDate)}
-                    </p>
-                  )}
-                  {birth && <p className="text-xs text-gray-500">Parto: {formatDisplayDate(birth)}</p>}
-                  {actions.phase === "empty" && (
-                    <p className="text-xs text-amber-700">
-                      Aplicar Vitasel y registrar nueva monta (~{reproParams.heatCycleDays} días)
-                    </p>
-                  )}
-                  {!phaseInfo.detail && !birth && actions.phase === "awaiting_diagnosis" && (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </div>
-              )
-            },
-          },
-          {
-            key: "actions",
-            header: "Acciones",
-            cell: (m) => {
-              const actions = matingActions(m.checks)
-              const isExpanded = expandedId === m.id
-              return (
-                <div className="flex flex-wrap items-center gap-1">
-                  {actions.canDiagnose && (
-                    <button
-                      type="button"
-                      onClick={() => openEco(m)}
-                      title="Diagnóstico"
-                      aria-label="Diagnóstico"
-                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                    >
-                      <BeakerIcon className="size-5" aria-hidden="true" />
-                    </button>
-                  )}
-                  {actions.canDeliver && (
-                    <button
-                      type="button"
-                      onClick={() => openParto(m)}
-                      title="Registrar parto"
-                      aria-label="Registrar parto"
-                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                    >
-                      <SunIcon className="size-5" aria-hidden="true" />
-                    </button>
-                  )}
-                  {m.checks.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : m.id)}
-                      title={isExpanded ? "Ocultar historial" : "Ver historial"}
-                      aria-label={isExpanded ? "Ocultar historial" : "Ver historial"}
-                      aria-expanded={isExpanded}
-                      className="inline-flex items-center gap-1 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                    >
-                      <ClockIcon className="size-5" aria-hidden="true" />
-                      <span className="text-xs font-medium">{m.checks.length}</span>
-                    </button>
-                  )}
-                  {!actions.canDiagnose && !actions.canDeliver && m.checks.length === 0 && (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </div>
-              )
-            },
-          },
-        ]}
       />
 
       <Drawer

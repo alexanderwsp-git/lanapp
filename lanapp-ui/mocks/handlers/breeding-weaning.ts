@@ -7,6 +7,7 @@ import {
 import type {
   ApiBreedingCycle,
   BreedingCycleCreatePayload,
+  BreedingCycleUpdatePayload,
   BreedingDiagnosisPayload,
   BulkBreedingCycleSchedulePayload,
 } from "@/lib/api/breeding-cycle"
@@ -27,6 +28,7 @@ import {
   notFound,
 } from "../store"
 import { addDays, daysBetween, newId } from "../utils"
+import { createMating } from "./mating"
 import { seedRecentWeanings } from "../data/weaning-records"
 
 export async function fetchBreedingCyclesByEwe(eweId: string): Promise<ApiBreedingCycle[]> {
@@ -51,6 +53,43 @@ export async function confirmBreedingCycleMating(id: string): Promise<ApiBreedin
   const store = getMockStore()
   const idx = store.breedingCycles.findIndex((c) => c.id === id)
   if (idx === -1) throw notFound("Ciclo", id)
+  const cycle = store.breedingCycles[idx]
+  if (cycle.matingId) return enrichBreedingCycle(cycle)
+  if (!cycle.ramId) {
+    throw new Error("Asigna un reproductor antes de confirmar la monta")
+  }
+
+  const mating = await createMating({
+    maleId: cycle.ramId,
+    femaleId: cycle.eweId,
+    matingDate: cycle.matingDate,
+    expectedBirthDate: cycle.expectedBirthDate ?? undefined,
+    notes: cycle.notes
+      ? `Ciclo ${cycle.cycleName}: ${cycle.notes}`
+      : `Ciclo ${cycle.cycleName}`,
+  })
+  store.breedingCycles[idx] = { ...cycle, matingId: mating.id }
+  return enrichBreedingCycle(store.breedingCycles[idx])
+}
+
+export async function updateBreedingCycle(
+  id: string,
+  payload: BreedingCycleUpdatePayload,
+): Promise<ApiBreedingCycle> {
+  const store = getMockStore()
+  const idx = store.breedingCycles.findIndex((c) => c.id === id)
+  if (idx === -1) throw notFound("Ciclo", id)
+  const prev = store.breedingCycles[idx]
+  store.breedingCycles[idx] = {
+    ...prev,
+    ...payload,
+    matingDate: payload.matingDate
+      ? new Date(payload.matingDate).toISOString()
+      : prev.matingDate,
+    expectedBirthDate: payload.matingDate
+      ? addDays(payload.matingDate, 147)
+      : prev.expectedBirthDate,
+  }
   return enrichBreedingCycle(store.breedingCycles[idx])
 }
 

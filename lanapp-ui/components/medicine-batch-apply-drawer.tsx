@@ -12,6 +12,7 @@ export type BatchApplyEntry = {
   notes: string
   scheduleNext: boolean
   nextScheduledDate: string
+  nextNotes: string
 }
 
 type MedicineBatchApplyDrawerProps = {
@@ -26,7 +27,7 @@ type MedicineBatchApplyDrawerProps = {
 const today = () => new Date().toISOString().slice(0, 10)
 
 function emptyEntry(): BatchApplyEntry {
-  return { selected: true, notes: "", scheduleNext: false, nextScheduledDate: "" }
+  return { selected: true, notes: "", scheduleNext: false, nextScheduledDate: "", nextNotes: "" }
 }
 
 function sheepTag(sheepId: string, sheepById: Map<string, ApiSheep>): string {
@@ -127,6 +128,7 @@ export function MedicineBatchApplyDrawer({
           appliedDate: batchDate,
           nextScheduledDate: entry.scheduleNext ? entry.nextScheduledDate : undefined,
           notes: entry.notes.trim() || app.notes || undefined,
+          nextNotes: entry.scheduleNext ? entry.nextNotes.trim() || undefined : undefined,
         })
         saved++
       }
@@ -276,17 +278,27 @@ export function MedicineBatchApplyDrawer({
                           Programar próxima dosis
                         </label>
                         {entry.scheduleNext && (
-                          <Field label="Fecha próxima dosis" htmlFor={`batch-next-${app.id}`}>
-                            <TextInput
-                              id={`batch-next-${app.id}`}
-                              type="date"
-                              value={entry.nextScheduledDate}
-                              onChange={(e) =>
-                                setEntry(app.id, { nextScheduledDate: e.target.value })
-                              }
-                              required
-                            />
-                          </Field>
+                          <>
+                            <Field label="Fecha próxima dosis" htmlFor={`batch-next-${app.id}`}>
+                              <TextInput
+                                id={`batch-next-${app.id}`}
+                                type="date"
+                                value={entry.nextScheduledDate}
+                                onChange={(e) =>
+                                  setEntry(app.id, { nextScheduledDate: e.target.value })
+                                }
+                                required
+                              />
+                            </Field>
+                            <Field label="Notas (próxima dosis)" htmlFor={`batch-next-notes-${app.id}`}>
+                              <TextInput
+                                id={`batch-next-notes-${app.id}`}
+                                value={entry.nextNotes}
+                                onChange={(e) => setEntry(app.id, { nextNotes: e.target.value })}
+                                placeholder="Opcional"
+                              />
+                            </Field>
+                          </>
                         )}
                       </div>
                     )

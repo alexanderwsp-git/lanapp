@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode, SVGProps } from "react"
+import type { IconType } from "react-icons"
 
 export function EmptyState({
   icon: Icon,
@@ -6,7 +7,7 @@ export function EmptyState({
   description,
   action,
 }: {
-  icon: ComponentType<SVGProps<SVGSVGElement>>
+  icon: IconType | ComponentType<SVGProps<SVGSVGElement>>
   title: string
   description?: string
   action?: ReactNode

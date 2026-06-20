@@ -354,7 +354,7 @@ export async function runDemoSeed(dataSource: DataSource, options: { force?: boo
         analysisId: DEMO_IDS.analyses.blancaFamachaLow,
         applicationDate: dateOnly(today),
         status: MedicineStatus.SCHEDULED,
-        notes: 'Desde análisis: FAMACHA — Anemia — desparasitar',
+        notes: 'FAMACHA — Anemia — desparasitar',
     });
     await saveIfMissing(medAppRepo, {
         id: DEMO_IDS.medicineApps.scheduledNegro,
