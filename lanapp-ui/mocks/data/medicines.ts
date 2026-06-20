@@ -3,6 +3,8 @@ import type { ApiMedicine, ApiMedicineApplication } from "@/lib/api/types"
 import { MedicineStatus } from "@sheep/domain"
 import { IDS } from "../ids"
 
+const today = () => new Date().toISOString().slice(0, 10)
+
 export const seedMedicines: ApiMedicine[] = [
   {
     id: IDS.medicines.ivermectina,
@@ -10,6 +12,13 @@ export const seedMedicines: ApiMedicine[] = [
     name: "Ivermectina",
     dosage: "1ml/50kg",
     description: "Antiparasitario de amplio espectro.",
+  },
+  {
+    id: IDS.medicines.albendazol,
+    type: MedicineType.DEWORMER,
+    name: "Albendazol",
+    dosage: "1 comprimido/40kg",
+    description: "Desparasitante oral — segundo producto para el selector.",
   },
   {
     id: IDS.medicines.complejoB,
@@ -29,15 +38,16 @@ export const seedMedicines: ApiMedicine[] = [
 
 export const seedMedicineApplications: ApiMedicineApplication[] = [
   {
-    id: "f1000001-0000-4000-8000-000000000001",
+    id: "01200001-0000-4000-8000-000000000001",
     medicineId: IDS.medicines.ivermectina,
     sheepId: IDS.sheep.blanca,
-    applicationDate: "2026-06-10T00:00:00.000Z",
+    analysisId: "01100001-0000-4000-8000-000000000001",
+    applicationDate: `${today()}T00:00:00.000Z`,
     status: MedicineStatus.SCHEDULED,
-    notes: "",
+    notes: "Desde análisis: FAMACHA — Anemia — desparasitar",
   },
   {
-    id: "f1000001-0000-4000-8000-000000000002",
+    id: "01200001-0000-4000-8000-000000000002",
     medicineId: IDS.medicines.complejoB,
     sheepId: IDS.sheep.negro,
     applicationDate: "2026-06-05T00:00:00.000Z",
@@ -45,7 +55,7 @@ export const seedMedicineApplications: ApiMedicineApplication[] = [
     notes: "Aplicado en potrero.",
   },
   {
-    id: "f1000001-0000-4000-8000-000000000003",
+    id: "f1000001-0000-4000-8000-000000000002",
     medicineId: IDS.medicines.clostridial,
     sheepId: IDS.sheep.luna,
     applicationDate: "2026-05-28T00:00:00.000Z",

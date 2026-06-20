@@ -1,7 +1,7 @@
 "use client"
 
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { MedicineStatus } from "@sheep/domain"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -31,11 +31,13 @@ import {
 } from "@/lib/api/analysis"
 import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
-import { fetchMedicines } from "@/lib/api/medicine"
+import { fetchMedicines, createMedicineApplication } from "@/lib/api/medicine"
 import type { ApiLocation, ApiMedicine, ApiSheep, BulkResult } from "@/lib/api/types"
 import { labelCategory } from "@/lib/labels/sheep"
 import { labelMedicineType, medicineTypeOptions } from "@/lib/labels/medicine"
 import { toDateInputValue, formatDisplayDate } from "@/lib/format"
+import { AnalysisDiagnosisDrawer } from "@/components/analysis-diagnosis-drawer"
+import { medsForType, treatmentNotes } from "@/lib/analysis/diagnosis-form"
 import {
   analysisRecommendation,
   analysisTypeOptions,
@@ -52,7 +54,6 @@ import {
   CheckBadgeIcon,
   XCircleIcon,
   ClockIcon,
-  ArrowRightIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline"
 
@@ -65,24 +66,25 @@ type TypeForm = {
 }
 
 
-type ResultForm = {
-  completedDate: string
-  famachaScore: number | null
-  resultValue: string
+type BatchEntry = {
+  score: number | null
+  value: string
   diagnosis: string
   diagnosisTouched: boolean
   notes: string
-  suggestedMedicineId: string
-  suggestedMedicineTouched: boolean
 }
 
-type TreatmentSuggestion = {
+type BatchTreatmentItem = {
+  analysisId: string
   sheepId: string
   sheepTag: string
+  message: string
   medicineType: string
   medicineId: string
-  medicineName: string
-  message: string
+  completedDate: string
+  diagnosis: string
+  analysisTypeName: string
+  selected: boolean
 }
 
 const today = () => new Date().toISOString().split("T")[0]
@@ -115,7 +117,6 @@ function isDue(a: ApiAnalysis): boolean {
 }
 
 export default function AnalysisPage() {
-  const router = useRouter()
   const [tab, setTab] = useState<"types" | "scheduled" | "history">("scheduled")
   const [scheduleFilter, setScheduleFilter] = useState<"due" | "all">("all")
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -149,28 +150,16 @@ export default function AnalysisPage() {
   const [batchOpen, setBatchOpen] = useState(false)
   const [batchTypeId, setBatchTypeId] = useState("")
   const [batchDate, setBatchDate] = useState(today())
-  const [batchEntries, setBatchEntries] = useState<
-    Record<string, { score: number | null; value: string; diagnosis: string; diagnosisTouched: boolean }>
-  >({})
+  const [batchEntries, setBatchEntries] = useState<Record<string, BatchEntry>>({})
   const [savingBatch, setSavingBatch] = useState(false)
   const [batchError, setBatchError] = useState<string | null>(null)
   const [batchResult, setBatchResult] = useState<{ saved: number; needTreatment: number } | null>(null)
+  const [batchTreatmentQueue, setBatchTreatmentQueue] = useState<BatchTreatmentItem[]>([])
+  const [schedulingBatchTreatments, setSchedulingBatchTreatments] = useState(false)
+  const [batchTreatmentError, setBatchTreatmentError] = useState<string | null>(null)
 
   const [resultTarget, setResultTarget] = useState<ApiAnalysis | null>(null)
-  const [resultForm, setResultForm] = useState<ResultForm>({
-    completedDate: today(),
-    famachaScore: null,
-    resultValue: "",
-    diagnosis: "",
-    diagnosisTouched: false,
-    notes: "",
-    suggestedMedicineId: "",
-    suggestedMedicineTouched: false,
-  })
-  const [savingResult, setSavingResult] = useState(false)
-  const [resultError, setResultError] = useState<string | null>(null)
-
-  const [treatment, setTreatment] = useState<TreatmentSuggestion | null>(null)
+  const [resultSuccess, setResultSuccess] = useState<string | null>(null)
 
   const [toDelete, setToDelete] = useState<ApiAnalysis | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -447,12 +436,14 @@ export default function AnalysisPage() {
     setBatchEntries({})
     setBatchError(null)
     setBatchResult(null)
+    setBatchTreatmentQueue([])
+    setBatchTreatmentError(null)
     setBatchOpen(true)
   }
 
   function batchSelectScore(analysisId: string, score: number) {
     setBatchEntries((prev) => {
-      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false }
+      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false, notes: "" }
       return {
         ...prev,
         [analysisId]: {
@@ -466,15 +457,22 @@ export default function AnalysisPage() {
 
   function batchSetValue(analysisId: string, value: string) {
     setBatchEntries((prev) => {
-      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false }
+      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false, notes: "" }
       return { ...prev, [analysisId]: { ...entry, value } }
     })
   }
 
   function batchSetDiagnosis(analysisId: string, diagnosis: string) {
     setBatchEntries((prev) => {
-      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false }
+      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false, notes: "" }
       return { ...prev, [analysisId]: { ...entry, diagnosis, diagnosisTouched: true } }
+    })
+  }
+
+  function batchSetNotes(analysisId: string, notes: string) {
+    setBatchEntries((prev) => {
+      const entry = prev[analysisId] ?? { score: null, value: "", diagnosis: "", diagnosisTouched: false, notes: "" }
+      return { ...prev, [analysisId]: { ...entry, notes } }
     })
   }
 
@@ -492,6 +490,8 @@ export default function AnalysisPage() {
     e.preventDefault()
     setBatchError(null)
     setBatchResult(null)
+    setBatchTreatmentQueue([])
+    setBatchTreatmentError(null)
     if (!batchTypeId) return setBatchError("Selecciona un tipo de análisis")
     if (!batchDate) return setBatchError("Indica la fecha")
 
@@ -501,12 +501,13 @@ export default function AnalysisPage() {
       return batchIsFamacha ? entry.score != null : entry.value.trim().length > 0
     })
     if (toSave.length === 0)
-      return setBatchError("Ingresa al menos un resultado para guardar")
+      return setBatchError("Ingresa al menos un diagnóstico para guardar")
 
     setSavingBatch(true)
     try {
       let saved = 0
       let needTreatment = 0
+      const treatmentItems: BatchTreatmentItem[] = []
       for (const a of toSave) {
         const entry = batchEntries[a.id]
         const completed = await markAnalysisCompleted(a, {
@@ -514,136 +515,74 @@ export default function AnalysisPage() {
           famachaScore: batchIsFamacha ? entry.score : null,
           resultValue: batchIsFamacha ? String(entry.score) : entry.value.trim(),
           diagnosis: entry.diagnosis.trim() || null,
-          notes: null,
+          notes: entry.notes.trim() || null,
         })
         saved++
-        if (analysisRecommendation(completed).needsTreatment) needTreatment++
+        const rec = analysisRecommendation(completed)
+        if (rec.needsTreatment && rec.medicineType) {
+          needTreatment++
+          const options = medsForType(meds, rec.medicineType)
+          const defaultMed = options[0]
+          treatmentItems.push({
+            analysisId: completed.id,
+            sheepId: completed.sheepId,
+            sheepTag: completed.sheep?.tag ?? sheepTag(completed.sheepId),
+            message: rec.message,
+            medicineType: rec.medicineType,
+            medicineId: defaultMed?.id ?? "",
+            completedDate: batchDate,
+            diagnosis: entry.diagnosis.trim(),
+            analysisTypeName: completed.analysisType?.name ?? typeName(completed.analysisTypeId),
+            selected: !!defaultMed,
+          })
+        }
       }
       setBatchResult({ saved, needTreatment })
+      setBatchTreatmentQueue(treatmentItems)
+      setBatchTreatmentError(null)
       await loadAnalyses()
       setBatchEntries({})
     } catch (err) {
-      setBatchError(err instanceof Error ? err.message : "No se pudieron guardar los resultados")
+      setBatchError(err instanceof Error ? err.message : "No se pudieron guardar los diagnósticos")
     } finally {
       setSavingBatch(false)
     }
   }
 
-  // --- Register result ---
   function openResult(a: ApiAnalysis) {
-    const scheduled = toDateInputValue(a.scheduledDate)
     setResultTarget(a)
-    setResultForm({
-      completedDate: scheduled <= today() ? today() : scheduled,
-      famachaScore: a.famachaScore ?? null,
-      resultValue: a.resultValue ?? "",
-      diagnosis: a.diagnosis ?? "",
-      diagnosisTouched: !!a.diagnosis,
-      notes: a.notes ?? "",
-      suggestedMedicineId: "",
-      suggestedMedicineTouched: false,
-    })
-    setResultError(null)
   }
 
-  const resultIsFamacha = resultTarget?.analysisType?.type === AnalysisType.FAMACHA
-
-  function selectScore(score: number) {
-    setResultForm((prev) => ({
-      ...prev,
-      famachaScore: score,
-      diagnosis: prev.diagnosisTouched ? prev.diagnosis : famachaDiagnosis(score),
-    }))
-  }
-
-  // Live recommendation preview from the current result form.
-  const livePreview = useMemo<ApiAnalysis | null>(() => {
-    if (!resultTarget) return null
-    return {
-      ...resultTarget,
-      famachaScore: resultForm.famachaScore,
-      resultValue: resultForm.resultValue,
-      diagnosis: resultForm.diagnosis,
-    }
-  }, [resultTarget, resultForm])
-  const liveRecommendation = livePreview ? analysisRecommendation(livePreview) : null
-
-  // Medicines matching the recommended type (fallback to the whole catalog),
-  // used to suggest a concrete treatment from the diagnosis.
-  const suggestedMeds = useMemo(() => {
-    if (!liveRecommendation?.medicineType) return []
-    const ofType = meds.filter((m) => m.type === liveRecommendation.medicineType)
-    return ofType.length > 0 ? ofType : meds
-  }, [meds, liveRecommendation?.medicineType])
-
-  // Auto-select the first matching medicine when a treatment becomes recommended
-  // and the user hasn't picked one manually.
-  useEffect(() => {
-    if (!liveRecommendation?.needsTreatment) return
-    if (resultForm.suggestedMedicineTouched) return
-    const first = suggestedMeds[0]?.id ?? ""
-    if (first && resultForm.suggestedMedicineId !== first) {
-      setResultForm((prev) =>
-        prev.suggestedMedicineTouched ? prev : { ...prev, suggestedMedicineId: first },
-      )
-    }
-  }, [liveRecommendation?.needsTreatment, suggestedMeds, resultForm.suggestedMedicineTouched, resultForm.suggestedMedicineId])
-
-  async function confirmResult(e: React.FormEvent) {
-    e.preventDefault()
-    if (!resultTarget) return
-    setResultError(null)
-    if (resultIsFamacha && resultForm.famachaScore == null) {
-      setResultError("Selecciona el puntaje FAMACHA")
+  async function scheduleBatchTreatments() {
+    const selected = batchTreatmentQueue.filter((item) => item.selected && item.medicineId)
+    if (selected.length === 0) {
+      setBatchTreatmentError("Selecciona al menos una oveja con medicamento para programar.")
       return
     }
-    if (!resultIsFamacha && !resultForm.resultValue.trim()) {
-      setResultError("Ingresa el resultado del análisis")
-      return
-    }
-    setSavingResult(true)
+    setSchedulingBatchTreatments(true)
+    setBatchTreatmentError(null)
     try {
-      const saved = await markAnalysisCompleted(resultTarget, {
-        completedDate: resultForm.completedDate,
-        famachaScore: resultIsFamacha ? resultForm.famachaScore : null,
-        resultValue: resultIsFamacha
-          ? String(resultForm.famachaScore)
-          : resultForm.resultValue.trim(),
-        diagnosis: resultForm.diagnosis.trim() || null,
-        notes: resultForm.notes.trim() || null,
-      })
-      const rec = analysisRecommendation(saved)
-      const chosenMed =
-        meds.find((m) => m.id === resultForm.suggestedMedicineId) ??
-        (rec.medicineType ? meds.find((m) => m.type === rec.medicineType) : undefined)
-      setResultTarget(null)
-      await loadAnalyses()
-      if (rec.needsTreatment && rec.medicineType) {
-        setTreatment({
-          sheepId: saved.sheepId,
-          sheepTag: saved.sheep?.tag ?? sheepTag(saved.sheepId),
-          medicineType: rec.medicineType,
-          medicineId: chosenMed?.id ?? "",
-          medicineName: chosenMed?.name ?? "",
-          message: rec.message,
+      for (const item of selected) {
+        await createMedicineApplication({
+          medicineId: item.medicineId,
+          sheepId: item.sheepId,
+          analysisId: item.analysisId,
+          applicationDate: new Date(item.completedDate),
+          status: MedicineStatus.SCHEDULED,
+          notes: treatmentNotes(item.analysisTypeName, item.diagnosis),
         })
       }
+      setBatchTreatmentQueue((prev) => prev.filter((item) => !item.selected || !item.medicineId))
+      setResultSuccess(
+        `${selected.length} tratamiento(s) programado(s). Revisa en Medicina o en la ficha de cada oveja.`,
+      )
     } catch (err) {
-      setResultError(err instanceof Error ? err.message : "No se pudo guardar el resultado")
+      setBatchTreatmentError(
+        err instanceof Error ? err.message : "No se pudieron programar los tratamientos",
+      )
     } finally {
-      setSavingResult(false)
+      setSchedulingBatchTreatments(false)
     }
-  }
-
-  function scheduleTreatment() {
-    if (!treatment) return
-    const qs = new URLSearchParams({
-      scheduleSheep: treatment.sheepId,
-      medType: treatment.medicineType,
-      date: today(),
-    })
-    if (treatment.medicineId) qs.set("medId", treatment.medicineId)
-    router.push(`/medicines?${qs.toString()}`)
   }
 
   async function setStatus(a: ApiAnalysis, status: AnalysisStatus) {
@@ -765,8 +704,8 @@ export default function AnalysisPage() {
                       disabled={statusUpdating === a.id}
                       onClick={() => openResult(a)}
                       className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
-                      title="Registrar resultado"
-                      aria-label="Registrar resultado"
+                      title="Registrar diagnóstico"
+                      aria-label="Registrar diagnóstico"
                     >
                       <CheckBadgeIcon className="h-5 w-5" />
                     </button>
@@ -801,7 +740,7 @@ export default function AnalysisPage() {
     <DashboardLayout>
       <PageHeader
         title="Análisis"
-        description="Diagnósticos, programación y resultados (FAMACHA, coprológico, etc.)"
+        description="Estudios de salud: programación y resultados (FAMACHA, coprológico, etc.)"
         action={
           tab === "types" ? (
             <button
@@ -820,7 +759,7 @@ export default function AnalysisPage() {
                   className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
                 >
                   <ClipboardDocumentCheckIcon className="h-5 w-5" aria-hidden="true" />
-                  Registrar resultados
+                  Registrar diagnósticos
                 </button>
               )}
               <button
@@ -836,32 +775,17 @@ export default function AnalysisPage() {
         }
       />
 
-      {treatment && (
-        <div className="mb-4 flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-2 text-sm text-amber-800">
-            <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <p>
-              <strong>{treatment.sheepTag}:</strong> {treatment.message} Tratamiento sugerido:{" "}
-              <strong>{treatment.medicineName || labelMedicineType(treatment.medicineType)}</strong>
-              {treatment.medicineName ? ` (${labelMedicineType(treatment.medicineType)})` : ""}.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={scheduleTreatment}
-              className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-500"
-            >
-              Programar tratamiento
-              <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
-            </button>
-            <button
-              onClick={() => setTreatment(null)}
-              className="rounded-md p-1.5 text-amber-700 hover:bg-amber-100"
-              aria-label="Descartar"
-            >
-              <XCircleIcon className="h-5 w-5" />
-            </button>
-          </div>
+      {resultSuccess && (
+        <div className="mb-4 flex flex-col gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 sm:flex-row sm:items-center sm:justify-between">
+          <p>{resultSuccess}</p>
+          <button
+            type="button"
+            onClick={() => setResultSuccess(null)}
+            className="shrink-0 self-start rounded-md p-1 text-green-700 hover:bg-green-100 sm:self-center"
+            aria-label="Cerrar"
+          >
+            <XCircleIcon className="h-5 w-5" />
+          </button>
         </div>
       )}
 
@@ -981,7 +905,7 @@ export default function AnalysisPage() {
             <div className="flex items-start gap-3">
               <ClockIcon className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
               <p className="text-sm text-gray-600">
-                Programa análisis aquí. Cuando obtengas el resultado, registra el{" "}
+                Programa análisis aquí. Cuando obtengas el valor, registra el{" "}
                 <strong>diagnóstico</strong>.
               </p>
             </div>
@@ -1040,7 +964,7 @@ export default function AnalysisPage() {
         open={typeOpen}
         onClose={() => setTypeOpen(false)}
         title={editingType ? "Editar tipo de análisis" : "Nuevo tipo de análisis"}
-        description="Define un tipo de diagnóstico para programar y registrar resultados."
+        description="Define un tipo de diagnóstico para programar y registrar diagnósticos."
         footer={
           <>
             <button
@@ -1245,8 +1169,8 @@ export default function AnalysisPage() {
       <Drawer
         open={batchOpen}
         onClose={() => setBatchOpen(false)}
-        title="Registrar resultados"
-        description="Captura el resultado de cada oveja con análisis pendiente."
+        title="Registrar diagnósticos"
+        description="Captura el diagnóstico de cada oveja con análisis pendiente."
         footer={
           <>
             <button
@@ -1276,10 +1200,85 @@ export default function AnalysisPage() {
           )}
           {batchResult && (
             <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-              {batchResult.saved} resultado(s) guardado(s).
+              {batchResult.saved} diagnóstico(s) guardado(s).
               {batchResult.needTreatment > 0
-                ? ` ${batchResult.needTreatment} requiere(n) tratamiento — revísalos en el historial para programarlo.`
+                ? ` ${batchResult.needTreatment} requiere(n) tratamiento — programa abajo.`
                 : ""}
+            </div>
+          )}
+          {batchTreatmentError && (
+            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{batchTreatmentError}</div>
+          )}
+          {batchTreatmentQueue.length > 0 && (
+            <div className="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+              <div className="flex items-start gap-2">
+                <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <p>Programa el tratamiento sugerido para las ovejas que lo requieren.</p>
+              </div>
+              <div className="flex flex-col divide-y divide-amber-100 overflow-hidden rounded-md border border-amber-200 bg-white">
+                {batchTreatmentQueue.map((item) => {
+                  const options = medsForType(meds, item.medicineType)
+                  return (
+                    <div key={item.analysisId} className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center">
+                      <label className="flex min-w-0 flex-1 items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={item.selected}
+                          onChange={(e) =>
+                            setBatchTreatmentQueue((prev) =>
+                              prev.map((row) =>
+                                row.analysisId === item.analysisId
+                                  ? { ...row, selected: e.target.checked }
+                                  : row,
+                              ),
+                            )
+                          }
+                          className="mt-1 rounded border-gray-300"
+                        />
+                        <span className="min-w-0">
+                          <span className="block font-medium text-gray-900">{item.sheepTag}</span>
+                          <span className="block text-xs text-gray-500">{item.message}</span>
+                        </span>
+                      </label>
+                      <Select
+                        aria-label={`Medicamento para ${item.sheepTag}`}
+                        value={item.medicineId}
+                        onChange={(e) =>
+                          setBatchTreatmentQueue((prev) =>
+                            prev.map((row) =>
+                              row.analysisId === item.analysisId
+                                ? { ...row, medicineId: e.target.value, selected: !!e.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                        className="sm:max-w-xs"
+                      >
+                        <option value="">Sin medicamento</option>
+                        {options.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} — {labelMedicineType(m.type)}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={scheduleBatchTreatments}
+                disabled={
+                  schedulingBatchTreatments ||
+                  !batchTreatmentQueue.some((item) => item.selected && item.medicineId)
+                }
+                className="inline-flex items-center justify-center gap-2 self-start rounded-md bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-60"
+              >
+                {schedulingBatchTreatments && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                )}
+                Programar seleccionados
+              </button>
             </div>
           )}
           {batchTypeOptions.length === 0 ? (
@@ -1297,6 +1296,8 @@ export default function AnalysisPage() {
                       setBatchTypeId(e.target.value)
                       setBatchEntries({})
                       setBatchResult(null)
+                      setBatchTreatmentQueue([])
+                      setBatchTreatmentError(null)
                     }}
                   >
                     {batchTypeOptions.map((t) => (
@@ -1371,14 +1372,22 @@ export default function AnalysisPage() {
                               />
                             )}
                           </div>
-                          {(batchIsFamacha ? entry?.score != null : !!entry?.value.trim()) && (
+                          <Field label="Diagnóstico" htmlFor={`batch-diag-${a.id}`}>
                             <TextInput
-                              aria-label={`Diagnóstico de ${sheepTag(a.sheepId)}`}
+                              id={`batch-diag-${a.id}`}
                               value={entry?.diagnosis ?? ""}
                               onChange={(e) => batchSetDiagnosis(a.id, e.target.value)}
-                              placeholder="Diagnóstico (opcional)"
+                              placeholder="Interpretación del resultado (opcional)"
                             />
-                          )}
+                          </Field>
+                          <Field label="Notas" htmlFor={`batch-notes-${a.id}`}>
+                            <TextInput
+                              id={`batch-notes-${a.id}`}
+                              value={entry?.notes ?? ""}
+                              onChange={(e) => batchSetNotes(a.id, e.target.value)}
+                              placeholder="Observaciones (opcional)"
+                            />
+                          </Field>
                         </div>
                       )
                     })
@@ -1390,147 +1399,21 @@ export default function AnalysisPage() {
         </form>
       </Drawer>
 
-      {/* Result drawer */}
-      <Drawer
+      <AnalysisDiagnosisDrawer
         open={!!resultTarget}
         onClose={() => setResultTarget(null)}
-        title="Registrar resultado"
-        description={
+        record={resultTarget}
+        sheepLabel={
           resultTarget
-            ? `${resultTarget.analysisType?.name ?? typeName(resultTarget.analysisTypeId)} → ${sheepTag(resultTarget.sheepId)}`
-            : undefined
+            ? resultTarget.sheep?.tag ?? sheepTag(resultTarget.sheepId)
+            : ""
         }
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setResultTarget(null)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="result-form"
-              disabled={savingResult}
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60"
-            >
-              {savingResult && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Guardar resultado
-            </button>
-          </>
-        }
-      >
-        <form id="result-form" onSubmit={confirmResult} className="flex flex-col gap-4">
-          {resultError && (
-            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{resultError}</div>
-          )}
-          <Field label="Fecha del resultado" required htmlFor="result-date">
-            <TextInput
-              id="result-date"
-              type="date"
-              value={resultForm.completedDate}
-              onChange={(e) => setResultForm({ ...resultForm, completedDate: e.target.value })}
-              required
-            />
-          </Field>
-
-          {resultIsFamacha ? (
-            <Field label="Puntaje FAMACHA (1–5)" required>
-              <div className="flex flex-wrap items-center gap-2">
-                {SCORES.map((s) => {
-                  const styles = scoreButton[s]
-                  const active = resultForm.famachaScore === s
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => selectScore(s)}
-                      aria-pressed={active}
-                      className={`flex h-11 w-11 items-center justify-center rounded-md border text-sm font-semibold transition ${
-                        active ? styles.active : `bg-white ${styles.idle}`
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  )
-                })}
-                <span className="self-center text-xs text-gray-400">1–2 anemia · 4–5 saludable</span>
-              </div>
-            </Field>
-          ) : (
-            <Field label="Resultado" required htmlFor="result-value">
-              <TextInput
-                id="result-value"
-                value={resultForm.resultValue}
-                onChange={(e) => setResultForm({ ...resultForm, resultValue: e.target.value })}
-                placeholder={resultTarget?.analysisType?.defaultUnit ? `Ej. 320 ${resultTarget.analysisType.defaultUnit}` : "Resultado del análisis"}
-                required
-              />
-            </Field>
-          )}
-
-          <Field label="Diagnóstico" htmlFor="result-diagnosis">
-            <TextInput
-              id="result-diagnosis"
-              value={resultForm.diagnosis}
-              onChange={(e) => setResultForm({ ...resultForm, diagnosis: e.target.value, diagnosisTouched: true })}
-              placeholder="Interpretación del resultado"
-            />
-          </Field>
-
-          {liveRecommendation?.needsTreatment && (
-            <div className="flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
-              <div className="flex items-start gap-2">
-                <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-                <p>{liveRecommendation.message}</p>
-              </div>
-              {suggestedMeds.length > 0 ? (
-                <Field label="Tratamiento sugerido" htmlFor="result-suggested-med">
-                  <Select
-                    id="result-suggested-med"
-                    value={resultForm.suggestedMedicineId}
-                    onChange={(e) =>
-                      setResultForm({
-                        ...resultForm,
-                        suggestedMedicineId: e.target.value,
-                        suggestedMedicineTouched: true,
-                      })
-                    }
-                  >
-                    <option value="">Sin sugerencia específica</option>
-                    {suggestedMeds.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} — {labelMedicineType(m.type)}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              ) : (
-                <p className="text-xs text-amber-700">
-                  No hay medicamentos en el catálogo para sugerir. Podrás programarlo manualmente al
-                  guardar.
-                </p>
-              )}
-              <p className="text-xs text-amber-700">
-                Al guardar podrás programar la aplicación con un clic.
-              </p>
-            </div>
-          )}
-
-          <Field label="Notas" htmlFor="result-notes">
-            <Textarea
-              id="result-notes"
-              rows={3}
-              value={resultForm.notes}
-              onChange={(e) => setResultForm({ ...resultForm, notes: e.target.value })}
-              placeholder="Observaciones del análisis"
-            />
-          </Field>
-        </form>
-      </Drawer>
+        meds={meds}
+        onSaved={(message) => {
+          setResultSuccess(message)
+          void loadAnalyses()
+        }}
+      />
 
       <ConfirmDialog
         open={!!typeToDelete}

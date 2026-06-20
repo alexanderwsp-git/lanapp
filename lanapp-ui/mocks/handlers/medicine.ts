@@ -72,6 +72,7 @@ export async function createMedicineApplication(
     id: newId(),
     medicineId: payload.medicineId,
     sheepId: payload.sheepId,
+    analysisId: payload.analysisId,
     applicationDate: new Date(payload.applicationDate).toISOString(),
     status: payload.status ?? MedicineStatus.SCHEDULED,
     notes: payload.notes,

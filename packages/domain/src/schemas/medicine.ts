@@ -30,6 +30,7 @@ export const MedicineApplicationSchema = z.object({
     id: z.string().uuid(),
     medicineId: z.string().uuid(),
     sheepId: z.string().uuid(),
+    analysisId: z.string().uuid().optional(),
     applicationDate: z.coerce.date(),
     nextApplicationDate: z.coerce.date().optional(),
     status: z.nativeEnum(MedicineStatus),
@@ -42,6 +43,7 @@ export const MedicineApplicationPartialSchema = MedicineApplicationSchema.partia
 export const MedicineApplicationCreateSchema = z.object({
     medicineId: z.string().uuid(),
     sheepId: z.string().uuid(),
+    analysisId: z.string().uuid().optional(),
     applicationDate: z.coerce.date(),
     nextApplicationDate: z.coerce.date().optional(),
     status: z.nativeEnum(MedicineStatus).default(MedicineStatus.SCHEDULED),

@@ -3,7 +3,7 @@ SHELL := /bin/bash
 UI_PORT ?= 3000
 API_PORT ?= 4001
 
-.PHONY: help install packages build build-all setup api ui kill-port kill-api kill-ui
+.PHONY: help install packages build build-all setup api ui kill-port kill-api kill-ui seed
 
 .DEFAULT_GOAL := help
 
@@ -23,6 +23,9 @@ build-all: ## Build packages + lanapp + auth + lanapp-ui
 	npm run build:all
 
 setup: install packages ## First-time dev setup
+
+seed: ## Load demo fixtures into Postgres (npm run seed -w lanapp)
+	npm run seed -w lanapp
 
 api: ## Start lanapp API dev server (:4001)
 	npm run dev:api

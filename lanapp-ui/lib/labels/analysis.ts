@@ -1,4 +1,7 @@
-import { MedicineType } from "@sheep/domain"
+import {
+  analysisRecommendation as domainAnalysisRecommendation,
+  type AnalysisRecommendation,
+} from "@sheep/domain"
 import { AnalysisStatus, AnalysisKind, type ApiAnalysis } from "@/lib/analysis/types"
 import type { BadgeColor } from "@/mocks/labels"
 
@@ -55,51 +58,9 @@ export function famachaColor(score: number): BadgeColor {
   return "green"
 }
 
-export type AnalysisRecommendation = {
-  needsTreatment: boolean
-  message: string
-  /** MedicineType sugerido para prellenar la programación de medicina. */
-  medicineType?: MedicineType
-}
+export type { AnalysisRecommendation }
 
-/**
- * Dado un resultado de análisis, indica si amerita tratamiento y qué sugerir.
- * - FAMACHA ≤ 2 → desparasitar.
- * - Coprológico con resultado "alto"/"positivo" → desparasitar.
- */
+/** @see @sheep/domain analysisRecommendation */
 export function analysisRecommendation(record: ApiAnalysis): AnalysisRecommendation {
-  const type = record.analysisType?.type
-  if (type === AnalysisKind.FAMACHA && record.famachaScore != null) {
-    if (record.famachaScore <= 2) {
-      return {
-        needsTreatment: true,
-        message: "Puntaje FAMACHA bajo: se recomienda desparasitar a la oveja.",
-        medicineType: MedicineType.DEWORMER,
-      }
-    }
-    return { needsTreatment: false, message: "Sin alerta. No requiere tratamiento." }
-  }
-
-  if (type === AnalysisKind.COPROLOGICAL) {
-    const v = (record.resultValue ?? "").toLowerCase()
-    const high = /(alto|alta|positiv|elevad)/.test(v) || parseInt(v, 10) >= 500
-    if (high) {
-      return {
-        needsTreatment: true,
-        message: "Carga parasitaria alta: se recomienda desparasitar.",
-        medicineType: MedicineType.DEWORMER,
-      }
-    }
-    return { needsTreatment: false, message: "Carga parasitaria dentro de lo normal." }
-  }
-
-  const recommended = record.analysisType?.recommendedMedicineType
-  if (recommended) {
-    return {
-      needsTreatment: true,
-      message: "El resultado podría requerir tratamiento.",
-      medicineType: recommended as MedicineType,
-    }
-  }
-  return { needsTreatment: false, message: "Sin recomendación automática para este análisis." }
+  return domainAnalysisRecommendation(record)
 }

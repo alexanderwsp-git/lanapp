@@ -4,6 +4,11 @@ export * from './enums/mating';
 export * from './enums/medicine';
 export * from './enums/breeding';
 export * from './enums/analysis';
+export {
+    analysisRecommendation,
+    type AnalysisRecommendation,
+    type AnalysisRecommendationInput,
+} from './analysis/recommendation';
 export * from './mating-lifecycle';
 export * from './reproduction-parameters';
 

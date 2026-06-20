@@ -227,9 +227,9 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
 
           {tab === "montas" && <SheepMontasTab sheep={sheep} onUpdated={onRefresh} />}
 
-          {tab === "medicina" && <SheepMedicineTab sheepId={sheep.id} />}
+          {tab === "medicina" && <SheepMedicineTab sheep={sheep} onUpdated={onRefresh} />}
 
-          {tab === "analisis" && <SheepAnalysisTab sheepId={sheep.id} />}
+          {tab === "analisis" && <SheepAnalysisTab sheep={sheep} onUpdated={onRefresh} />}
         </div>
       </div>
 

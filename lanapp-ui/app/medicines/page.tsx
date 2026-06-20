@@ -11,6 +11,7 @@ import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { Combobox } from "@/components/ui/combobox"
 import { useSheepFilter } from "@/components/ui/sheep-filter"
 import { Drawer } from "@/components/ui/drawer"
+import { MedicineBatchApplyDrawer } from "@/components/medicine-batch-apply-drawer"
 import {
   MedicineCreateSchema,
   MedicineStatus,
@@ -46,7 +47,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
   ClipboardDocumentCheckIcon,
-  CheckBadgeIcon,
+  CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline"
@@ -117,6 +118,8 @@ export default function MedicinesPage() {
   const [savingBulk, setSavingBulk] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [bulkResult, setBulkResult] = useState<BulkResult | null>(null)
+
+  const [batchApplyOpen, setBatchApplyOpen] = useState(false)
 
   const [applyTarget, setApplyTarget] = useState<ApiMedicineApplication | null>(null)
   const [applyForm, setApplyForm] = useState<ApplyForm>({
@@ -591,11 +594,10 @@ export default function MedicinesPage() {
                       type="button"
                       disabled={statusUpdating === a.id}
                       onClick={() => openApply(a)}
-                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
-                      title="Marcar como aplicado"
-                      aria-label="Marcar como aplicado"
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
                     >
-                      <CheckBadgeIcon className="h-5 w-5" />
+                      <CheckCircleIcon className="h-4 w-4" />
+                      Registrar aplicación
                     </button>
                     <button
                       type="button"
@@ -639,14 +641,26 @@ export default function MedicinesPage() {
               Nuevo medicamento
             </button>
           ) : (
-            <button
-              onClick={() => openBulk()}
-              disabled={meds.length === 0 || sheep.length === 0}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-            >
-              <PlusIcon className="h-5 w-5" aria-hidden="true" />
-              Programar aplicación
-            </button>
+            <div className="flex items-center gap-2">
+              {tab === "scheduled" && (
+                <button
+                  onClick={() => setBatchApplyOpen(true)}
+                  disabled={scheduledApps.length === 0}
+                  className="inline-flex items-center gap-2 rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
+                >
+                  <ClipboardDocumentCheckIcon className="h-5 w-5" aria-hidden="true" />
+                  Registrar aplicaciones
+                </button>
+              )}
+              <button
+                onClick={() => openBulk()}
+                disabled={meds.length === 0 || sheep.length === 0}
+                className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+              >
+                <PlusIcon className="h-5 w-5" aria-hidden="true" />
+                Programar aplicación
+              </button>
+            </div>
           )
         }
       />
@@ -1113,6 +1127,17 @@ export default function MedicinesPage() {
           </Field>
         </form>
       </Drawer>
+
+      <MedicineBatchApplyDrawer
+        open={batchApplyOpen}
+        onClose={() => setBatchApplyOpen(false)}
+        applications={scheduledApps}
+        sheepById={sheepById}
+        medById={medById}
+        onSaved={async () => {
+          await loadApps()
+        }}
+      />
 
       <ConfirmDialog
         open={!!medToDelete}

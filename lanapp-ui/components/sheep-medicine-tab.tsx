@@ -1,149 +1,196 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { BeakerIcon, ArrowRightCircleIcon, CheckCircleIcon, ClockIcon } from "@heroicons/react/24/outline"
+import { BeakerIcon, CheckCircleIcon, PlusIcon } from "@heroicons/react/24/outline"
+import { MedicineStatus } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
-import { fetchMedicineApplicationsBySheep } from "@/lib/api/medicine"
+import { MedicineApplyDrawer } from "@/components/medicine-apply-drawer"
+import { MedicineScheduleDrawer } from "@/components/medicine-schedule-drawer"
+import {
+  fetchMedicineApplicationsBySheep,
+  fetchMedicines,
+} from "@/lib/api/medicine"
+import type { ApiMedicine, ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
 import { labelMedicineStatus, labelMedicineType, medicineStatusColor } from "@/lib/labels/medicine"
-import type { ApiMedicineApplication } from "@/lib/api/types"
-import { formatDisplayDate, toDateInputValue } from "@/lib/format"
+import { formatDisplayDate } from "@/lib/format"
 
-const today = () => new Date().toISOString().slice(0, 10)
+const isScheduled = (status: string) =>
+  status === MedicineStatus.SCHEDULED || String(status).toLowerCase() === "scheduled"
 
-/**
- * Historial y resumen de medicina por oveja. Reemplaza al bloque que vivía
- * dentro de la pestaña General y agrega KPIs de aplicaciones aplicadas /
- * pendientes con un acceso directo a programar.
- */
-export function SheepMedicineTab({ sheepId }: { sheepId: string }) {
+export function SheepMedicineTab({
+  sheep,
+  onUpdated,
+}: {
+  sheep: ApiSheep
+  onUpdated?: () => void | Promise<void>
+}) {
+  const sheepId = sheep.id
+  const sheepLabel = sheep.name ? `${sheep.tag} · ${sheep.name}` : sheep.tag
+
   const [apps, setApps] = useState<ApiMedicineApplication[]>([])
+  const [medicines, setMedicines] = useState<ApiMedicine[]>([])
   const [loading, setLoading] = useState(true)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [applyTarget, setApplyTarget] = useState<ApiMedicineApplication | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
+  const load = useCallback(async () => {
     setLoading(true)
-    fetchMedicineApplicationsBySheep(sheepId)
-      .then((list) => {
-        if (cancelled) return
-        const sorted = [...list].sort(
-          (a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime(),
-        )
-        setApps(sorted)
-      })
-      .catch(() => {
-        if (!cancelled) setApps([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+    try {
+      const [list, medPage] = await Promise.all([
+        fetchMedicineApplicationsBySheep(sheepId),
+        fetchMedicines(1, 100),
+      ])
+      const sorted = [...list].sort(
+        (a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime(),
+      )
+      setApps(sorted)
+      setMedicines(medPage.items)
+    } catch {
+      setApps([])
+      setMedicines([])
+    } finally {
+      setLoading(false)
     }
   }, [sheepId])
 
-  const summary = useMemo(() => {
-    const t = today()
-    let applied = 0
-    let upcoming = 0
-    let lastDate: string | null = null
-    for (const a of apps) {
-      const isApplied = String(a.status).toLowerCase().includes("applied") || a.status === "Applied"
-      if (isApplied) {
-        applied += 1
-        const d = toDateInputValue(a.applicationDate)
-        if (!lastDate || d > lastDate) lastDate = d
-      } else if (toDateInputValue(a.applicationDate) >= t) {
-        upcoming += 1
-      }
-    }
-    return { applied, upcoming, lastDate }
-  }, [apps])
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const pending = apps.filter((a) => isScheduled(a.status)).length
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Aplicadas</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{summary.applied}</p>
-          <p className="mt-0.5 text-xs text-gray-500">
-            {summary.lastDate ? `Última: ${formatDisplayDate(summary.lastDate)}` : "Sin aplicaciones"}
-          </p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            <ClockIcon className="h-5 w-5 text-blue-500" />
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Programadas</p>
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{summary.upcoming}</p>
-          <p className="mt-0.5 text-xs text-gray-500">Pendientes por aplicar</p>
-        </div>
-        <div className="flex items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
-          <Link
-            href={`/medicines?scheduleSheep=${sheepId}`}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-500"
-          >
-            <ArrowRightCircleIcon className="h-5 w-5" />
-            Programar aplicación
-          </Link>
-        </div>
-      </div>
-
-      <div className="rounded-lg bg-white p-6 shadow">
+    <div className="rounded-lg bg-white p-6 shadow">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
           <BeakerIcon className="h-5 w-5 text-gray-400" />
-          Historial de medicina
+          Medicina
         </h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Aplicaciones de fármacos y vacunas registradas para esta oveja.
-        </p>
-        <div className="mt-4">
-          <DataTable
-            bare
-            hideFooter
-            rows={apps}
-            rowKey={(a) => a.id}
-            loading={loading}
-            loadingText="Cargando aplicaciones…"
-            empty={<p className="text-sm text-gray-500">Sin aplicaciones registradas.</p>}
-            columns={[
-              {
-                key: "date",
-                header: "Fecha",
-                className: "whitespace-nowrap text-gray-900",
-                cell: (a) => formatDisplayDate(a.applicationDate),
-              },
-              {
-                key: "medicine",
-                header: "Medicamento",
-                className: "whitespace-nowrap",
-                cell: (a) => a.medicine?.name || "—",
-              },
-              {
-                key: "type",
-                header: "Tipo",
-                className: "whitespace-nowrap",
-                cell: (a) => (a.medicine?.type ? labelMedicineType(a.medicine.type) : "—"),
-              },
-              {
-                key: "status",
-                header: "Estado",
-                className: "whitespace-nowrap",
-                cell: (a) => (
-                  <StatusBadge color={medicineStatusColor[a.status] ?? "gray"}>
-                    {labelMedicineStatus(a.status)}
-                  </StatusBadge>
-                ),
-              },
-              { key: "notes", header: "Notas", cell: (a) => a.notes || "—" },
-            ]}
-          />
-        </div>
+        <button
+          type="button"
+          onClick={() => setScheduleOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+        >
+          <PlusIcon className="h-4 w-4" />
+          Nueva aplicación
+        </button>
       </div>
+      <p className="mt-1 text-sm text-gray-500">
+        Aplicaciones de fármacos y vacunas registradas para esta oveja.{" "}
+        {pending > 0 ? `${pending} programada(s).` : ""}
+      </p>
+
+      {success && (
+        <div className="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          {success}
+        </div>
+      )}
+
+      <div className="mt-4">
+        <DataTable
+          bare
+          hideFooter
+          rows={apps}
+          rowKey={(a) => a.id}
+          loading={loading}
+          loadingText="Cargando aplicaciones…"
+          empty={<p className="text-sm text-gray-500">Sin aplicaciones registradas.</p>}
+          columns={[
+            {
+              key: "date",
+              header: "Fecha",
+              className: "whitespace-nowrap text-gray-900",
+              cell: (a) => formatDisplayDate(a.applicationDate),
+            },
+            {
+              key: "medicine",
+              header: "Medicamento",
+              className: "whitespace-nowrap",
+              cell: (a) => a.medicine?.name || "—",
+            },
+            {
+              key: "type",
+              header: "Tipo",
+              className: "whitespace-nowrap",
+              cell: (a) => (a.medicine?.type ? labelMedicineType(a.medicine.type) : "—"),
+            },
+            {
+              key: "status",
+              header: "Estado",
+              className: "whitespace-nowrap",
+              cell: (a) => (
+                <StatusBadge color={medicineStatusColor[a.status] ?? "gray"}>
+                  {labelMedicineStatus(a.status)}
+                </StatusBadge>
+              ),
+            },
+            {
+              key: "notes",
+              header: "Notas",
+              cell: (a) => (
+                <span className="flex flex-col gap-0.5">
+                  {a.notes ? <span>{a.notes}</span> : <span>—</span>}
+                  {a.analysisId ? (
+                    <Link
+                      href="/analysis"
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-500"
+                    >
+                      Desde análisis
+                    </Link>
+                  ) : null}
+                </span>
+              ),
+            },
+            {
+              key: "actions",
+              header: "Acciones",
+              align: "right",
+              cell: (a) =>
+                isScheduled(a.status) ? (
+                  <button
+                    type="button"
+                    onClick={() => setApplyTarget(a)}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-indigo-50"
+                  >
+                    <CheckCircleIcon className="h-4 w-4" />
+                    Registrar aplicación
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-400">—</span>
+                ),
+            },
+          ]}
+        />
+      </div>
+
+      <MedicineScheduleDrawer
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        sheepId={sheepId}
+        sheepLabel={sheepLabel}
+        medicines={medicines}
+        onSaved={async (message) => {
+          setSuccess(message)
+          await load()
+          await onUpdated?.()
+        }}
+      />
+
+      <MedicineApplyDrawer
+        open={!!applyTarget}
+        onClose={() => setApplyTarget(null)}
+        application={applyTarget}
+        medicineName={applyTarget?.medicine?.name ?? "Medicamento"}
+        sheepLabel={sheepLabel}
+        onSaved={async () => {
+          setSuccess("Aplicación registrada.")
+          await load()
+          await onUpdated?.()
+        }}
+      />
     </div>
   )
 }

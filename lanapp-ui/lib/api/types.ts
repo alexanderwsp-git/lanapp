@@ -20,6 +20,7 @@ export type ApiMedicineApplication = {
   id: string
   medicineId: string
   sheepId: string
+  analysisId?: string | null
   applicationDate: string
   nextApplicationDate?: string | null
   status: string

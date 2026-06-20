@@ -21,6 +21,7 @@
 
 | Document | Purpose |
 |----------|---------|
+| [`../docs/ANALYSIS_MEDICINE_DIAGNOSIS.md`](../docs/ANALYSIS_MEDICINE_DIAGNOSIS.md) | **Análisis vs Medicina vs diagnóstico preñez** — three workflows |
 | [`../sheep/docs/ARCHITECTURE_PLAN.md`](../sheep/docs/ARCHITECTURE_PLAN.md) | Category engine, use cases, long-term architecture |
 | [`../sheep/README.md`](../sheep/README.md) | Monorepo dev commands |
 | [`../../packages/domain/src/schemas/`](../../packages/domain/src/schemas/) | **Source of truth** for request/response field names |
@@ -155,7 +156,7 @@ HTTP helpers live in `lib/api/client.ts` (`apiFetch`, `lanapp.get/post/put/patch
 | `/planner` | Mock | Use `bulkScheduleBreedingCycles` when wiring |
 | `/weaning` | Mock | Use `bulkRecordWeaning` + `fetchWeaningAlerts` when wiring |
 | `/locations`, `/dashboard`, `/reports/*` | Mock | `lib/mock-data.ts` |
-| Sheep detail tabs (Pesos, Montas, FAMACHA) | Mock | Per-tab API clients TBD |
+| Sheep detail tabs (Pesos, Montas, Análisis, Medicina) | Mixed | Análisis/Medicina tabs support inline register actions |
 
 **v0 bulk UI pattern:** load sheep with `fetchSheep({ locationId, category, gender })` → multi-select → call bulk function → show `BulkResult.succeeded.length` / list `failed[]`.
 
@@ -292,7 +293,11 @@ Mounted under `{API_PREFIX}/`:
 
 **FAMACHA** = anemia score **1–5** (`famachaScore`). Lower scores (≤2) trigger desparasitar recommendations.
 
+**UI:** Complete scheduled analyses via **Registrar diagnóstico** (single drawer or batch **Registrar diagnósticos**). Shared component: `components/analysis-diagnosis-drawer.tsx`. Sheep detail **Análisis** tab uses the same drawer inline.
+
 Legacy `/health-check` API remains for backward compatibility; new data should use `/analysis`.
+
+**See also:** [`../../docs/ANALYSIS_MEDICINE_DIAGNOSIS.md`](../../docs/ANALYSIS_MEDICINE_DIAGNOSIS.md) — how Análisis relates to Medicina and diagnóstico de preñez (ECO).
 
 ### 3.6.1 Health check (legacy)
 

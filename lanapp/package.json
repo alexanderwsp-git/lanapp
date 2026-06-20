@@ -14,6 +14,8 @@
         "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name -d ./src/config/ormconfig.ts",
         "migration:run": "npm run typeorm -- migration:run -d ./src/config/ormconfig.ts",
         "migration:revert": "npm run typeorm -- migration:revert -d ./src/config/ormconfig.ts",
+        "seed": "ts-node src/seeds/run-demo-seed.ts",
+        "seed:demo": "ts-node src/seeds/run-demo-seed.ts",
         "format": "prettier --write \"src/**/*.{ts,tsx}\"",
         "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
     },

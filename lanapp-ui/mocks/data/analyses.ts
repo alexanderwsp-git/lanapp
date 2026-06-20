@@ -8,6 +8,13 @@ import {
 import { famachaDiagnosis } from "@/lib/labels/analysis"
 import { IDS } from "../ids"
 
+const today = () => new Date().toISOString().slice(0, 10)
+const addDays = (iso: string, days: number) => {
+  const d = new Date(`${iso}T00:00:00.000Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
 export const seedAnalysisTypes: ApiAnalysisType[] = [
   {
     id: IDS.analysisTypes.famacha,
@@ -32,6 +39,14 @@ export const seedAnalysisTypes: ApiAnalysisType[] = [
     description: "Puntaje de condición corporal (escala 1–5).",
     defaultUnit: "1–5",
     recommendedMedicineType: null,
+  },
+  {
+    id: IDS.analysisTypes.blood,
+    type: AnalysisType.BLOOD,
+    name: "Hemograma",
+    description: "Panel sanguíneo básico — tipo custom con tratamiento sugerido.",
+    defaultUnit: "g/dL",
+    recommendedMedicineType: MedicineType.VITAMIN,
   },
 ]
 
@@ -58,15 +73,15 @@ function famachaDone(
 }
 
 export const seedAnalyses: ApiAnalysis[] = [
-  // FAMACHA migrados del antiguo modelo health-check.
-  famachaDone("g1000001-0000-4000-8000-000000000001", IDS.sheep.blanca, "2026-06-01T00:00:00.000Z", 2, "Revisar desparasitación"),
-  famachaDone("g1000001-0000-4000-8000-000000000002", IDS.sheep.blanca, "2026-05-01T00:00:00.000Z", 4, "Normal"),
-  famachaDone("g1000001-0000-4000-8000-000000000003", IDS.sheep.blanca, "2026-04-01T00:00:00.000Z", 5),
-  famachaDone("g1000001-0000-4000-8000-000000000004", IDS.sheep.luna, "2026-06-01T00:00:00.000Z", 5, "Sin alerta"),
-  famachaDone("g1000001-0000-4000-8000-000000000005", IDS.sheep.negro, "2026-06-01T00:00:00.000Z", 4, "Normal"),
-  // Coprológicos realizados.
+  // FAMACHA — historial (score 2 → recomienda tratamiento; vinculado en medicina)
+  famachaDone("01100001-0000-4000-8000-000000000001", IDS.sheep.blanca, "2026-06-01T00:00:00.000Z", 2, "Revisar desparasitación"),
+  famachaDone("01100001-0000-4000-8000-000000000002", IDS.sheep.blanca, "2026-05-01T00:00:00.000Z", 4, "Normal"),
+  famachaDone("01100001-0000-4000-8000-000000000003", IDS.sheep.blanca, "2026-04-01T00:00:00.000Z", 5),
+  famachaDone("01100001-0000-4000-8000-000000000004", IDS.sheep.luna, "2026-06-01T00:00:00.000Z", 5, "Sin alerta"),
+  famachaDone("01100001-0000-4000-8000-000000000005", IDS.sheep.negro, "2026-06-01T00:00:00.000Z", 4, "Normal"),
+  // Coprológicos realizados
   {
-    id: "g1000001-0000-4000-8000-000000000006",
+    id: "01100001-0000-4000-8000-000000000006",
     analysisTypeId: IDS.analysisTypes.coprological,
     sheepId: IDS.sheep.blanca,
     scheduledDate: "2026-05-20T00:00:00.000Z",
@@ -78,7 +93,7 @@ export const seedAnalyses: ApiAnalysis[] = [
     notes: "Se recomienda desparasitar",
   },
   {
-    id: "g1000001-0000-4000-8000-000000000007",
+    id: "01100001-0000-4000-8000-000000000007",
     analysisTypeId: IDS.analysisTypes.coprological,
     sheepId: IDS.sheep.estrella,
     scheduledDate: "2026-05-18T00:00:00.000Z",
@@ -89,29 +104,68 @@ export const seedAnalyses: ApiAnalysis[] = [
     diagnosis: "Dentro de lo normal",
     notes: null,
   },
-  // Programados pendientes (para la pestaña Programados).
+  // Programados — resultado individual (Estrella, hoy)
   {
-    id: "g1000001-0000-4000-8000-000000000008",
+    id: "01100001-0000-4000-8000-000000000008",
     analysisTypeId: IDS.analysisTypes.famacha,
     sheepId: IDS.sheep.estrella,
-    scheduledDate: new Date().toISOString(),
+    scheduledDate: `${today()}T00:00:00.000Z`,
     completedDate: null,
     status: AnalysisStatus.SCHEDULED,
     resultValue: null,
     famachaScore: null,
     diagnosis: null,
-    notes: "Control mensual",
+    notes: "Control mensual — probar checkbox Programar tratamiento",
   },
+  // Programado — coprológico (Manchas)
   {
-    id: "g1000001-0000-4000-8000-000000000009",
+    id: "01100001-0000-4000-8000-000000000009",
     analysisTypeId: IDS.analysisTypes.coprological,
     sheepId: IDS.sheep.manchas,
-    scheduledDate: new Date(Date.now() + 4 * 86400000).toISOString(),
+    scheduledDate: `${addDays(today(), 4)}T00:00:00.000Z`,
     completedDate: null,
     status: AnalysisStatus.SCHEDULED,
     resultValue: null,
     famachaScore: null,
     diagnosis: null,
     notes: null,
+  },
+  // Batch FAMACHA — varias ovejas hoy (Registrar resultados)
+  {
+    id: "01100001-0000-4000-8000-000000000010",
+    analysisTypeId: IDS.analysisTypes.famacha,
+    sheepId: IDS.sheep.oreja,
+    scheduledDate: `${today()}T00:00:00.000Z`,
+    completedDate: null,
+    status: AnalysisStatus.SCHEDULED,
+    resultValue: null,
+    famachaScore: null,
+    diagnosis: null,
+    notes: "Batch FAMACHA — probar score 1–2",
+  },
+  {
+    id: "01100001-0000-4000-8000-000000000011",
+    analysisTypeId: IDS.analysisTypes.famacha,
+    sheepId: IDS.sheep.pelusa,
+    scheduledDate: `${today()}T00:00:00.000Z`,
+    completedDate: null,
+    status: AnalysisStatus.SCHEDULED,
+    resultValue: null,
+    famachaScore: null,
+    diagnosis: null,
+    notes: "Batch FAMACHA — probar score 4–5",
+  },
+  // Tipo custom con recommendedMedicineType (Rosa)
+  {
+    id: "01100001-0000-4000-8000-000000000012",
+    analysisTypeId: IDS.analysisTypes.blood,
+    sheepId: IDS.sheep.rosa,
+    scheduledDate: `${today()}T00:00:00.000Z`,
+    completedDate: null,
+    status: AnalysisStatus.SCHEDULED,
+    resultValue: null,
+    famachaScore: null,
+    diagnosis: null,
+    notes: "Hemograma — sugiere vitamina al ingresar resultado",
   },
 ]

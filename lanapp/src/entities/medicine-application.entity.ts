@@ -16,6 +16,9 @@ export class MedicineApplication extends BaseEntity {
     @Column()
     sheepId!: string;
 
+    @Column({ nullable: true })
+    analysisId?: string;
+
     @Column()
     applicationDate!: Date;
 

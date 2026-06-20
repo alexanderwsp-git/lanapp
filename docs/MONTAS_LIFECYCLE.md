@@ -130,6 +130,7 @@ After confirming a planned cycle, continue on the ewe’s **Montas** tab for ECO
 
 ## Related docs
 
+- How Análisis, Medicina, and diagnóstico relate: [`ANALYSIS_MEDICINE_DIAGNOSIS.md`](./ANALYSIS_MEDICINE_DIAGNOSIS.md)
 - Testing walkthrough: [`TESTING_SHEEP_LIFECYCLE.md`](./TESTING_SHEEP_LIFECYCLE.md)
 - UI/API contract: [`lanapp-ui/docs/APP_CONTEXT.md`](../lanapp-ui/docs/APP_CONTEXT.md) §16
 - Architecture: [`sheep/docs/ARCHITECTURE_PLAN.md`](../sheep/docs/ARCHITECTURE_PLAN.md)

@@ -20,7 +20,7 @@ export const {
   bulkScheduleAnalyses,
 } = api
 
-/** Marca un análisis como realizado, guardando resultado y diagnóstico. */
+/** Marca un análisis como realizado, guardando valor medido y diagnóstico. */
 export async function markAnalysisCompleted(
   record: ApiAnalysis,
   opts: {
