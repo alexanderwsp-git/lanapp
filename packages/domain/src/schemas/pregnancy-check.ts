@@ -9,6 +9,8 @@ export const BreedingDiagnosisSchema = z.object({
     vitaselApplied: z.boolean().optional(),
     notes: z.string().optional(),
     nextCheckDate: z.coerce.date().optional(),
+    confirmMating: z.boolean().optional(),
+    confirmMatingDate: z.coerce.date().optional(),
 });
 
 export type BreedingDiagnosis = z.infer<typeof BreedingDiagnosisSchema>;

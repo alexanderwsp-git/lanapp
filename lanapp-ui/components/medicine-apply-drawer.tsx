@@ -105,16 +105,6 @@ export function MedicineApplyDrawer({
     >
       <form id="medicine-apply-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-        <Field label="Fecha en que se aplicó" required htmlFor="apply-date">
-          <TextInput
-            id="apply-date"
-            type="date"
-            value={appliedDate}
-            onChange={(e) => setAppliedDate(e.target.value)}
-            required
-          />
-        </Field>
-
         <Field label="Notas" htmlFor="apply-notes">
           <Textarea
             id="apply-notes"
@@ -122,6 +112,16 @@ export function MedicineApplyDrawer({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Opcional"
+          />
+        </Field>
+
+        <Field label="Fecha en que se aplicó" required htmlFor="apply-date">
+          <TextInput
+            id="apply-date"
+            type="date"
+            value={appliedDate}
+            onChange={(e) => setAppliedDate(e.target.value)}
+            required
           />
         </Field>
 

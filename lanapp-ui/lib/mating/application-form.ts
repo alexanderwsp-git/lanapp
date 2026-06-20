@@ -14,6 +14,7 @@ import { toDateInputValue } from "@/lib/format"
 export type MatingFormState = {
   partnerId: string
   matingDate: string
+  plannedDate: string
   cycleName: string
   notes: string
   scheduleOnly: boolean
@@ -33,6 +34,7 @@ export function emptyMatingForm(
   return {
     partnerId: defaults.partnerId ?? "",
     matingDate: defaults.matingDate ?? today,
+    plannedDate: defaults.plannedDate ?? defaults.matingDate ?? today,
     cycleName: defaults.cycleName ?? defaultCycleName(),
     notes: defaults.notes ?? "",
     scheduleOnly: defaults.scheduleOnly ?? false,
@@ -81,10 +83,9 @@ export async function saveMatingForm(input: {
     if (!form.partnerId) throw new Error("Selecciona un reproductor")
     await updateBreedingCycle(plannedCycleId, {
       ramId: maleId,
-      matingDate: form.matingDate,
       notes,
     })
-    await confirmBreedingCycleMating(plannedCycleId)
+    await confirmBreedingCycleMating(plannedCycleId, { matingDate: form.matingDate })
 
     if (form.scheduleNext && form.nextScheduledDate) {
       await scheduleNextMating({
@@ -159,9 +160,12 @@ export function matingFormFromPlannedCycle(cycle: {
   cycleName: string
   notes?: string | null
 }): MatingFormState {
+  const planned = toDateInputValue(cycle.matingDate)
+  const today = new Date().toISOString().slice(0, 10)
   return emptyMatingForm({
     partnerId: cycle.ramId ?? "",
-    matingDate: toDateInputValue(cycle.matingDate),
+    matingDate: today,
+    plannedDate: planned,
     cycleName: cycle.cycleName,
     notes: cycle.notes ?? "",
     scheduleOnly: false,

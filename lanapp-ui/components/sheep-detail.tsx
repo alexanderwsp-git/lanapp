@@ -84,7 +84,7 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <SheepWeaningAction sheepId={sheep.id} onWeaned={onRefresh} />
+            <SheepWeaningAction sheep={sheep} onWeaned={onRefresh} />
             <button
               type="button"
               onClick={() => setEditOpen(true)}
@@ -223,7 +223,7 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
             </div>
           )}
 
-          {tab === "peso" && <SheepPesosTab sheepId={sheep.id} />}
+          {tab === "peso" && <SheepPesosTab sheep={sheep} />}
 
           {tab === "montas" && <SheepMontasTab sheep={sheep} onUpdated={onRefresh} />}
 

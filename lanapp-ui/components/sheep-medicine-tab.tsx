@@ -10,6 +10,7 @@ import {
   fetchMedicines,
 } from "@/lib/api/medicine"
 import type { ApiMedicine, ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
+import { medicineEligibility } from "@/lib/sheep-action-eligibility"
 import { IconAdd, IconApplyMedicine, IconMedicine } from "@/lib/icons/analysis-medicine"
 import { labelMedicineStatus, labelMedicineType, medicineStatusColor } from "@/lib/labels/medicine"
 import { MedicineStatus } from "@sheep/domain"
@@ -60,6 +61,7 @@ export function SheepMedicineTab({
   }, [load])
 
   const pending = apps.filter((a) => isScheduled(a.status)).length
+  const registerBlockReason = medicineEligibility(sheep)
 
   return (
     <div className="rounded-lg bg-white p-6 shadow">
@@ -70,8 +72,13 @@ export function SheepMedicineTab({
         </h3>
         <button
           type="button"
-          onClick={() => setScheduleOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+          onClick={() => {
+            if (registerBlockReason) return
+            setScheduleOpen(true)
+          }}
+          disabled={!!registerBlockReason}
+          title={registerBlockReason ?? undefined}
+          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconApplyMedicine className="h-4 w-4" aria-hidden="true" />
           Nueva aplicación

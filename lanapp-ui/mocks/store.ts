@@ -90,8 +90,12 @@ export function enrichMating(mating: ApiMating): ApiMating {
 export function enrichBreedingCycle(cycle: ApiBreedingCycle): ApiBreedingCycle {
   const ewe = findSheep(cycle.eweId)
   const ram = cycle.ramId ? findSheep(cycle.ramId) : undefined
+  const mating = cycle.matingId
+    ? getMockStore().matings.find((m) => m.id === cycle.matingId)
+    : undefined
   return {
     ...cycle,
+    confirmedMatingDate: mating?.matingDate ?? cycle.confirmedMatingDate ?? null,
     ewe: ewe
       ? { id: ewe.id, tag: ewe.tag, name: ewe.name, currentLocationId: ewe.currentLocationId }
       : null,

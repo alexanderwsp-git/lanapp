@@ -153,13 +153,31 @@ Sections (when not schedule-only):
 | Sheep → Medicina | **Nueva aplicación** | Apply medicine for this sheep now |
 | Sheep → Medicina row | **Registrar aplicación** | Confirm pending dose |
 | `/medicines` bulk | **Programar aplicación** / **Registrar aplicaciones** | Herd schedule / batch confirm |
+| `/planner` bulk | **Agregar al ciclo** (schedule) | **Confirmar montas** (batch confirm real date) |
 
 Schedule-only for a single sheep: header **Registrar análisis** → toggle **Programar para después** in the drawer (no second header button). Bulk `/analysis` remains for herd scheduling.
+
+**Drawer layout pattern (reference: Análisis):**
+
+1. Primary toggles at top (`SwitchField`, not checkboxes)
+2. Notes visible early (always for medicine apply; in captura for analysis)
+3. `Separator` before optional follow-up sections (próxima dosis, próxima monta, seguimiento)
+4. Primary actions disabled via `blockReason` on the button (`title` tooltip) — not validation inside the drawer
+
+**Button validation on sheep detail:**
+
+| Tab / header | `blockReason` |
+|--------------|---------------|
+| Análisis → Registrar análisis | Sheep must be `ACTIVE` |
+| Medicina → Nueva aplicación | Sheep must be `ACTIVE` |
+| Pesos → Registrar peso | Sheep must be `ACTIVE` |
+| Montas → Registrar monta | Breeding eligibility |
+| Header → Destetar | Lamb category, age ≥ `weaningDays`, active |
 
 **Sheep detail tabs:**
 
 - **Análisis**: one header **Registrar análisis**; drawer modes for register, schedule-only, add diagnosis, update diagnosis; icon row actions only.
-- **Medicina**: one header **Nueva aplicación** (apply-now); row **Registrar aplicación** for pending doses.
+- **Medicina**: one header **Nueva aplicación** (apply-now); row **Registrar aplicación** for pending doses. Apply drawer order: **Notas** → fecha aplicada → separator → switch **Programar próxima dosis**.
 
 **Bulk pages (many sheep):**
 
@@ -210,12 +228,13 @@ sequenceDiagram
 
 | Context | Meaning | UI action |
 |---------|---------|-----------|
-| Montas / Planificador | **Pregnancy** outcome (ECO) | **Registrar diagnóstico** (ECO modal) |
+| Montas / Planificador | **Pregnancy** outcome (ECO) | **Registrar diagnóstico** drawer; optional **Confirmar monta al guardar** if not yet confirmed |
 | Sheep → Análisis tab | Health test for **this sheep** | **Registrar análisis** (header) |
 | Sheep → Análisis row (pending) | Complete scheduled test | Icon **Agregar diagnóstico** |
 | Sheep → Análisis row (done) | Edit completed test | Icon **Actualizar diagnóstico** |
 | `/analysis` bulk complete | Many sheep pending tests | **Registrar diagnósticos** |
 | `/analysis` bulk schedule | Plan future tests | **Programar análisis** |
+| `/planner` bulk confirm | Confirm real monta date for planned cycles | **Confirmar montas** |
 | Sheep → Medicina tab | Dose for **this sheep** | **Nueva aplicación** |
 | `analysis.diagnosis` field | Text **interpretation** of one test | In captura section |
 | `analysis.notes` field | Observations of **this test** | In captura section (not próximos pasos) |

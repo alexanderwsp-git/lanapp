@@ -2,12 +2,18 @@ import {
     BreedingCycleCreateSchema,
     BreedingCycleUpdateSchema,
     BulkBreedingCycleScheduleSchema,
+    BulkBreedingCycleConfirmSchema,
+    ConfirmBreedingMatingSchema,
     BreedingDiagnosisSchema,
     IdSchema,
 } from '@sheep/domain';
 import { created, deleted, failed, found, foundPaginated, updated, asyncHandler, validateSchema, validateParams } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import { BreedingCycleService } from '../services/breeding-cycle.service';
+import {
+    serializeBreedingCycle,
+    serializeBreedingCycles,
+} from '../utils/breeding-cycle.serializer';
 
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -21,12 +27,12 @@ router.get(
         const cycleName = req.query.cycleName as string;
         if (cycleName) {
             const cycles = await breedingCycleService.findByCycleName(cycleName);
-            return found(res, cycles);
+            return found(res, serializeBreedingCycles(cycles));
         }
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
         const result = await breedingCycleService.findAll(page, limit);
-        foundPaginated(res, result, page, limit);
+        foundPaginated(res, { ...result, data: serializeBreedingCycles(result.data) }, page, limit);
     })
 );
 
@@ -36,7 +42,17 @@ router.get(
     validateParams(IdSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const cycles = await breedingCycleService.findByEwe(req.params.eweId);
-        found(res, cycles);
+        found(res, serializeBreedingCycles(cycles));
+    })
+);
+
+router.post(
+    '/bulk/confirm-mating',
+    verifyToken,
+    validateSchema(BulkBreedingCycleConfirmSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const result = await breedingCycleService.bulkConfirmMating(req.body, req.user!.username);
+        created(res, result);
     })
 );
 
@@ -56,7 +72,7 @@ router.post(
     validateSchema(BreedingCycleCreateSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const cycle = await breedingCycleService.create(req.body, req.user!.username);
-        created(res, cycle);
+        created(res, serializeBreedingCycle(cycle));
     })
 );
 
@@ -73,7 +89,7 @@ router.patch(
                 req.user!.username
             );
             if (!cycle) return failed(res, 'Breeding cycle not found');
-            updated(res, cycle);
+            updated(res, serializeBreedingCycle(cycle));
         } catch (err) {
             failed(res, err instanceof Error ? err.message : 'No se pudo registrar el diagnóstico');
         }
@@ -84,14 +100,16 @@ router.post(
     '/:id/confirm-mating',
     verifyToken,
     validateParams(IdSchema),
+    validateSchema(ConfirmBreedingMatingSchema),
     asyncHandler(async (req: Request, res: Response) => {
         try {
             const cycle = await breedingCycleService.confirmMating(
                 req.params.id,
-                req.user!.username
+                req.user!.username,
+                { matingDate: req.body.matingDate }
             );
             if (!cycle) return failed(res, 'Breeding cycle not found');
-            updated(res, cycle);
+            updated(res, serializeBreedingCycle(cycle));
         } catch (err) {
             failed(res, err instanceof Error ? err.message : 'No se pudo confirmar la monta');
         }
@@ -106,7 +124,8 @@ router.put(
     asyncHandler(async (req: Request, res: Response) => {
         const cycle = await breedingCycleService.update(req.params.id, req.body, req.user!.username);
         if (!cycle) return failed(res, 'Breeding cycle not found');
-        updated(res, cycle);
+        const reloaded = await breedingCycleService.findOne(req.params.id);
+        updated(res, reloaded ? serializeBreedingCycle(reloaded) : cycle);
     })
 );
 
@@ -118,7 +137,7 @@ router.post(
         try {
             const cycle = await breedingCycleService.cancel(req.params.id, req.user!.username);
             if (!cycle) return failed(res, 'Breeding cycle not found');
-            updated(res, cycle);
+            updated(res, serializeBreedingCycle(cycle));
         } catch (err) {
             failed(res, err instanceof Error ? err.message : 'No se pudo cancelar el ciclo');
         }

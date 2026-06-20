@@ -12,6 +12,7 @@ import { Combobox } from "@/components/ui/combobox"
 import { useSheepFilter } from "@/components/ui/sheep-filter"
 import { Drawer } from "@/components/ui/drawer"
 import { MedicineBatchApplyDrawer } from "@/components/medicine-batch-apply-drawer"
+import { MedicineApplyDrawer } from "@/components/medicine-apply-drawer"
 import {
   MedicineCreateSchema,
   MedicineStatus,
@@ -26,7 +27,6 @@ import {
   deleteMedicineApplication,
   fetchMedicineApplications,
   fetchMedicines,
-  markApplicationApplied,
   updateMedicine,
   updateMedicineApplicationStatus,
 } from "@/lib/api/medicine"
@@ -57,14 +57,6 @@ type MedForm = {
   name: string
   dosage: string
   description: string
-  notes: string
-}
-
-type ApplyForm = {
-  appliedDate: string
-  scheduleNext: boolean
-  nextScheduledDate: string
-  nextNotes: string
   notes: string
 }
 
@@ -123,15 +115,6 @@ export default function MedicinesPage() {
   const [batchApplyOpen, setBatchApplyOpen] = useState(false)
 
   const [applyTarget, setApplyTarget] = useState<ApiMedicineApplication | null>(null)
-  const [applyForm, setApplyForm] = useState<ApplyForm>({
-    appliedDate: today(),
-    scheduleNext: false,
-    nextScheduledDate: "",
-    nextNotes: "",
-    notes: "",
-  })
-  const [savingApply, setSavingApply] = useState(false)
-  const [applyError, setApplyError] = useState<string | null>(null)
 
   const [appToDelete, setAppToDelete] = useState<ApiMedicineApplication | null>(null)
   const [deletingApp, setDeletingApp] = useState(false)
@@ -440,43 +423,11 @@ export default function MedicinesPage() {
   }
 
   function openApply(app: ApiMedicineApplication) {
-    const scheduled = toDateInputValue(app.applicationDate)
     setApplyTarget(app)
-    setApplyForm({
-      appliedDate: scheduled <= today() ? today() : scheduled,
-      scheduleNext: false,
-      nextScheduledDate: "",
-      nextNotes: "",
-      notes: app.notes ?? "",
-    })
-    setApplyError(null)
   }
 
-  async function confirmApply(e: React.FormEvent) {
-    e.preventDefault()
-    if (!applyTarget) return
-    setApplyError(null)
-
-    if (applyForm.scheduleNext && !applyForm.nextScheduledDate) {
-      setApplyError("Indica la fecha de la próxima dosis")
-      return
-    }
-
-    setSavingApply(true)
-    try {
-      await markApplicationApplied(applyTarget, {
-        appliedDate: applyForm.appliedDate,
-        nextScheduledDate: applyForm.scheduleNext ? applyForm.nextScheduledDate : undefined,
-        notes: applyForm.notes,
-        nextNotes: applyForm.scheduleNext ? applyForm.nextNotes : undefined,
-      })
-      setApplyTarget(null)
-      await loadApps()
-    } catch (err) {
-      setApplyError(err instanceof Error ? err.message : "No se pudo registrar la aplicación")
-    } finally {
-      setSavingApply(false)
-    }
+  async function handleApplySaved() {
+    await loadApps()
   }
 
   async function setAppStatus(app: ApiMedicineApplication, status: MedicineStatus) {
@@ -1041,107 +992,14 @@ export default function MedicinesPage() {
         </form>
       </Drawer>
 
-      {/* Apply drawer — confirm + optional next schedule */}
-      <Drawer
+      <MedicineApplyDrawer
         open={!!applyTarget}
         onClose={() => setApplyTarget(null)}
-        title="Registrar aplicación"
-        description={
-          applyTarget
-            ? `${medDisplayName(applyTarget.medicineId)} → ${sheepDisplayTag(applyTarget.sheepId)}`
-            : undefined
-        }
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setApplyTarget(null)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="apply-form"
-              disabled={savingApply}
-              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60"
-            >
-              {savingApply && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              )}
-              Confirmar aplicado
-            </button>
-          </>
-        }
-      >
-        <form id="apply-form" onSubmit={confirmApply} className="flex flex-col gap-4">
-          {applyError && (
-            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{applyError}</div>
-          )}
-          <Field label="Fecha en que se aplicó" required htmlFor="apply-date">
-            <TextInput
-              id="apply-date"
-              type="date"
-              value={applyForm.appliedDate}
-              onChange={(e) => setApplyForm({ ...applyForm, appliedDate: e.target.value })}
-              required
-            />
-          </Field>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={applyForm.scheduleNext}
-              onChange={(e) =>
-                setApplyForm({
-                  ...applyForm,
-                  scheduleNext: e.target.checked,
-                  nextScheduledDate: e.target.checked
-                    ? applyForm.nextScheduledDate ||
-                      (() => {
-                        const d = new Date(applyForm.appliedDate)
-                        d.setDate(d.getDate() + 7)
-                        return d.toISOString().split("T")[0]
-                      })()
-                    : "",
-                })
-              }
-              className="rounded border-gray-300 text-indigo-600"
-            />
-            Programar próxima dosis (nuevo registro)
-          </label>
-          {applyForm.scheduleNext && (
-            <>
-              <Field label="Fecha próxima dosis" required htmlFor="apply-next">
-                <TextInput
-                  id="apply-next"
-                  type="date"
-                  value={applyForm.nextScheduledDate}
-                  onChange={(e) => setApplyForm({ ...applyForm, nextScheduledDate: e.target.value })}
-                  required
-                />
-              </Field>
-              <Field label="Notas (próxima dosis)" htmlFor="apply-next-notes">
-                <Textarea
-                  id="apply-next-notes"
-                  rows={2}
-                  value={applyForm.nextNotes}
-                  onChange={(e) => setApplyForm({ ...applyForm, nextNotes: e.target.value })}
-                  placeholder="Opcional — recordatorio para la siguiente aplicación"
-                />
-              </Field>
-            </>
-          )}
-          <Field label="Notas" htmlFor="apply-notes">
-            <Textarea
-              id="apply-notes"
-              rows={3}
-              value={applyForm.notes}
-              onChange={(e) => setApplyForm({ ...applyForm, notes: e.target.value })}
-              placeholder="Ej. dosis aplicada, reacción, lote, observaciones del campo..."
-            />
-          </Field>
-        </form>
-      </Drawer>
+        application={applyTarget}
+        medicineName={applyTarget ? medDisplayName(applyTarget.medicineId) : ""}
+        sheepLabel={applyTarget ? sheepDisplayTag(applyTarget.sheepId) : ""}
+        onSaved={handleApplySaved}
+      />
 
       <MedicineBatchApplyDrawer
         open={batchApplyOpen}

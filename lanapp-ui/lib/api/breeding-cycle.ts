@@ -14,6 +14,7 @@ export type ApiBreedingCycle = {
   matingId?: string | null
   cycleName: string
   matingDate: string
+  confirmedMatingDate?: string | null
   diagnosisType?: DiagnosisType | null
   diagnosisDate?: string | null
   result?: BreedingResult | null
@@ -28,7 +29,7 @@ export type ApiBreedingCycle = {
 
 export type BulkBreedingCycleSchedulePayload = {
   cycleName: string
-  ramId?: string
+  ramId: string
   matingDate: string
   vitaselApplied?: boolean
   notes?: string
@@ -53,12 +54,24 @@ export type BreedingDiagnosisPayload = {
   vitaselApplied?: boolean
   notes?: string
   nextCheckDate?: string
+  confirmMating?: boolean
+  confirmMatingDate?: string
+}
+
+export type ConfirmBreedingMatingPayload = {
+  matingDate?: string
+}
+
+export type BulkBreedingCycleConfirmPayload = {
+  ids: string[]
+  matingDate: string
 }
 
 export const {
   fetchBreedingCyclesByEwe,
   fetchBreedingCycles,
   confirmBreedingCycleMating,
+  bulkConfirmBreedingCycles,
   createBreedingCycle,
   updateBreedingCycle,
   bulkScheduleBreedingCycles,

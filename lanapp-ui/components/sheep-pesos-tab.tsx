@@ -14,16 +14,20 @@ import {
   updateWeight,
   type ApiWeight,
 } from "@/lib/api/weight"
+import type { ApiSheep } from "@/lib/api/types"
+import { weightEligibility } from "@/lib/sheep-action-eligibility"
 import { formatDisplayDate, dailyGainByWeightId, formatDailyGain, toDateInputValue } from "@/lib/format"
 import { ScaleIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
 type SheepPesosTabProps = {
-  sheepId: string
+  sheep: ApiSheep
 }
 
-export function SheepPesosTab({ sheepId }: SheepPesosTabProps) {
+export function SheepPesosTab({ sheep }: SheepPesosTabProps) {
+  const sheepId = sheep.id
+  const registerBlockReason = weightEligibility(sheep)
   const [records, setRecords] = useState<ApiWeight[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -194,8 +198,9 @@ export function SheepPesosTab({ sheepId }: SheepPesosTabProps) {
           </Field>
           <button
             type="submit"
-            disabled={!peso || !fecha || saving}
-            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+            disabled={!peso || !fecha || saving || !!registerBlockReason}
+            title={registerBlockReason ?? undefined}
+            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving && (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

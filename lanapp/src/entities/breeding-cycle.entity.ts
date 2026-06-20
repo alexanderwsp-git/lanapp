@@ -3,6 +3,7 @@ import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 't
 import { BaseEntity } from './base.entity';
 
 import { Sheep } from './sheep.entity';
+import { Mating } from './mating.entity';
 
 @Entity({ name: 'breeding_cycle', schema: process.env.DATABASE_SCHEMA || 'public' })
 export class BreedingCycle extends BaseEntity {
@@ -55,4 +56,8 @@ export class BreedingCycle extends BaseEntity {
     @ManyToOne(() => Sheep, { nullable: true })
     @JoinColumn({ name: 'ramId' })
     ram?: Sheep;
+
+    @ManyToOne(() => Mating, { nullable: true })
+    @JoinColumn({ name: 'matingId' })
+    mating?: Mating;
 }

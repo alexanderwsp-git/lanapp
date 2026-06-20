@@ -51,8 +51,8 @@ import { formatDisplayDate, toDateInputValue } from "@/lib/format"
 import { breedingResultBadgeColor, labelBreedingResult } from "@/lib/labels/breeding"
 import { labelMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
 import { labelCategory } from "@/lib/labels/sheep"
-import { IconMating } from "@/lib/icons/analysis-medicine"
-import { BeakerIcon, SunIcon, ClockIcon } from "@heroicons/react/24/outline"
+import { IconDiagnosis, IconMating } from "@/lib/icons/analysis-medicine"
+import { SunIcon, ClockIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
@@ -223,6 +223,7 @@ export function SheepMontasTab({
   }
 
   function openNewMating() {
+    if (registerBlockReason) return
     setPlannedTarget(null)
     setRegisterOpen(true)
   }
@@ -323,7 +324,9 @@ export function SheepMontasTab({
         <button
           type="button"
           onClick={openNewMating}
-          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+          disabled={!!registerBlockReason}
+          title={registerBlockReason ?? undefined}
+          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconMating className="h-4 w-4" aria-hidden="true" />
           Registrar monta
@@ -391,23 +394,42 @@ export function SheepMontasTab({
           }}
           columns={[
             {
-              key: "date",
-              header: "Fecha",
+              key: "plannedDate",
+              header: "Planificada",
               className: "whitespace-nowrap",
               cell: (item) => {
-                const date =
-                  item.kind === "planned" ? item.cycle.matingDate : item.row.matingDate
-                const upcoming =
-                  item.kind === "planned" &&
-                  toDateInputValue(item.cycle.matingDate) > today()
+                if (item.kind === "mating") {
+                  return <span className="text-gray-400">—</span>
+                }
+                const upcoming = toDateInputValue(item.cycle.matingDate) > today()
                 return (
                   <>
-                    <div className="font-medium text-gray-900">{formatDisplayDate(date)}</div>
-                    {item.kind === "planned" && (
-                      <div className="mt-1 text-xs text-gray-400">Programada</div>
-                    )}
+                    <div className="font-medium text-gray-900">
+                      {formatDisplayDate(item.cycle.matingDate)}
+                    </div>
                     {upcoming && <div className="mt-1 text-xs text-gray-400">Próxima</div>}
                   </>
+                )
+              },
+            },
+            {
+              key: "confirmedDate",
+              header: "Monta confirmada",
+              className: "whitespace-nowrap",
+              cell: (item) => {
+                if (item.kind === "mating") {
+                  return (
+                    <div className="font-medium text-gray-900">
+                      {formatDisplayDate(item.row.matingDate)}
+                    </div>
+                  )
+                }
+                return item.cycle.confirmedMatingDate ? (
+                  <div className="font-medium text-gray-900">
+                    {formatDisplayDate(item.cycle.confirmedMatingDate)}
+                  </div>
+                ) : (
+                  <span className="text-gray-400">—</span>
                 )
               },
             },
@@ -504,19 +526,39 @@ export function SheepMontasTab({
               },
             },
             {
+              key: "notes",
+              header: "Notas",
+              cell: (item) => {
+                const notes =
+                  item.kind === "planned" ? item.cycle.notes : item.row.notes
+                return notes ? (
+                  <span className="max-w-xs text-sm text-gray-600">{notes}</span>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )
+              },
+            },
+            {
               key: "actions",
               header: "",
               align: "right",
               className: "whitespace-nowrap",
               cell: (item) => {
                 if (item.kind === "planned") {
+                  const confirmBlockReason =
+                    registerBlockReason ??
+                    (!item.cycle.ramId ? "Asigna un reproductor antes de confirmar" : null)
                   return (
                     <button
                       type="button"
-                      onClick={() => confirmCycleMating(item.cycle)}
-                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
-                      title="Registrar monta"
-                      aria-label="Registrar monta"
+                      onClick={() => {
+                        if (confirmBlockReason) return
+                        confirmCycleMating(item.cycle)
+                      }}
+                      disabled={!!confirmBlockReason}
+                      title={confirmBlockReason ?? "Confirmar monta"}
+                      aria-label="Confirmar monta"
+                      className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <IconMating className="h-5 w-5" aria-hidden="true" />
                     </button>
@@ -535,7 +577,7 @@ export function SheepMontasTab({
                         aria-label="Diagnóstico"
                         className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
                       >
-                        <BeakerIcon className="size-5" aria-hidden="true" />
+                        <IconDiagnosis className="size-5" aria-hidden="true" />
                       </button>
                     )}
                     {actions.canDeliver && (
@@ -581,7 +623,6 @@ export function SheepMontasTab({
         isFemale={isFemale}
         partnerLabel={partnerLabel}
         partnerOptions={partnerOptions}
-        blockReason={registerBlockReason}
         plannedCycle={plannedTarget}
         onSaved={async (message) => {
           setSuccess(message)

@@ -7,8 +7,8 @@ Canonical reference for per-ewe breeding on the **Montas** tab. The **Planificad
 ```mermaid
 flowchart TD
     subgraph planner [Planificador — scope only]
-        Schedule["Agregar al ciclo\n(cycleName + ram + date)"]
-        Confirm["Confirmar monta"]
+        Schedule["Agregar al ciclo\n(cycleName + ram + fecha planificada)"]
+        Confirm["Confirmar monta\n(fecha real)"]
     end
     subgraph montas [Montas tab — source of truth]
         Mating["Registrar monta"]
@@ -42,6 +42,27 @@ Configurable under **Configuración → Reproducción** (`GET/PUT /farm-paramete
 | `weaningDays` | **70** | Weaning alerts (aligned with category engine) |
 
 Ultrasound (ECO) is the most reliable pregnancy check at 30–45 days post-monta. Early confirmation supports nutrition and health management for the ~147-day gestation.
+
+## Two dates: planned vs confirmed
+
+| Field | Meaning |
+|-------|---------|
+| `breeding_cycle.matingDate` | **Fecha planificada** — when the cycle was scheduled in Planificador |
+| `mating.matingDate` | **Fecha real** — when the monta actually occurred in the field |
+
+Confirming a monta creates the `mating` row with the **real date** (defaults to today). The planned date on the cycle row is **not** overwritten.
+
+Diagnosis (ECO) uses the **confirmed** mating date for gestation windows — not the planned date.
+
+## Button validation (`blockReason`)
+
+Primary actions are **disabled** with a tooltip when the sheep is ineligible (same pattern as Análisis):
+
+| Action | Rules |
+|--------|-------|
+| Registrar monta | Ewe/ram breeding eligibility (`lib/breeding-eligibility.ts`) |
+| Confirmar monta (planned row) | Same as registrar monta + reproductor assigned |
+| Destetar | Active lamb (CORDERO/CORDERA), age ≥ `weaningDays`, no prior record |
 
 ## Step-by-step rules
 
@@ -113,8 +134,11 @@ When a linked lamb is **destetado**, the ewe returns to **OVEJA VACÍA** and can
 | Planificador | Montas tab |
 |--------------|------------|
 | Bulk schedule ewes into `cycleName` (e.g. `2026-A`) | Per-ewe history and actions |
-| Optional ram, date, Vitasel flag | Register monta, ECO, parto |
-| **Confirmar monta** → creates linked `mating` row | All diagnosis and parto |
+| **Required** ram + **fecha planificada**, Vitasel flag | Register monta, ECO, parto |
+| **Confirmar montas** (bulk or per row) → creates linked `mating` with real date | All diagnosis and parto |
+| **Registrar diagnóstico** — optional “Confirmar monta al guardar” + fecha real if not yet confirmed | ECO on confirmed mating |
+
+Diagnosis does **not** auto-confirm the monta silently. If the cycle has no `matingId`, the operator must confirm explicitly (toggle in the diagnosis drawer) or confirm first via **Confirmar montas**.
 
 After confirming a planned cycle, continue on the ewe’s **Montas** tab for ECO and parto.
 

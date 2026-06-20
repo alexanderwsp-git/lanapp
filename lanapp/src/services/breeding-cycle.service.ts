@@ -1,4 +1,4 @@
-import { BreedingCycleStatus, BreedingResult, BulkBreedingCycleSchedule } from '@sheep/domain';
+import { BreedingCycleStatus, BreedingResult, BulkBreedingCycleSchedule, BulkBreedingCycleConfirm } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { BreedingCycleRepository } from '../repositories/breeding-cycle.repository';
 import { BreedingCycle } from '../entities/breeding-cycle.entity';
@@ -59,6 +59,8 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
             vitaselApplied?: boolean;
             notes?: string;
             nextCheckDate?: Date;
+            confirmMating?: boolean;
+            confirmMatingDate?: Date;
         },
         username: string
     ): Promise<BreedingCycle | null> {
@@ -68,10 +70,16 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
         }
 
         if (!cycle.matingId) {
-            if (!cycle.ramId) {
-                throw new Error('Asigna un reproductor y confirma la monta antes del diagnóstico');
+            if (!data.confirmMating) {
+                throw new Error(
+                    'Confirma la monta antes del diagnóstico o activa "Confirmar monta al guardar"'
+                );
             }
-            cycle = (await this.confirmMating(id, username))!;
+            if (!cycle.ramId) {
+                throw new Error('Asigna un reproductor antes de confirmar la monta');
+            }
+            const matingDate = data.confirmMatingDate ?? new Date();
+            cycle = (await this.confirmMating(id, username, { matingDate }))!;
         }
 
         await this.pregnancyCheckService.recordDiagnosisForMating(
@@ -94,7 +102,11 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
      * Records the operational mating (Montas tab) for a planned cycle row.
      * Idempotent when matingId is already set.
      */
-    async confirmMating(id: string, username: string): Promise<BreedingCycle | null> {
+    async confirmMating(
+        id: string,
+        username: string,
+        options: { matingDate?: Date } = {}
+    ): Promise<BreedingCycle | null> {
         const cycle = await this.findOne(id);
         if (!cycle || cycle.status === BreedingCycleStatus.CANCELLED) {
             return null;
@@ -106,11 +118,13 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
             throw new Error('Asigna un reproductor antes de confirmar la monta');
         }
 
+        const actualMatingDate = options.matingDate ?? new Date();
+
         const mating = await this.matingService.recordMating(
             {
                 maleId: cycle.ramId,
                 femaleId: cycle.eweId,
-                matingDate: cycle.matingDate,
+                matingDate: actualMatingDate,
                 notes: cycle.notes
                     ? `Ciclo ${cycle.cycleName}: ${cycle.notes}`
                     : `Ciclo ${cycle.cycleName}`,
@@ -118,7 +132,33 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
             username
         );
 
-        return this.update(id, { matingId: mating.id }, username);
+        await this.update(id, { matingId: mating.id }, username);
+        return this.findOne(id);
+    }
+
+    async bulkConfirmMating(data: BulkBreedingCycleConfirm, username: string): Promise<BulkResult> {
+        const result = emptyBulkResult();
+        const uniqueIds = [...new Set(data.ids)];
+        result.total = uniqueIds.length;
+
+        for (const id of uniqueIds) {
+            try {
+                const cycle = await this.confirmMating(id, username, { matingDate: data.matingDate });
+                if (!cycle) {
+                    result.failed.push({ sheepId: id, error: 'Ciclo no encontrado' });
+                    continue;
+                }
+                result.succeeded.push({ sheepId: cycle.eweId, recordId: cycle.id });
+            } catch (err) {
+                const cycle = await this.findOne(id);
+                result.failed.push({
+                    sheepId: cycle?.eweId ?? id,
+                    error: err instanceof Error ? err.message : 'No se pudo confirmar la monta',
+                });
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -132,7 +172,8 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
         if (cycle.diagnosisDate || cycle.actualBirthDate) {
             throw new Error('No se puede cancelar un ciclo con diagnóstico o parto registrado');
         }
-        return this.update(id, { status: BreedingCycleStatus.CANCELLED }, username);
+        await this.update(id, { status: BreedingCycleStatus.CANCELLED }, username);
+        return this.findOne(id);
     }
 
     async bulkSchedule(data: BulkBreedingCycleSchedule, username: string): Promise<BulkResult> {
@@ -144,21 +185,19 @@ export class BreedingCycleService extends BaseService<BreedingCycle> {
         const eweById = new Map(ewes.map(e => [e.id, e]));
         const repo = this.repository as BreedingCycleRepository;
 
-        if (data.ramId) {
-            const ram = await this.sheepService.findOne(data.ramId);
-            if (!ram) {
-                for (const eweId of uniqueEweIds) {
-                    result.failed.push({ sheepId: eweId, error: 'Carnero no encontrado' });
-                }
-                return result;
+        const ram = await this.sheepService.findOne(data.ramId);
+        if (!ram) {
+            for (const eweId of uniqueEweIds) {
+                result.failed.push({ sheepId: eweId, error: 'Carnero no encontrado' });
             }
-            const ramError = ramBreedingEligibility(ram);
-            if (ramError) {
-                for (const eweId of uniqueEweIds) {
-                    result.failed.push({ sheepId: eweId, error: ramError });
-                }
-                return result;
+            return result;
+        }
+        const ramError = ramBreedingEligibility(ram);
+        if (ramError) {
+            for (const eweId of uniqueEweIds) {
+                result.failed.push({ sheepId: eweId, error: ramError });
             }
+            return result;
         }
 
         for (const eweId of uniqueEweIds) {

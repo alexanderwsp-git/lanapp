@@ -12,28 +12,24 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { useSheepFilter } from "@/components/ui/sheep-filter"
+import { BreedingDiagnosisDrawer } from "@/components/breeding-diagnosis-drawer"
+import { MatingBatchConfirmDrawer } from "@/components/mating-batch-confirm-drawer"
 import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
-import { DiagnosisHistoryTable } from "@/components/diagnosis-history-table"
 import {
   bulkScheduleBreedingCycles,
   cancelBreedingCycle,
-  confirmBreedingCycleMating,
   fetchBreedingCycles,
-  recordBreedingDiagnosis,
   type ApiBreedingCycle,
 } from "@/lib/api/breeding-cycle"
 import type { ApiLocation, ApiSheep, BulkResult } from "@/lib/api/types"
-import { BreedingCycleStatus, DiagnosisType, Gender, SheepCategory, SheepStatus } from "@sheep/domain"
+import { BreedingCycleStatus, Gender, SheepCategory, SheepStatus } from "@sheep/domain"
 import { labelCategory } from "@/lib/labels/sheep"
 import {
   breedingResultBadgeColor,
-  breedingResultToUiOptions,
   labelBreedingResult,
-  uiResultToBreedingResult,
 } from "@/lib/labels/breeding"
 import { isEweBreedingEligible, isRamBreedingEligible } from "@/lib/breeding-eligibility"
-import { fetchPregnancyChecksByMating, type ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
 import { formatDisplayDate } from "@/lib/format"
 import {
   CalendarDaysIcon,
@@ -66,13 +62,8 @@ export default function PlannerPage() {
   const [potreroFilter, setPotreroFilter] = useState("")
 
   const [diagFor, setDiagFor] = useState<ApiBreedingCycle | null>(null)
-  const [dDate, setDDate] = useState(today())
-  const [dResult, setDResult] = useState<"Preñada" | "Vacía" | "Revisar">("Preñada")
-  const [dNotes, setDNotes] = useState("")
-  const [dNextCheck, setDNextCheck] = useState("")
-  const [diagHistory, setDiagHistory] = useState<ApiPregnancyCheck[]>([])
-  const [diagSaving, setDiagSaving] = useState(false)
-  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmPreselect, setConfirmPreselect] = useState<string[]>([])
   const [toCancel, setToCancel] = useState<ApiBreedingCycle | null>(null)
   const [cancelling, setCancelling] = useState(false)
 
@@ -184,54 +175,17 @@ export default function PlannerPage() {
 
   function openDiag(row: ApiBreedingCycle) {
     setDiagFor(row)
-    setDDate(today())
-    setDResult("Preñada")
-    setDNotes("")
-    setDNextCheck("")
-    setDiagHistory([])
-    if (row.matingId) {
-      fetchPregnancyChecksByMating(row.matingId)
-        .then(setDiagHistory)
-        .catch(() => setDiagHistory([]))
-    }
   }
 
-  async function saveDiag(e: React.FormEvent) {
-    e.preventDefault()
-    if (!diagFor || !dDate) return
-    setDiagSaving(true)
-    try {
-      await recordBreedingDiagnosis(diagFor.id, {
-        diagnosisType: DiagnosisType.ECO,
-        diagnosisDate: dDate,
-        result: uiResultToBreedingResult(dResult),
-        notes: dNotes.trim() || undefined,
-        nextCheckDate: dResult === "Revisar" && dNextCheck ? dNextCheck : undefined,
-      })
-      setDiagFor(null)
-      await load()
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : "No se pudo guardar el diagnóstico")
-    } finally {
-      setDiagSaving(false)
-    }
+  function openConfirmMating(row?: ApiBreedingCycle) {
+    setConfirmPreselect(row ? [row.id] : [])
+    setConfirmOpen(true)
   }
 
-  async function confirmMating(row: ApiBreedingCycle) {
-    if (row.matingId) return
-    if (!row.ramId) {
-      window.alert("Asigna un reproductor al ciclo antes de confirmar la monta.")
-      return
-    }
-    setConfirmingId(row.id)
-    try {
-      await confirmBreedingCycleMating(row.id)
-      await load()
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : "No se pudo confirmar la monta")
-    } finally {
-      setConfirmingId(null)
-    }
+  function confirmMatingBlockReason(row: ApiBreedingCycle): string | null {
+    if (row.matingId) return "Monta ya confirmada"
+    if (!row.ramId) return "Asigna un reproductor antes de confirmar"
+    return null
   }
 
   function cancelRow(row: ApiBreedingCycle) {
@@ -296,8 +250,12 @@ export default function PlannerPage() {
       setBError("Indica el nombre del ciclo (ej. 2026-A)")
       return
     }
+    if (!bRam) {
+      setBError("Selecciona un reproductor")
+      return
+    }
     if (!bDate) {
-      setBError("Indica la fecha de monta")
+      setBError("Indica la fecha planificada")
       return
     }
     const eweIds = Array.from(bSelected)
@@ -310,7 +268,7 @@ export default function PlannerPage() {
     try {
       const res = await bulkScheduleBreedingCycles({
         cycleName: bCycle.trim(),
-        ramId: bRam || undefined,
+        ramId: bRam,
         matingDate: bDate,
         vitaselApplied: bVitasel,
         notes: bNotes.trim() || undefined,
@@ -345,6 +303,15 @@ export default function PlannerPage() {
               Ver alertas de destete
               <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
             </Link>
+            <button
+              type="button"
+              onClick={() => openConfirmMating()}
+              disabled={rows.filter((r) => !r.matingId && r.ramId).length === 0}
+              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              <HeartIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              Confirmar montas
+            </button>
             <button
               type="button"
               onClick={() => openAddDrawer()}
@@ -448,7 +415,23 @@ export default function PlannerPage() {
               { key: "ewe", header: "Oveja", className: "whitespace-nowrap font-medium text-gray-900", cell: (r) => displayEwe(r) },
               { key: "ram", header: "Reproductor", className: "whitespace-nowrap", cell: (r) => displayRam(r) },
               { key: "cycle", header: "Ciclo", className: "whitespace-nowrap", cell: (r) => r.cycleName },
-              { key: "matingDate", header: "Fecha monta", className: "whitespace-nowrap", cell: (r) => formatDisplayDate(r.matingDate) },
+              {
+                key: "plannedDate",
+                header: "Planificada",
+                className: "whitespace-nowrap",
+                cell: (r) => formatDisplayDate(r.matingDate),
+              },
+              {
+                key: "confirmedDate",
+                header: "Monta confirmada",
+                className: "whitespace-nowrap",
+                cell: (r) =>
+                  r.confirmedMatingDate ? (
+                    formatDisplayDate(r.confirmedMatingDate)
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  ),
+              },
               {
                 key: "mating",
                 header: "Monta",
@@ -490,11 +473,11 @@ export default function PlannerPage() {
                     {!r.matingId && (
                       <button
                         type="button"
-                        onClick={() => confirmMating(r)}
-                        disabled={confirmingId === r.id}
-                        title="Confirmar monta"
+                        onClick={() => openConfirmMating(r)}
+                        disabled={!!confirmMatingBlockReason(r)}
+                        title={confirmMatingBlockReason(r) ?? "Confirmar monta"}
                         aria-label="Confirmar monta"
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:opacity-50"
+                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <HeartIcon className="size-5" aria-hidden="true" />
                       </button>
@@ -543,7 +526,7 @@ export default function PlannerPage() {
             <button
               type="submit"
               form="add-cycle-form"
-              disabled={bSaving || bSelected.size === 0}
+              disabled={bSaving || bSelected.size === 0 || !bRam}
               className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
             >
               {bSaving && (
@@ -594,7 +577,7 @@ export default function PlannerPage() {
               {ewesAlreadyInCycle.size} oveja(s) ya en ciclo <strong>{bCycle.trim()}</strong>.
             </p>
           )}
-          <Field label="Reproductor (opcional)" htmlFor="b-ram">
+          <Field label="Reproductor" required htmlFor="b-ram">
             <Combobox
               id="b-ram"
               options={ramOptions}
@@ -604,7 +587,7 @@ export default function PlannerPage() {
               emptyMessage="Sin reproductores aptos"
             />
           </Field>
-          <Field label="Fecha de monta" required htmlFor="b-date">
+          <Field label="Fecha planificada" required htmlFor="b-date">
             <TextInput id="b-date" type="date" value={bDate} onChange={(e) => setBDate(e.target.value)} />
           </Field>
           <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -617,7 +600,7 @@ export default function PlannerPage() {
             Aplicó Vitasel
           </label>
           <Field label="Notas" htmlFor="b-notes">
-            <TextInput id="b-notes" value={bNotes} onChange={(e) => setBNotes(e.target.value)} />
+            <Textarea id="b-notes" rows={2} value={bNotes} onChange={(e) => setBNotes(e.target.value)} />
           </Field>
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
             <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
@@ -683,72 +666,23 @@ export default function PlannerPage() {
         </form>
       </Drawer>
 
-      <Drawer
+      <BreedingDiagnosisDrawer
         open={diagFor !== null}
         onClose={() => setDiagFor(null)}
-        title="Registrar diagnóstico"
-        description={diagFor ? `${displayEwe(diagFor)} · ciclo ${diagFor.cycleName}` : undefined}
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setDiagFor(null)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cerrar
-            </button>
-            <button
-              type="submit"
-              form="diag-form"
-              disabled={diagSaving}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {diagSaving ? "Guardando…" : "Guardar diagnóstico"}
-            </button>
-          </>
-        }
-      >
-        <form id="diag-form" onSubmit={saveDiag} className="flex flex-col gap-4">
-          {diagHistory.length > 0 && (
-            <div>
-              <p className="mb-2 text-sm font-medium text-gray-700">Historial de chequeos</p>
-              <DiagnosisHistoryTable checks={diagHistory} />
-            </div>
-          )}
-          {!diagFor?.matingId && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Se confirmará la monta automáticamente al guardar (requiere reproductor asignado).
-            </p>
-          )}
-          <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
-            Diagnóstico de preñez por ecógrafo (ECO).
-          </p>
-          <Field label="Fecha" required htmlFor="d-date">
-            <TextInput id="d-date" type="date" value={dDate} onChange={(e) => setDDate(e.target.value)} />
-          </Field>
-          <Field label="Resultado" required htmlFor="d-result">
-            <Select
-              id="d-result"
-              value={dResult}
-              onChange={(e) => setDResult(e.target.value as typeof dResult)}
-            >
-              {breedingResultToUiOptions().map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {dResult === "Revisar" && (
-            <Field label="Próximo chequeo" htmlFor="d-next">
-              <TextInput id="d-next" type="date" value={dNextCheck} onChange={(e) => setDNextCheck(e.target.value)} />
-            </Field>
-          )}
-          <Field label="Notas" htmlFor="d-notes">
-            <Textarea id="d-notes" rows={2} value={dNotes} onChange={(e) => setDNotes(e.target.value)} />
-          </Field>
-        </form>
-      </Drawer>
+        cycle={diagFor}
+        eweLabel={diagFor ? displayEwe(diagFor) : ""}
+        onSaved={load}
+      />
+
+      <MatingBatchConfirmDrawer
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        cycles={rows}
+        eweById={eweById}
+        initialCycleFilter={cycleFilter}
+        initialSelectedIds={confirmPreselect}
+        onSaved={load}
+      />
 
       <ConfirmDialog
         open={toCancel !== null}

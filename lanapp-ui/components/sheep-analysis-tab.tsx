@@ -8,6 +8,7 @@ import { isAnalysisDue, todayInput } from "@/lib/analysis/due"
 import { fetchAnalysesBySheep, fetchAnalysisTypes } from "@/lib/api/analysis"
 import { fetchMedicines } from "@/lib/api/medicine"
 import type { ApiMedicine, ApiSheep } from "@/lib/api/types"
+import { analysisEligibility } from "@/lib/sheep-action-eligibility"
 import { AnalysisStatus, AnalysisType, type ApiAnalysis, type ApiAnalysisType } from "@/lib/analysis/types"
 import {
   IconAdd,
@@ -91,8 +92,10 @@ export function SheepAnalysisTab({
   }, [load])
 
   const pending = records.filter((r) => r.status === AnalysisStatus.SCHEDULED).length
+  const registerBlockReason = analysisEligibility(sheep)
 
   function openNewAnalysis() {
+    if (registerBlockReason) return
     setDiagnoseTarget(null)
     setDrawerOpen(true)
   }
@@ -118,7 +121,9 @@ export function SheepAnalysisTab({
         <button
           type="button"
           onClick={openNewAnalysis}
-          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+          disabled={!!registerBlockReason}
+          title={registerBlockReason ?? undefined}
+          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconAnalysis className="h-4 w-4" aria-hidden="true" />
           Registrar análisis

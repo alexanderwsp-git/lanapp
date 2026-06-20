@@ -7,11 +7,18 @@ export class BreedingCycleRepository extends BaseRepository<BreedingCycle> {
         super(BreedingCycle);
     }
 
+    override async findOne(id: string): Promise<BreedingCycle | null> {
+        return this.repository.findOne({
+            where: { id } as any,
+            relations: ['ewe', 'ram', 'mating'],
+        });
+    }
+
     async findByEwe(eweId: string): Promise<BreedingCycle[]> {
         return this.repository.find({
             where: { eweId, status: BreedingCycleStatus.ACTIVE },
             order: { matingDate: 'DESC' },
-            relations: ['ewe', 'ram'],
+            relations: ['ewe', 'ram', 'mating'],
         });
     }
 
@@ -19,7 +26,7 @@ export class BreedingCycleRepository extends BaseRepository<BreedingCycle> {
         return this.repository.find({
             where: { cycleName, status: BreedingCycleStatus.ACTIVE },
             order: { matingDate: 'ASC' },
-            relations: ['ewe', 'ram'],
+            relations: ['ewe', 'ram', 'mating'],
         });
     }
 
@@ -33,7 +40,7 @@ export class BreedingCycleRepository extends BaseRepository<BreedingCycle> {
     async findActiveByMatingId(matingId: string): Promise<BreedingCycle | null> {
         return this.repository.findOne({
             where: { matingId, status: BreedingCycleStatus.ACTIVE },
-            relations: ['ewe', 'ram'],
+            relations: ['ewe', 'ram', 'mating'],
         });
     }
 
@@ -43,7 +50,7 @@ export class BreedingCycleRepository extends BaseRepository<BreedingCycle> {
             skip: (page - 1) * limit,
             take: limit,
             order: { createdAt: 'DESC' },
-            relations: ['ewe', 'ram'],
+            relations: ['ewe', 'ram', 'mating'],
         });
         return { data, total };
     }

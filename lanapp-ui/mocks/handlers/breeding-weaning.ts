@@ -10,6 +10,8 @@ import type {
   BreedingCycleUpdatePayload,
   BreedingDiagnosisPayload,
   BulkBreedingCycleSchedulePayload,
+  BulkBreedingCycleConfirmPayload,
+  ConfirmBreedingMatingPayload,
 } from "@/lib/api/breeding-cycle"
 import type { BulkResult } from "@/lib/api/types"
 import type {
@@ -49,7 +51,10 @@ export async function fetchBreedingCycles(params?: {
   return cycles.map(enrichBreedingCycle)
 }
 
-export async function confirmBreedingCycleMating(id: string): Promise<ApiBreedingCycle> {
+export async function confirmBreedingCycleMating(
+  id: string,
+  payload: ConfirmBreedingMatingPayload = {},
+): Promise<ApiBreedingCycle> {
   const store = getMockStore()
   const idx = store.breedingCycles.findIndex((c) => c.id === id)
   if (idx === -1) throw notFound("Ciclo", id)
@@ -59,10 +64,12 @@ export async function confirmBreedingCycleMating(id: string): Promise<ApiBreedin
     throw new Error("Asigna un reproductor antes de confirmar la monta")
   }
 
+  const actualDate = payload.matingDate ?? new Date().toISOString().slice(0, 10)
+
   const mating = await createMating({
     maleId: cycle.ramId,
     femaleId: cycle.eweId,
-    matingDate: cycle.matingDate,
+    matingDate: actualDate,
     expectedBirthDate: cycle.expectedBirthDate ?? undefined,
     notes: cycle.notes
       ? `Ciclo ${cycle.cycleName}: ${cycle.notes}`
@@ -70,6 +77,26 @@ export async function confirmBreedingCycleMating(id: string): Promise<ApiBreedin
   })
   store.breedingCycles[idx] = { ...cycle, matingId: mating.id }
   return enrichBreedingCycle(store.breedingCycles[idx])
+}
+
+export async function bulkConfirmBreedingCycles(
+  payload: BulkBreedingCycleConfirmPayload,
+): Promise<BulkResult> {
+  const result: BulkResult = { succeeded: [], failed: [], total: payload.ids.length }
+  for (const id of payload.ids) {
+    try {
+      const cycle = await confirmBreedingCycleMating(id, { matingDate: payload.matingDate })
+      result.succeeded.push({ sheepId: cycle.eweId, recordId: cycle.id })
+    } catch (err) {
+      const store = getMockStore()
+      const cycle = store.breedingCycles.find((c) => c.id === id)
+      result.failed.push({
+        sheepId: cycle?.eweId ?? id,
+        error: err instanceof Error ? err.message : "No se pudo confirmar la monta",
+      })
+    }
+  }
+  return result
 }
 
 export async function updateBreedingCycle(
@@ -145,8 +172,21 @@ export async function recordBreedingDiagnosis(
   payload: BreedingDiagnosisPayload,
 ): Promise<ApiBreedingCycle> {
   const store = getMockStore()
-  const idx = store.breedingCycles.findIndex((c) => c.id === id)
+  let idx = store.breedingCycles.findIndex((c) => c.id === id)
   if (idx === -1) throw notFound("Ciclo", id)
+
+  if (!store.breedingCycles[idx].matingId) {
+    if (!payload.confirmMating) {
+      throw new Error(
+        'Confirma la monta antes del diagnóstico o activa "Confirmar monta al guardar"',
+      )
+    }
+    await confirmBreedingCycleMating(id, {
+      matingDate: payload.confirmMatingDate,
+    })
+    idx = store.breedingCycles.findIndex((c) => c.id === id)
+  }
+
   store.breedingCycles[idx] = {
     ...store.breedingCycles[idx],
     diagnosisType: payload.diagnosisType,

@@ -56,7 +56,7 @@ export type BulkMedicineSchedule = z.infer<typeof BulkMedicineScheduleSchema>;
 
 export const BulkBreedingCycleScheduleSchema = z.object({
     cycleName: z.string().min(1),
-    ramId: z.string().uuid().optional(),
+    ramId: z.string().uuid(),
     matingDate: z.coerce.date(),
     vitaselApplied: z.boolean().default(false),
     notes: z.string().optional(),
@@ -64,6 +64,19 @@ export const BulkBreedingCycleScheduleSchema = z.object({
 });
 
 export type BulkBreedingCycleSchedule = z.infer<typeof BulkBreedingCycleScheduleSchema>;
+
+export const ConfirmBreedingMatingSchema = z.object({
+    matingDate: z.coerce.date().optional(),
+});
+
+export type ConfirmBreedingMating = z.infer<typeof ConfirmBreedingMatingSchema>;
+
+export const BulkBreedingCycleConfirmSchema = z.object({
+    ids: z.array(z.string().uuid()).min(1).max(500),
+    matingDate: z.coerce.date(),
+});
+
+export type BulkBreedingCycleConfirm = z.infer<typeof BulkBreedingCycleConfirmSchema>;
 
 export const BulkMatingScheduleSchema = z.object({
     maleId: z.string().uuid(),
