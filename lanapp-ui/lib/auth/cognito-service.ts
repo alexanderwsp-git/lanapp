@@ -5,6 +5,7 @@ import {
   AdminListGroupsForUserCommand,
   ConfirmForgotPasswordCommand,
   ForgotPasswordCommand,
+  GetUserCommand,
   GlobalSignOutCommand,
   InitiateAuthCommand,
   ListUsersCommand,
@@ -13,6 +14,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 
+import { displayName, userInitials } from './display-user';
 import { lanappGroupForRole, rolesFromGroups, type LanappRole } from './constants';
 import {
   getAdminCognitoClient,
@@ -163,6 +165,19 @@ export async function verifyAccessToken(accessToken: string) {
   return verifier.verify(accessToken);
 }
 
+export async function getUserAttributesFromAccessToken(accessToken: string) {
+  const client = getPublicCognitoClient();
+  const response = await client.send(new GetUserCommand({ AccessToken: accessToken }));
+  const attrs = Object.fromEntries(
+    (response.UserAttributes ?? []).map((a) => [a.Name, a.Value])
+  );
+  return {
+    username: response.Username ?? '',
+    email: attrs.email ?? response.Username ?? '',
+    preferredUsername: attrs.preferred_username ?? null,
+  };
+}
+
 export async function inviteUser(input: {
   email: string;
   role: LanappRole;
@@ -206,19 +221,18 @@ function mapCognitoUser(user: UserType, groups: string[]) {
   );
   const email = attrs.email ?? user.Username ?? '';
   const roles = rolesFromGroups(groups);
+  const preferredUsername = attrs.preferred_username ?? null;
+  const displayInput = { email, username: user.Username ?? email, preferredUsername };
 
   return {
     id: user.Username ?? '',
     email,
-    username: attrs.preferred_username ?? user.Username ?? email,
+    username: preferredUsername ?? user.Username ?? email,
+    preferredUsername,
     roles,
     status: user.Enabled === false ? 'Inactivo' : 'Activo',
-    initials: (attrs.preferred_username ?? email)
-      .split(/[.\s@]/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p: string) => p[0]?.toUpperCase() ?? '')
-      .join(''),
+    initials: userInitials(displayInput),
+    displayName: displayName(displayInput),
   };
 }
 

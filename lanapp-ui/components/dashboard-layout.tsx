@@ -13,8 +13,10 @@ import {
 } from "@heroicons/react/24/outline"
 import { SidebarContent } from "@/components/sidebar-content"
 import { logout } from "@/lib/auth/client"
+import { useAuth } from "@/lib/auth/use-auth"
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -89,9 +91,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 onClick={() => setUserMenuOpen((v) => !v)}
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
-                  AS
+                  {user?.initials || "?"}
                 </span>
-                <span className="hidden text-sm font-medium text-gray-700 sm:block">Alfonso S.</span>
+                <span className="hidden text-sm font-medium text-gray-700 sm:block">
+                  {user?.shortName || user?.displayName || "Usuario"}
+                </span>
                 <ChevronDownIcon className="hidden h-4 w-4 text-gray-400 sm:block" aria-hidden="true" />
               </button>
 
@@ -100,7 +104,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} aria-hidden="true" />
                   <div className="absolute right-0 z-20 mt-2 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
                     <Link
-                      href="/users"
+                      href="/profile"
                       className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setUserMenuOpen(false)}
                     >

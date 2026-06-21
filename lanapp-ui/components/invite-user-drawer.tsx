@@ -20,6 +20,7 @@ type InviteUserDrawerProps = {
 
 export function InviteUserDrawer({ open, onClose, onInvited }: InviteUserDrawerProps) {
   const [email, setEmail] = useState("")
+  const [displayNameInput, setDisplayNameInput] = useState("")
   const [role, setRole] = useState<LanappRole>("operario")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -27,6 +28,7 @@ export function InviteUserDrawer({ open, onClose, onInvited }: InviteUserDrawerP
   useEffect(() => {
     if (!open) return
     setEmail("")
+    setDisplayNameInput("")
     setRole("operario")
     setError(null)
   }, [open])
@@ -43,7 +45,13 @@ export function InviteUserDrawer({ open, onClose, onInvited }: InviteUserDrawerP
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), role }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          role,
+          ...(displayNameInput.trim()
+            ? { preferredUsername: displayNameInput.trim() }
+            : {}),
+        }),
       })
       const body = await res.json()
       if (!res.ok || !body.success) {
@@ -93,6 +101,15 @@ export function InviteUserDrawer({ open, onClose, onInvited }: InviteUserDrawerP
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="usuario@ejemplo.com"
+          />
+        </Field>
+        <Field label="Nombre para mostrar" htmlFor="invite-display-name">
+          <TextInput
+            id="invite-display-name"
+            type="text"
+            value={displayNameInput}
+            onChange={(e) => setDisplayNameInput(e.target.value)}
+            placeholder="Ej. María Rodríguez"
           />
         </Field>
         <Field label="Rol" required htmlFor="invite-role">

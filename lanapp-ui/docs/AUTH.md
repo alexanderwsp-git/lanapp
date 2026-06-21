@@ -6,7 +6,7 @@ Lanapp usa **AWS Cognito** con registro solo por invitación (`allow_admin_creat
 
 1. **Bootstrap (una vez):** crear el primer admin en Cognito (consola AWS o CLI) y asignarlo al grupo `lanapp_admin`.
 2. **Login:** `/login` con email + contraseña (`InitiateAuth` — solo vars `COGNITO_*`, sin AWS access keys).
-3. **Invitar usuarios:** admin en `/users` → Cognito envía email con contraseña temporal (requiere IAM vía **ECS task role** en prod).
+3. **Invitar usuarios:** admin en `/users` → email, rol y opcionalmente **nombre para mostrar** (`preferred_username` en Cognito) → email con contraseña temporal.
 4. **Recuperar contraseña:** `/forgot-password` → código por email → `/reset-password`.
 5. **Registro público:** no disponible. `/register` explica el flujo invite-only.
 

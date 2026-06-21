@@ -139,3 +139,48 @@ Open the UI in a browser and confirm API calls work (Network tab → `/api/v1/la
 
 - Rebuild the image if the API URL changes (`LANAPP_SERVICE_URL` build-arg).
 - CloudWatch log group `/ecs/mexp-lanapp-front` is provisioned by Terraform (`aws_cloudwatch_log_group.lanapp_front_logs`).
+
+## Reset de datos (prod, post prueba F&F)
+
+Puedes vaciar Postgres y empezar de cero **sin destruir RDS**. Los usuarios Cognito y archivos S3 son independientes.
+
+### Antes de la prueba
+
+1. Crear **snapshot RDS** en AWS Console (RDS → instancia `mexp-postgres-lanapp` → Take snapshot).
+
+### Vaciar datos de la app
+
+1. Conectar a `lanappdb` (Session Manager, bastion, o cliente con acceso al SG de RDS).
+2. Ejecutar:
+
+```bash
+psql "postgres://user_lanapp:PASSWORD@HOST:5432/lanappdb" \
+  -f webapp/lanapp/scripts/reset-lanapp-schema.sql
+```
+
+O manualmente:
+
+```sql
+DROP SCHEMA lanapp CASCADE;
+CREATE SCHEMA lanapp;
+GRANT ALL ON SCHEMA lanapp TO user_lanapp;
+```
+
+3. Reiniciar el servicio API ECS (`make update-back` o force new deployment) para que TypeORM ejecute migraciones (`migrationsRun: true`) y recree tablas vacías.
+4. **No** ejecutar `npm run seed:demo` en prod salvo que quieras datos de demostración.
+
+### Qué no se resetea con SQL
+
+| Recurso | Acción manual |
+|---------|----------------|
+| Usuarios Cognito | Consola AWS o CLI `admin-delete-user` |
+| Imágenes S3 | Vaciar bucket `mexp-imagenes-lanapp-*` si aplica |
+| Parámetros reproducción | Se recrean con defaults al primer `GET /farm-parameters` |
+
+Eliminar usuario de prueba en Cognito:
+
+```bash
+aws cognito-idp admin-delete-user \
+  --user-pool-id "$COGNITO_USER_POOL_ID" \
+  --username "email@example.com"
+```
