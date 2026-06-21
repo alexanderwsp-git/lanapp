@@ -12,6 +12,7 @@ type WeightProgressChartProps = {
   points: WeightChartPoint[]
   height?: number
   className?: string
+  hideHeader?: boolean
 }
 
 function parseDate(value: string) {
@@ -22,7 +23,28 @@ function formatAxisDate(value: string) {
   return parseDate(value).toLocaleDateString("es-EC", { day: "numeric", month: "short" })
 }
 
-export function WeightProgressChart({ points, height = 220, className = "" }: WeightProgressChartProps) {
+export function computeWeightSummary(points: WeightChartPoint[]) {
+  const sorted = [...points].sort(
+    (a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime(),
+  )
+  if (sorted.length < 2) return null
+
+  const first = sorted[0]
+  const last = sorted[sorted.length - 1]
+  const totalDelta = last.weight - first.weight
+  const daysSpan = Math.round(
+    (parseDate(last.date).getTime() - parseDate(first.date).getTime()) / (1000 * 60 * 60 * 24),
+  )
+
+  return { totalDelta, daysSpan, first, last }
+}
+
+export function WeightProgressChart({
+  points,
+  height = 220,
+  className = "",
+  hideHeader = false,
+}: WeightProgressChartProps) {
   const sorted = useMemo(
     () => [...points].sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime()),
     [points]
@@ -67,39 +89,35 @@ export function WeightProgressChart({ points, height = 220, className = "" }: We
     )
   }
 
-  const first = sorted[0]
-  const last = sorted[sorted.length - 1]
-  const totalDelta = last.weight - first.weight
-  const daysSpan =
-    sorted.length > 1
-      ? Math.round(
-          (parseDate(last.date).getTime() - parseDate(first.date).getTime()) / (1000 * 60 * 60 * 24)
-        )
-      : 0
+  const summary = computeWeightSummary(sorted)
 
   return (
     <div className={`rounded-lg border border-gray-100 bg-white p-4 ${className}`}>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-semibold text-gray-900">Progreso de peso</h4>
-          <p className="text-xs text-gray-500">Evolución entre pesajes periódicos (kg)</p>
+      {!hideHeader && (
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">Progreso de peso</h4>
+            <p className="text-xs text-gray-500">Evolución entre pesajes periódicos (kg)</p>
+          </div>
+          {summary && (
+            <dl className="flex gap-4 text-xs">
+              <div>
+                <dt className="text-gray-400">Variación</dt>
+                <dd
+                  className={`font-semibold ${summary.totalDelta >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
+                  {summary.totalDelta >= 0 ? "+" : ""}
+                  {summary.totalDelta.toFixed(1)} kg
+                </dd>
+              </div>
+              <div>
+                <dt className="text-gray-400">Período</dt>
+                <dd className="font-semibold text-gray-700">{summary.daysSpan} días</dd>
+              </div>
+            </dl>
+          )}
         </div>
-        {sorted.length > 1 && (
-          <dl className="flex gap-4 text-xs">
-            <div>
-              <dt className="text-gray-400">Variación</dt>
-              <dd className={`font-semibold ${totalDelta >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {totalDelta >= 0 ? "+" : ""}
-                {totalDelta.toFixed(1)} kg
-              </dd>
-            </div>
-            <div>
-              <dt className="text-gray-400">Período</dt>
-              <dd className="font-semibold text-gray-700">{daysSpan} días</dd>
-            </div>
-          </dl>
-        )}
-      </div>
+      )}
 
       <svg
         viewBox={`0 0 ${layout.width} ${height}`}

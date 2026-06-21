@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
+import { Combobox } from "@/components/ui/combobox"
 import {
   Gender,
   RecordType,
@@ -13,7 +14,7 @@ import {
   type SheepCreate,
   type SheepUpdate,
 } from "@sheep/domain"
-import { createSheep, updateSheep, updateSheepStatus } from "@/lib/api/sheep"
+import { createSheep, updateSheep, updateSheepStatus, fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import type { ApiLocation, ApiSheep } from "@/lib/api/types"
 import { formatLastWeight, toDateInputValue } from "@/lib/format"
@@ -23,6 +24,7 @@ import {
   labelGender,
   labelRecordType,
   labelStatus,
+  labelCategory,
   recordTypeOptions,
   statusOptions,
 } from "@/lib/labels/sheep"
@@ -37,8 +39,9 @@ type FormState = {
   recordType: RecordType
   status: SheepStatus
   currentLocationId: string
+  motherId: string
+  fatherId: string
   notes: string
-  isBreedingRam: boolean
 }
 
 function emptyForm(): FormState {
@@ -52,8 +55,9 @@ function emptyForm(): FormState {
     recordType: RecordType.BORN,
     status: SheepStatus.ACTIVE,
     currentLocationId: "",
+    motherId: "",
+    fatherId: "",
     notes: "",
-    isBreedingRam: false,
   }
 }
 
@@ -68,8 +72,9 @@ function formFromSheep(sheep: ApiSheep): FormState {
     recordType: sheep.recordType,
     status: sheep.status,
     currentLocationId: sheep.currentLocationId ?? sheep.currentLocation?.id ?? "",
+    motherId: sheep.motherId ?? "",
+    fatherId: sheep.fatherId ?? "",
     notes: sheep.notes ?? "",
-    isBreedingRam: sheep.isBreedingRam ?? false,
   }
 }
 
@@ -93,6 +98,7 @@ export function SheepForm({
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [locations, setLocations] = useState<ApiLocation[]>([])
+  const [allSheep, setAllSheep] = useState<ApiSheep[]>([])
   const [form, setForm] = useState<FormState>(() => (initial ? formFromSheep(initial) : emptyForm()))
   const [initialStatus] = useState<SheepStatus | null>(initial?.status ?? null)
   const inDrawer = variant === "drawer"
@@ -113,11 +119,30 @@ export function SheepForm({
     fetchLocations()
       .then(setLocations)
       .catch(() => setLocations([]))
+    fetchSheep({ page: 1, limit: 300 })
+      .then((res) => setAllSheep(res.items))
+      .catch(() => setAllSheep([]))
   }, [])
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
+
+  const motherOptions = allSheep
+    .filter((s) => s.gender === Gender.FEMALE && s.id !== initial?.id)
+    .map((s) => ({
+      value: s.id,
+      label: s.tag,
+      sublabel: s.name ?? labelCategory(s.category),
+    }))
+
+  const fatherOptions = allSheep
+    .filter((s) => s.gender === Gender.MALE && s.id !== initial?.id)
+    .map((s) => ({
+      value: s.id,
+      label: s.tag,
+      sublabel: s.name ?? labelCategory(s.category),
+    }))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -131,8 +156,9 @@ export function SheepForm({
       birthDate: form.birthDate,
       recordType: form.recordType,
       currentLocationId: form.currentLocationId || undefined,
+      motherId: form.motherId || undefined,
+      fatherId: form.fatherId || undefined,
       notes: form.notes.trim() || undefined,
-      ...(form.gender === Gender.MALE ? { isBreedingRam: form.isBreedingRam } : {}),
     }
 
     if (mode === "new") {
@@ -314,6 +340,24 @@ export function SheepForm({
             ))}
           </Select>
         </Field>
+        <Field label="Madre (opcional)" htmlFor="motherId">
+          <Combobox
+            id="motherId"
+            options={motherOptions}
+            value={form.motherId}
+            onChange={(v) => setField("motherId", v)}
+            placeholder="Seleccionar hembra"
+          />
+        </Field>
+        <Field label="Padre (opcional)" htmlFor="fatherId">
+          <Combobox
+            id="fatherId"
+            options={fatherOptions}
+            value={form.fatherId}
+            onChange={(v) => setField("fatherId", v)}
+            placeholder="Seleccionar macho"
+          />
+        </Field>
         <Field label="Notas" htmlFor="notes" className="sm:col-span-2">
           <Textarea
             id="notes"
@@ -323,24 +367,6 @@ export function SheepForm({
             placeholder="Observaciones..."
           />
         </Field>
-        {mode === "edit" && form.gender === Gender.MALE && (
-          <div className="sm:col-span-2">
-            <label className="flex items-start gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.isBreedingRam}
-                onChange={(e) => setField("isBreedingRam", e.target.checked)}
-                className="mt-0.5 rounded border-gray-300"
-              />
-              <span>
-                <span className="font-medium">Marcar como reproductor</span>
-                <span className="mt-0.5 block text-xs text-gray-500">
-                  Carnero seleccionado para monta. Aplica categoría Reproductor cuando tenga ≥12 meses.
-                </span>
-              </span>
-            </label>
-          </div>
-        )}
       </div>
       {mode === "new" && (
         <p className={inDrawer ? "mt-5 text-xs text-gray-500" : "px-6 text-xs text-gray-500"}>

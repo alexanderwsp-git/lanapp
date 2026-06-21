@@ -1,13 +1,15 @@
 export enum DiagnosisType {
     ECO = 'ECO',
+    /** Manual pregnancy check (no ultrasound). */
+    MANUAL = 'Manual',
     /** Legacy manual pregnancy check — display only; migrated to ECO. */
     CONTROL_MONTA = 'Control Monta',
     /** Legacy — was misused for pregnancy; use Analysis FAMACHA for anemia. Migrated to ECO. */
     FAMACHA = 'FAMACHA',
 }
 
-/** Pregnancy diagnosis methods allowed on Montas / Planificador (ECO only). */
-export const PREGNANCY_DIAGNOSIS_TYPES = [DiagnosisType.ECO] as const;
+/** Pregnancy diagnosis methods allowed on Montas / Planificador. */
+export const PREGNANCY_DIAGNOSIS_TYPES = [DiagnosisType.ECO, DiagnosisType.MANUAL] as const;
 
 export enum BreedingResult {
     PREGNANT = 'Pregnant',

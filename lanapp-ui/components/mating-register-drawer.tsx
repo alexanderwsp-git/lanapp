@@ -25,6 +25,7 @@ type MatingRegisterDrawerProps = {
   partnerLabel: string
   partnerOptions: ComboboxOption[]
   plannedCycle?: ApiBreedingCycle | null
+  hasActivePlannedCycle?: boolean
   onSaved: (message: string) => void | Promise<void>
 }
 
@@ -47,6 +48,7 @@ export function MatingRegisterDrawer({
   partnerLabel,
   partnerOptions,
   plannedCycle = null,
+  hasActivePlannedCycle = false,
   onSaved,
 }: MatingRegisterDrawerProps) {
   const { params: reproParams } = useReproductionParameters()
@@ -96,6 +98,7 @@ export function MatingRegisterDrawer({
         form,
         sheepLabel,
         plannedCycleId: plannedCycle?.id,
+        hasActivePlannedCycle,
         reproParams,
       })
       await onSaved(successMessage)

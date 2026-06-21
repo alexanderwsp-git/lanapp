@@ -73,6 +73,11 @@ export async function updateSheep(id: string, payload: SheepUpdate): Promise<Api
     birthDate: payload.birthDate
       ? new Date(payload.birthDate).toISOString()
       : current.birthDate,
+    ...(payload.isBreedingRam === true
+      ? { breedingRamMarkedAt: new Date().toISOString().split("T")[0] }
+      : payload.isBreedingRam === false
+        ? { breedingRamMarkedAt: null }
+        : {}),
   }
   store.sheep[idx] = updated
   return enrichSheep(updated)

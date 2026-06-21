@@ -48,10 +48,10 @@ router.post(
     verifyToken,
     validateParams(MatingIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
-        const { deliveryDate, notes } = DeliveryRecordSchema.parse(req.body);
+        const parsed = DeliveryRecordSchema.parse(req.body);
         const check = await pregnancyCheckService.recordDelivery(
             req.params.matingId,
-            { deliveryDate, notes },
+            parsed,
             req.user!.username
         );
         created(res, check);

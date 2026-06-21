@@ -124,6 +124,9 @@ function validateCaptureFields(record: ApiAnalysis, form: DiagnosisFormState): v
   if (!isFamacha && !form.resultValue.trim()) {
     throw new Error("Ingresa el valor del análisis")
   }
+  if (form.scheduleTreatment && !form.suggestedMedicineId) {
+    throw new Error("Selecciona un medicamento para el tratamiento")
+  }
 }
 
 function capturePayload(record: ApiAnalysis, form: DiagnosisFormState) {
@@ -148,7 +151,10 @@ async function appendMedicineAndFollowUp(
 ): Promise<string> {
   let successMsg = baseMessage
 
-  if (form.scheduleTreatment && form.suggestedMedicineId) {
+  if (form.scheduleTreatment) {
+    if (!form.suggestedMedicineId) {
+      throw new Error("Selecciona un medicamento para el tratamiento")
+    }
     if (!form.applyTreatmentNow && !form.treatmentDate) {
       throw new Error("Indica la fecha programada del medicamento")
     }

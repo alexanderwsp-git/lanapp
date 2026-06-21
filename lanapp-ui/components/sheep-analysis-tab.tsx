@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
 import { AnalysisDiagnosisDrawer } from "@/components/analysis-diagnosis-drawer"
+import { SheepAnalysisSummary } from "@/components/sheep-analysis-summary"
 import { isAnalysisDue, todayInput } from "@/lib/analysis/due"
 import { fetchAnalysesBySheep, fetchAnalysisTypes } from "@/lib/api/analysis"
 import { fetchMedicines } from "@/lib/api/medicine"
@@ -112,7 +113,11 @@ export function SheepAnalysisTab({
   }
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow">
+    <div className="flex flex-col gap-6">
+      <div className="rounded-lg bg-white p-6 shadow">
+        <SheepAnalysisSummary sheepId={sheepId} embedded />
+      </div>
+      <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
           <IconAnalysis className="h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -245,6 +250,7 @@ export function SheepAnalysisTab({
         meds={meds}
         onSaved={handleSaved}
       />
+      </div>
     </div>
   )
 }

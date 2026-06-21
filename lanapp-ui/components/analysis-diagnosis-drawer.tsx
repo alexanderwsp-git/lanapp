@@ -128,6 +128,14 @@ export function AnalysisDiagnosisDrawer({
     }
   }, [liveRecommendation?.needsTreatment, suggestedMeds, form.suggestedMedicineTouched, form.suggestedMedicineId])
 
+  useEffect(() => {
+    if (!form.scheduleTreatment || form.suggestedMedicineTouched) return
+    const first = suggestedMeds[0]?.id ?? meds[0]?.id ?? ""
+    if (first && form.suggestedMedicineId !== first) {
+      setForm((prev) => ({ ...prev, suggestedMedicineId: first }))
+    }
+  }, [form.scheduleTreatment, suggestedMeds, meds, form.suggestedMedicineTouched, form.suggestedMedicineId])
+
   const typeLabel = activeType?.name ?? "Análisis"
 
   useEffect(() => {

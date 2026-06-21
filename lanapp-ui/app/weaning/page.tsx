@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { DataTable } from "@/components/ui/data-table"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Drawer } from "@/components/ui/drawer"
-import { Field, TextInput } from "@/components/ui/form-fields"
+import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import { WeaningRecentPanel } from "@/components/weaning-recent-panel"
 import { fetchWeaningAlerts, bulkRecordWeaning } from "@/lib/api/weaning"
 import type { ApiSheep, BulkResult } from "@/lib/api/types"
@@ -352,14 +352,6 @@ export default function WeaningPage() {
               placeholder="Ej. Lote-3"
             />
           </Field>
-          <Field label="Notas (opcional)" htmlFor="weaning-notas">
-            <TextInput
-              id="weaning-notas"
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              placeholder="Ej. Destete lote A"
-            />
-          </Field>
           <div>
             <p className="mb-1.5 text-sm font-medium text-gray-700">Peso de destete por cordero (kg)</p>
             <p className="mb-2 text-xs text-gray-500">Decimales permitidos (ej. 12.3)</p>
@@ -384,6 +376,15 @@ export default function WeaningPage() {
               ))}
             </div>
           </div>
+          <Field label="Notas (opcional)" htmlFor="weaning-notas">
+            <Textarea
+              id="weaning-notas"
+              rows={2}
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              placeholder="Ej. Destete lote A — observaciones de campo"
+            />
+          </Field>
         </form>
       </Drawer>
         </>

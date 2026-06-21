@@ -1,8 +1,10 @@
+import { BulkWeightSchedule } from '@sheep/domain';
 import { BaseService } from './base.service';
 import { WeightRepository } from '../repositories/weight.repository';
 import { SheepRepository } from '../repositories/sheep.repository';
 import { Weight } from '../entities/weight.entity';
 import { calculateDailyGain, toDateKey } from '../utils/weight.utils';
+import { BulkResult, emptyBulkResult, resolveSheepIds } from '../utils/bulk-target';
 
 export type SheepWithLatestWeight<T> = T & {
     latestWeight: number | null;
@@ -115,5 +117,64 @@ export class WeightService extends BaseService<Weight> {
                 latestWeightDate: latest?.measurementDate ?? null,
             };
         });
+    }
+
+    async bulkRecordWeights(data: BulkWeightSchedule, username: string): Promise<BulkResult> {
+        const result = emptyBulkResult();
+        const sheepRepository = new SheepRepository();
+
+        const items: { sheepId: string; weight: number; notes?: string }[] = [];
+
+        if (data.records?.length) {
+            for (const record of data.records) {
+                items.push(record);
+            }
+        } else {
+            const sheepIds = await resolveSheepIds(sheepRepository, {
+                sheepIds: data.sheepIds,
+                filters: data.filters,
+            });
+            for (const sheepId of sheepIds) {
+                items.push({
+                    sheepId,
+                    weight: data.defaultWeight!,
+                    notes: data.notes,
+                });
+            }
+        }
+
+        result.total = items.length;
+        if (items.length === 0) return result;
+
+        const sheepIds = items.map(i => i.sheepId);
+        const sheepById = new Map(
+            (await sheepRepository.findByIds(sheepIds)).map(s => [s.id, s])
+        );
+
+        for (const item of items) {
+            if (!sheepById.has(item.sheepId)) {
+                result.failed.push({ sheepId: item.sheepId, error: 'Oveja no encontrada' });
+                continue;
+            }
+            try {
+                const record = await this.upsertWeightOnDate(
+                    {
+                        sheepId: item.sheepId,
+                        weight: item.weight,
+                        measurementDate: data.measurementDate,
+                        notes: item.notes ?? data.notes,
+                    },
+                    username
+                );
+                result.succeeded.push({ sheepId: item.sheepId, recordId: record.id });
+            } catch (err) {
+                result.failed.push({
+                    sheepId: item.sheepId,
+                    error: err instanceof Error ? err.message : 'No se pudo registrar el peso',
+                });
+            }
+        }
+
+        return result;
     }
 }

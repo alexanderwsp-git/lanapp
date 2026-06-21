@@ -101,6 +101,7 @@ export {
     BulkBreedingCycleConfirmSchema,
     BulkMatingScheduleSchema,
     BulkWeaningSchema,
+    BulkWeightScheduleSchema,
     type SheepTargetFilters,
     type SheepTarget,
     type BulkResult,
@@ -111,6 +112,8 @@ export {
     type BulkMatingSchedule,
     type BulkWeaning,
     type BulkWeaningRecordItem,
+    type BulkWeightSchedule,
+    type BulkWeightRecordItem,
 } from './schemas/bulk';
 export * from './schemas/upload';
 export * from './schemas/request';

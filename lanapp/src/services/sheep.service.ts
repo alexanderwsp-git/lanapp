@@ -109,6 +109,7 @@ export class SheepService extends BaseService<Sheep> {
         const sheep = await this.repository.create({
             ...rest,
             ...(currentLocationId ? { currentLocation: { id: currentLocationId } as any } : {}),
+            ...(rest.isBreedingRam ? { breedingRamMarkedAt: new Date() } : {}),
             category,
             status,
             createdBy: username,
@@ -140,6 +141,15 @@ export class SheepService extends BaseService<Sheep> {
                 ? { currentLocation: currentLocationId ? ({ id: currentLocationId } as any) : null }
                 : {}),
         };
+
+        if (rest.isBreedingRam !== undefined) {
+            if (rest.isBreedingRam) {
+                (updateData as Partial<Sheep>).breedingRamMarkedAt =
+                    rest.breedingRamMarkedAt ?? new Date();
+            } else {
+                (updateData as Partial<Sheep>).breedingRamMarkedAt = null;
+            }
+        }
 
         const sheep = await super.update(id, updateData, username);
         if (!sheep) return null;

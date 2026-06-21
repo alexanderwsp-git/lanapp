@@ -79,6 +79,9 @@ export class Sheep extends BaseEntity {
     isBreedingRam!: boolean;
 
     @Column({ type: 'date', nullable: true })
+    breedingRamMarkedAt?: Date | null;
+
+    @Column({ type: 'date', nullable: true })
     pregnancyConfirmedAt?: Date;
 
     @Column({ type: 'date', nullable: true })

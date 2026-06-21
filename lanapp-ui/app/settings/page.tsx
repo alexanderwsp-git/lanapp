@@ -5,9 +5,10 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-  import { EmptyState } from "@/components/ui/empty-state"
-  import { DataTable } from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { DataTable } from "@/components/ui/data-table"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
+import { SwitchField } from "@/components/ui/switch"
 import { BREEDS } from "@/mocks/labels"
 import { ReproductionParametersForm } from "@/components/reproduction-parameters-form"
 import { PlusIcon, PencilSquareIcon, TrashIcon, TagIcon } from "@heroicons/react/24/outline"
@@ -26,6 +27,12 @@ const initialRazas: Raza[] = BREEDS.slice(0, 6).map((b, i) => ({
 
 const emptyRaza: Raza = { id: "", nombre: "", notas: "" }
 
+const PREFERENCE_ITEMS = [
+  { id: "famacha" as const, t: "Alertas FAMACHA", d: "Notificar cuando una oveja tenga puntaje 2 o inferior (anemia)." },
+  { id: "monta" as const, t: "Recordatorios de monta", d: "Avisar fechas de monta y parto estimado." },
+  { id: "stock" as const, t: "Stock de medicamentos", d: "Alertar cuando un medicamento esté bajo stock." },
+]
+
 export default function SettingsPage() {
   const [razas, setRazas] = useState<Raza[]>(initialRazas)
   const [editing, setEditing] = useState<Raza | null>(null)
@@ -34,6 +41,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [toDelete, setToDelete] = useState<Raza | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [preferences, setPreferences] = useState({
+    famacha: true,
+    monta: true,
+    stock: true,
+  })
 
   function openNew() {
     setEditing(null)
@@ -192,18 +204,16 @@ export default function SettingsPage() {
         <section className="rounded-lg bg-white p-6 shadow">
           <h2 className="text-base font-semibold text-gray-900">Preferencias</h2>
           <div className="mt-6 flex flex-col divide-y divide-gray-100">
-            {[
-              { t: "Alertas FAMACHA", d: "Notificar cuando una oveja tenga puntaje 2 o inferior (anemia)." },
-              { t: "Recordatorios de monta", d: "Avisar fechas de monta y parto estimado." },
-              { t: "Stock de medicamentos", d: "Alertar cuando un medicamento esté bajo stock." },
-            ].map((item, i) => (
-              <label key={item.t} className={`flex items-center justify-between gap-4 ${i === 0 ? "pb-4" : "py-4"}`}>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{item.t}</p>
-                  <p className="text-sm text-gray-500">{item.d}</p>
-                </div>
-                <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" />
-              </label>
+            {PREFERENCE_ITEMS.map((item, i) => (
+              <div key={item.id} className={i === 0 ? "pb-4" : "py-4"}>
+                <SwitchField
+                  label={item.t}
+                  description={item.d}
+                  checked={preferences[item.id]}
+                  onChange={(checked) => setPreferences((prev) => ({ ...prev, [item.id]: checked }))}
+                  aria-label={item.t}
+                />
+              </div>
             ))}
           </div>
         </section>

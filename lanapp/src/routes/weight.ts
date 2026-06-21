@@ -1,4 +1,4 @@
-import { WeightCreateSchema, WeightUpdateSchema, IdSchema } from '@sheep/domain';
+import { WeightCreateSchema, WeightUpdateSchema, IdSchema, BulkWeightScheduleSchema } from '@sheep/domain';
 import { created, deleted, failed, found, foundPaginated, updated, asyncHandler, validateSchema, validateParams } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import { WeightService } from '../services';
@@ -59,6 +59,16 @@ router.post(
     asyncHandler(async (req: Request, res: Response) => {
         const weight = await weightService.recordWeight(req.body, req.user!.username);
         created(res, weight);
+    })
+);
+
+router.post(
+    '/bulk',
+    verifyToken,
+    validateSchema(BulkWeightScheduleSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const result = await weightService.bulkRecordWeights(req.body, req.user!.username);
+        created(res, result);
     })
 );
 

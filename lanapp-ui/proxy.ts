@@ -18,6 +18,7 @@ const PUBLIC_API = [
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
   '/api/auth/set-password',
+  '/api/auth/refresh',
 ];
 
 export function proxy(request: NextRequest) {

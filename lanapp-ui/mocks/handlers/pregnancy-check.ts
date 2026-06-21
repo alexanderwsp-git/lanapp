@@ -63,6 +63,9 @@ export async function recordDelivery(
     isPregnant: false,
     kind: PregnancyCheckKind.DELIVERY,
     notes: payload.notes,
+    offspringBorn: payload.offspringBorn ?? null,
+    offspringAlive: payload.offspringAlive ?? null,
+    offspringLost: payload.offspringLost ?? null,
   }
   store.pregnancyChecks.push(check)
 

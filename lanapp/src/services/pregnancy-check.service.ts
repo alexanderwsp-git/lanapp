@@ -175,6 +175,9 @@ export class PregnancyCheckService extends BaseService<PregnancyCheck> {
         data: {
             deliveryDate: Date;
             notes?: string;
+            offspringBorn?: number;
+            offspringAlive?: number;
+            offspringLost?: number;
         },
         username: string
     ): Promise<PregnancyCheck> {
@@ -193,6 +196,9 @@ export class PregnancyCheckService extends BaseService<PregnancyCheck> {
                 isPregnant: false,
                 kind: PregnancyCheckKind.DELIVERY,
                 notes: data.notes?.trim() || 'Parto registrado',
+                offspringBorn: data.offspringBorn,
+                offspringAlive: data.offspringAlive,
+                offspringLost: data.offspringLost,
             },
             username
         );

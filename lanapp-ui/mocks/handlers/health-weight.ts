@@ -1,8 +1,10 @@
 import type {
   ApiWeight,
+  BulkWeightPayload,
   WeightCreatePayload,
   WeightUpdatePayload,
 } from "@/lib/api/weight"
+import type { BulkResult } from "@/lib/api/types"
 import { getMockStore, notFound } from "../store"
 import { calcDailyGain, newId } from "../utils"
 
@@ -59,4 +61,33 @@ export async function deleteWeight(id: string): Promise<void> {
   const idx = store.weights.findIndex((w) => w.id === id)
   if (idx === -1) throw notFound("Peso", id)
   store.weights.splice(idx, 1)
+}
+
+export async function bulkRecordWeights(payload: BulkWeightPayload): Promise<BulkResult> {
+  const result: BulkResult = { succeeded: [], failed: [], total: 0 }
+  const items =
+    payload.records ??
+    (payload.sheepIds ?? []).map((sheepId) => ({
+      sheepId,
+      weight: payload.defaultWeight!,
+      notes: payload.notes,
+    }))
+  result.total = items.length
+  for (const item of items) {
+    try {
+      const record = await createWeight({
+        sheepId: item.sheepId,
+        weight: item.weight,
+        measurementDate: payload.measurementDate,
+        notes: item.notes ?? payload.notes,
+      })
+      result.succeeded.push({ sheepId: item.sheepId, recordId: record.id })
+    } catch (err) {
+      result.failed.push({
+        sheepId: item.sheepId,
+        error: err instanceof Error ? err.message : "No se pudo registrar el peso",
+      })
+    }
+  }
+  return result
 }

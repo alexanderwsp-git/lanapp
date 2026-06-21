@@ -10,6 +10,7 @@ export type ApiSheep = SheepJson & {
   motherId?: string | null
   /** ID del padre (reproductor) para genealogía. */
   fatherId?: string | null
+  breedingRamMarkedAt?: string | null
 }
 
 export type ApiMedicine = Medicine & {

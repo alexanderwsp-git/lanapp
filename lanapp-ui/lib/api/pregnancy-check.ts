@@ -22,11 +22,17 @@ export type ApiPregnancyCheck = {
   kind?: PregnancyCheckKind | null
   notes?: string | null
   nextCheckDate?: string | null
+  offspringBorn?: number | null
+  offspringAlive?: number | null
+  offspringLost?: number | null
 }
 
 export type DeliveryPayload = {
   deliveryDate: string
   notes?: string
+  offspringBorn?: number
+  offspringAlive?: number
+  offspringLost?: number
 }
 
 export const { fetchPregnancyChecksByMating, recordPregnancyCheck, recordDelivery } = resolveApi(real, mock)

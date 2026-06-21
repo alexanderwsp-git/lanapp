@@ -20,7 +20,7 @@ export function reproductorStatus(sheep: ApiSheep): ReproductorStatus | null {
   if (isCategory) {
     return {
       label: "Sí",
-      hint: "Aparece en Agregar al ciclo del planificador.",
+      hint: "Aparece en Montas → Agregar al ciclo.",
       badgeColor: "green",
       eligibleForBreedingCycle: true,
     }
@@ -47,7 +47,7 @@ export function reproductorStatus(sheep: ApiSheep): ReproductorStatus | null {
 
   return {
     label: "No",
-    hint: "Activa «Marcar como reproductor» en Editar para usarlo en ciclos de monta.",
+    hint: "Activa el interruptor «Marcar como reproductor» en el detalle de la oveja.",
     badgeColor: "gray",
     eligibleForBreedingCycle: false,
   }

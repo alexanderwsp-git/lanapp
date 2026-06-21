@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
 import { MedicineApplyDrawer } from "@/components/medicine-apply-drawer"
 import { MedicineScheduleDrawer } from "@/components/medicine-schedule-drawer"
+import { SheepMedicineSummary } from "@/components/sheep-medicine-summary"
 import {
   fetchMedicineApplicationsBySheep,
   fetchMedicines,
@@ -32,12 +33,14 @@ export function SheepMedicineTab({
   const [apps, setApps] = useState<ApiMedicineApplication[]>([])
   const [medicines, setMedicines] = useState<ApiMedicine[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [applyTarget, setApplyTarget] = useState<ApiMedicineApplication | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       const [list, medPage] = await Promise.all([
         fetchMedicineApplicationsBySheep(sheepId),
@@ -48,9 +51,9 @@ export function SheepMedicineTab({
       )
       setApps(sorted)
       setMedicines(medPage.items)
-    } catch {
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "No se pudo cargar medicina")
       setApps([])
-      setMedicines([])
     } finally {
       setLoading(false)
     }
@@ -61,10 +64,16 @@ export function SheepMedicineTab({
   }, [load])
 
   const pending = apps.filter((a) => isScheduled(a.status)).length
-  const registerBlockReason = medicineEligibility(sheep)
+  const registerBlockReason =
+    medicineEligibility(sheep) ??
+    (medicines.length === 0 ? "No hay medicamentos en el catálogo" : null)
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow">
+    <div className="flex flex-col gap-6">
+      <div className="rounded-lg bg-white p-6 shadow">
+        <SheepMedicineSummary sheepId={sheepId} embedded />
+      </div>
+      <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
           <IconMedicine className="h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -88,6 +97,21 @@ export function SheepMedicineTab({
         Aplicaciones de fármacos y vacunas registradas para esta oveja.{" "}
         {pending > 0 ? `${pending} programada(s).` : ""}
       </p>
+
+      {loadError && (
+        <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {loadError}
+        </div>
+      )}
+
+      {!loading && !loadError && medicines.length === 0 && (
+        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          No hay medicamentos en el catálogo.{" "}
+          <a href="/medicines" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Ir a Medicamentos
+          </a>
+        </div>
+      )}
 
       {success && (
         <div className="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
@@ -187,6 +211,7 @@ export function SheepMedicineTab({
           await onUpdated?.()
         }}
       />
+      </div>
     </div>
   )
 }

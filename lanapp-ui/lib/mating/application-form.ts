@@ -68,9 +68,10 @@ export async function saveMatingForm(input: {
   form: MatingFormState
   sheepLabel: string
   plannedCycleId?: string
+  hasActivePlannedCycle?: boolean
   reproParams: ReproductionParameters
 }): Promise<{ successMessage: string }> {
-  const { sheepId, isFemale, form, sheepLabel, plannedCycleId, reproParams } = input
+  const { sheepId, isFemale, form, sheepLabel, plannedCycleId, hasActivePlannedCycle, reproParams } = input
 
   if (!form.matingDate) throw new Error("Indica la fecha de monta")
 
@@ -119,6 +120,10 @@ export async function saveMatingForm(input: {
 
   if (!form.partnerId) {
     throw new Error(isFemale ? "Selecciona un reproductor" : "Selecciona una oveja")
+  }
+
+  if (hasActivePlannedCycle && isFemale) {
+    throw new Error("Hay una monta planificada pendiente. Confírmala desde la tabla en lugar de registrar una nueva.")
   }
 
   const expectedBirth = expectedBirthFromMating(form.matingDate, reproParams)

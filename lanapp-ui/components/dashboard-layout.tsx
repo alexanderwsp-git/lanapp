@@ -16,7 +16,7 @@ import { logout } from "@/lib/auth/client"
 import { useAuth } from "@/lib/auth/use-auth"
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -91,10 +91,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 onClick={() => setUserMenuOpen((v) => !v)}
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
-                  {user?.initials || "?"}
+                  {loading ? "…" : user?.initials || "?"}
                 </span>
                 <span className="hidden text-sm font-medium text-gray-700 sm:block">
-                  {user?.shortName || user?.displayName || "Usuario"}
+                  {loading ? "…" : user?.shortName || user?.displayName || ""}
                 </span>
                 <ChevronDownIcon className="hidden h-4 w-4 text-gray-400 sm:block" aria-hidden="true" />
               </button>

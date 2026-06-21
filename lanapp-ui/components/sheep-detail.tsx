@@ -6,6 +6,7 @@ import {
   ClipboardDocumentListIcon,
   ScaleIcon,
 } from "@heroicons/react/24/outline"
+import { Gender } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
 import { SheepPesosTab } from "@/components/sheep-pesos-tab"
@@ -14,10 +15,16 @@ import { SheepReproStats } from "@/components/sheep-repro-stats"
 import { SheepMedicineTab } from "@/components/sheep-medicine-tab"
 import { SheepAnalysisTab } from "@/components/sheep-analysis-tab"
 import { SheepWeaningAction } from "@/components/sheep-weaning-action"
+import { SheepWeightSummary } from "@/components/sheep-weight-summary"
 import { SheepGenealogy } from "@/components/sheep-genealogy"
 import { SheepFormDrawer } from "@/components/sheep-form-drawer"
+import { SheepMedicineSummary } from "@/components/sheep-medicine-summary"
+import { SheepAnalysisSummary } from "@/components/sheep-analysis-summary"
+import { SwitchField } from "@/components/ui/switch"
 import type { ApiSheep } from "@/lib/api/types"
+import { updateSheep } from "@/lib/api/sheep"
 import { fetchWeaningRecordsBySheep, type ApiWeaningRecord } from "@/lib/api/weaning"
+import { useSheepWeights } from "@/lib/hooks/use-sheep-weights"
 import { formatDisplayDate, formatAgeDays, formatDailyGain, formatLastWeight } from "@/lib/format"
 import { reproductorStatus } from "@/lib/reproductor-status"
 import {
@@ -41,6 +48,9 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
   const [weaningRecords, setWeaningRecords] = useState<ApiWeaningRecord[]>([])
   const [weaningLoading, setWeaningLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  const [reproSaving, setReproSaving] = useState(false)
+  const [reproError, setReproError] = useState<string | null>(null)
+  const sheepWeights = useSheepWeights(sheep.id)
 
   // Support deep-link redirects from the legacy /sheep/[id]/edit route.
   useEffect(() => {
@@ -72,6 +82,19 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
       cancelled = true
     }
   }, [sheep.id])
+
+  async function toggleBreedingRam(checked: boolean) {
+    setReproError(null)
+    setReproSaving(true)
+    try {
+      await updateSheep(sheep.id, { isBreedingRam: checked })
+      await onRefresh?.()
+    } catch (err) {
+      setReproError(err instanceof Error ? err.message : "No se pudo actualizar el reproductor")
+    } finally {
+      setReproSaving(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -136,11 +159,28 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-gray-400">Reproductor</span>
               <StatusBadge color={repro.badgeColor}>{repro.label}</StatusBadge>
-              {sheep.isBreedingRam && (
-                <span className="text-xs text-gray-500">Flag activo en Editar</span>
+              {sheep.breedingRamMarkedAt && (
+                <span className="text-xs text-gray-500">
+                  Marcado {formatDisplayDate(sheep.breedingRamMarkedAt)}
+                </span>
               )}
             </div>
             <p className="mt-1 text-sm text-gray-600">{repro.hint}</p>
+            {sheep.gender === Gender.MALE && (
+              <div className="mt-3 border-t border-gray-200 pt-3">
+                <SwitchField
+                  label="Marcar como reproductor"
+                  description="Carnero seleccionado para monta. Aplica categoría Reproductor cuando tenga ≥12 meses."
+                  checked={sheep.isBreedingRam === true}
+                  onChange={toggleBreedingRam}
+                  disabled={reproSaving}
+                  aria-label="Marcar como reproductor"
+                />
+                {reproError && (
+                  <p className="mt-2 text-sm text-red-600">{reproError}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -167,6 +207,12 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
         <div className="mt-6">
           {tab === "general" && (
             <div className="flex flex-col gap-6">
+              <SheepWeightSummary
+                records={sheepWeights.records}
+                loading={sheepWeights.loading}
+                compact
+              />
+
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
                   <ClipboardDocumentListIcon className="h-5 w-5 text-gray-400" />
@@ -185,6 +231,14 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
               </div>
 
               <SheepGenealogy sheep={sheep} />
+
+              <div className="rounded-lg bg-white p-6 shadow">
+                <SheepMedicineSummary sheepId={sheep.id} onViewTab={() => setTab("medicina")} />
+              </div>
+
+              <div className="rounded-lg bg-white p-6 shadow">
+                <SheepAnalysisSummary sheepId={sheep.id} onViewTab={() => setTab("analisis")} />
+              </div>
 
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
@@ -223,7 +277,16 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
             </div>
           )}
 
-          {tab === "peso" && <SheepPesosTab sheep={sheep} />}
+          {tab === "peso" && (
+            <SheepPesosTab
+              sheep={sheep}
+              records={sheepWeights.records}
+              loading={sheepWeights.loading}
+              loadError={sheepWeights.error}
+              reload={sheepWeights.reload}
+              setRecords={sheepWeights.setRecords}
+            />
+          )}
 
           {tab === "montas" && <SheepMontasTab sheep={sheep} onUpdated={onRefresh} />}
 

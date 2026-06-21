@@ -10,7 +10,39 @@ export type ApiEnvelope<T> = {
   error: string | null
 }
 
+import { refreshSessionIfNeeded, forceLogout } from '@/lib/auth/client'
+import { getAccessToken, isSkipAuthEnabled } from '@/lib/auth/session'
+
 const API_PREFIX = process.env.NEXT_PUBLIC_API_PREFIX || "/api/v1"
+
+let handling401 = false
+
+async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
+  if (!isSkipAuthEnabled()) {
+    await refreshSessionIfNeeded()
+  }
+
+  const res = await fetch(url, {
+    ...init,
+    headers: { ...getHeaders(), ...init?.headers },
+  })
+
+  if (res.status === 401 && !isSkipAuthEnabled() && !handling401) {
+    handling401 = true
+    const refreshed = await refreshSessionIfNeeded()
+    if (refreshed && getAccessToken()) {
+      handling401 = false
+      return fetch(url, {
+        ...init,
+        headers: { ...getHeaders(), ...init?.headers },
+      })
+    }
+    handling401 = false
+    void forceLogout()
+  }
+
+  return res
+}
 
 function getHeaders(): HeadersInit {
   const headers: HeadersInit = { "Content-Type": "application/json" }
@@ -25,10 +57,7 @@ export async function apiFetch<T>(
   init?: RequestInit
 ): Promise<ApiEnvelope<T>> {
   const url = path.startsWith("http") ? path : `${API_PREFIX}/${path.replace(/^\//, "")}`
-  const res = await fetch(url, {
-    ...init,
-    headers: { ...getHeaders(), ...init?.headers },
-  })
+  const res = await fetchWithAuth(url, init)
 
   if (res.status === 204) {
     return { success: true, message: "OK", data: null as T, error: null }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -34,7 +33,6 @@ import { formatDisplayDate } from "@/lib/format"
 import {
   CalendarDaysIcon,
   UserGroupIcon,
-  ArrowRightIcon,
   CheckIcon,
   HeartIcon,
   XMarkIcon,
@@ -296,13 +294,6 @@ export default function PlannerPage() {
         description="Ciclos reproductivos por temporada"
         action={
           <div className="flex items-center gap-2">
-            <Link
-              href="/weaning"
-              className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Ver alertas de destete
-              <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
-            </Link>
             <button
               type="button"
               onClick={() => openConfirmMating()}
@@ -669,8 +660,7 @@ export default function PlannerPage() {
       <BreedingDiagnosisDrawer
         open={diagFor !== null}
         onClose={() => setDiagFor(null)}
-        cycle={diagFor}
-        eweLabel={diagFor ? displayEwe(diagFor) : ""}
+        target={diagFor ? { kind: "cycle", cycle: diagFor, eweLabel: displayEwe(diagFor) } : null}
         onSaved={load}
       />
 

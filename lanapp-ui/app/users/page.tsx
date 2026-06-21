@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { InviteUserDrawer } from "@/components/invite-user-drawer"
+import { RequireRole } from "@/components/require-role"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
@@ -30,7 +31,7 @@ const rolColor: Record<string, "indigo" | "blue" | "gray"> = {
   operario: "gray",
 }
 
-export default function UsersPage() {
+function UsersPageContent() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -131,5 +132,13 @@ export default function UsersPage() {
         onInvited={loadUsers}
       />
     </DashboardLayout>
+  )
+}
+
+export default function UsersPage() {
+  return (
+    <RequireRole role="admin">
+      <UsersPageContent />
+    </RequireRole>
   )
 }

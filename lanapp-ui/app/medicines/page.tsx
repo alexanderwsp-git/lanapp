@@ -861,7 +861,11 @@ export default function MedicinesPage() {
               rows={2}
               value={medForm.description}
               onChange={(e) => setMedForm({ ...medForm, description: e.target.value })}
+              placeholder="Ej. Antiparasitario de amplio espectro para ovinos"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Qué es el fármaco y para qué sirve. Visible en el catálogo de medicamentos.
+            </p>
           </Field>
           <Field label="Notas" htmlFor="med-notes">
             <Textarea
@@ -869,7 +873,11 @@ export default function MedicinesPage() {
               rows={2}
               value={medForm.notes}
               onChange={(e) => setMedForm({ ...medForm, notes: e.target.value })}
+              placeholder="Ej. Comprado en agroveterinaria X — lote 2026"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Uso interno de la finca (opcional). No se muestra en el catálogo principal.
+            </p>
           </Field>
         </form>
       </Drawer>

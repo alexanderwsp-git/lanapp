@@ -1,36 +1,40 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { WeightProgressChart } from "@/components/ui/weight-progress-chart"
-  import { EmptyState } from "@/components/ui/empty-state"
-  import { DataTable } from "@/components/ui/data-table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { DataTable } from "@/components/ui/data-table"
 import { Drawer } from "@/components/ui/drawer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import {
   createWeight,
   deleteWeight,
-  fetchWeightsBySheep,
   updateWeight,
   type ApiWeight,
 } from "@/lib/api/weight"
 import type { ApiSheep } from "@/lib/api/types"
 import { weightEligibility } from "@/lib/sheep-action-eligibility"
 import { formatDisplayDate, dailyGainByWeightId, formatDailyGain, toDateInputValue } from "@/lib/format"
-import { ScaleIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline"
+import { InformationCircleIcon, ScaleIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
+const GAIN_TOOLTIP =
+  "Promedio entre este pesaje y el anterior: (peso₂ − peso₁) / días × 1000 g/día. El primer pesaje muestra «—»."
+
 type SheepPesosTabProps = {
   sheep: ApiSheep
+  records: ApiWeight[]
+  loading: boolean
+  loadError: string | null
+  reload: () => Promise<void>
+  setRecords: React.Dispatch<React.SetStateAction<ApiWeight[]>>
 }
 
-export function SheepPesosTab({ sheep }: SheepPesosTabProps) {
+export function SheepPesosTab({ sheep, records, loading, loadError, reload, setRecords }: SheepPesosTabProps) {
   const sheepId = sheep.id
   const registerBlockReason = weightEligibility(sheep)
-  const [records, setRecords] = useState<ApiWeight[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
 
   const [peso, setPeso] = useState("")
   const [fecha, setFecha] = useState(today())
@@ -47,24 +51,6 @@ export function SheepPesosTab({ sheep }: SheepPesosTabProps) {
 
   const [toDelete, setToDelete] = useState<ApiWeight | null>(null)
   const [deleting, setDeleting] = useState(false)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setLoadError(null)
-    try {
-      const data = await fetchWeightsBySheep(sheepId)
-      setRecords(data)
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los pesajes")
-      setRecords([])
-    } finally {
-      setLoading(false)
-    }
-  }, [sheepId])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const chartPoints = useMemo(
     () =>
@@ -157,8 +143,8 @@ export function SheepPesosTab({ sheep }: SheepPesosTabProps) {
       await deleteWeight(toDelete.id)
       setRecords((prev) => prev.filter((r) => r.id !== toDelete.id))
       setToDelete(null)
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "No se pudo eliminar el peso")
+    } catch {
+      await reload()
       setToDelete(null)
     } finally {
       setDeleting(false)
@@ -216,7 +202,7 @@ export function SheepPesosTab({ sheep }: SheepPesosTabProps) {
       {loadError && (
         <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
           {loadError}
-          <button type="button" onClick={load} className="ml-2 font-semibold underline">
+          <button type="button" onClick={reload} className="ml-2 font-semibold underline">
             Reintentar
           </button>
         </div>
@@ -238,7 +224,19 @@ export function SheepPesosTab({ sheep }: SheepPesosTabProps) {
           { key: "weight", header: "Peso (kg)", className: "whitespace-nowrap", cell: (w) => Number(w.weight) },
           {
             key: "gain",
-            header: "Ganancia prom. (g/día)",
+            header: (
+              <span className="inline-flex items-center gap-1">
+                Ganancia prom. (g/día)
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-gray-600"
+                  title={GAIN_TOOLTIP}
+                  aria-label={GAIN_TOOLTIP}
+                >
+                  <InformationCircleIcon className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </span>
+            ),
             className: "whitespace-nowrap",
             cell: (w) => formatDailyGain(gainById.get(w.id) ?? null),
           },

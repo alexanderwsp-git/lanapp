@@ -3,14 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Gender,
-  DiagnosisType,
   SheepCategory,
   SheepStatus,
   BreedingCycleStatus,
   deliveryCheck,
-  isOutsideEcoWindow,
   suggestedEcoWindow,
-  suggestedRemateDate,
 } from "@sheep/domain"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
@@ -18,11 +15,10 @@ import { Drawer } from "@/components/ui/drawer"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import type { ComboboxOption } from "@/components/ui/combobox"
 import { MatingRegisterDrawer } from "@/components/mating-register-drawer"
-import {
-  MatingActivityFeed,
-  matingPhaseSummary,
-} from "@/components/mating-timeline"
-import { diagnoseOptionsForPhase, isPostPregnancyFollowUp, matingActions } from "@/lib/mating-actions"
+import { BreedingDiagnosisDrawer, type BreedingDiagnosisTarget } from "@/components/breeding-diagnosis-drawer"
+import { MatingActivityFeed, matingPhaseSummary } from "@/components/mating-timeline"
+import { SheepReproStats } from "@/components/sheep-repro-stats"
+import { matingActions } from "@/lib/mating-actions"
 import {
   fetchMatingsBySheep,
   type ApiMating,
@@ -30,9 +26,7 @@ import {
 import {
   fetchPregnancyChecksByMating,
   recordDelivery,
-  recordPregnancyCheck,
   type ApiPregnancyCheck,
-  type PregnancyCheckCreatePayload,
 } from "@/lib/api/pregnancy-check"
 import {
   fetchBreedingCyclesByEwe,
@@ -49,14 +43,12 @@ import {
 import { useReproductionParameters } from "@/lib/hooks/use-reproduction-parameters"
 import { formatDisplayDate, toDateInputValue } from "@/lib/format"
 import { breedingResultBadgeColor, labelBreedingResult } from "@/lib/labels/breeding"
-import { labelMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
+import { labelMatingStatus, labelPlannedMatingStatus, matingStatusBadgeColor } from "@/lib/labels/mating"
 import { labelCategory } from "@/lib/labels/sheep"
 import { IconDiagnosis, IconMating } from "@/lib/icons/analysis-medicine"
 import { SunIcon, ClockIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
-
-type EcoResult = "Preñada" | "Vacía" | "Revisar"
 
 type MatingRow = ApiMating & { checks: ApiPregnancyCheck[] }
 
@@ -105,16 +97,14 @@ export function SheepMontasTab({
   const [registerOpen, setRegisterOpen] = useState(false)
   const [plannedTarget, setPlannedTarget] = useState<ApiBreedingCycle | null>(null)
 
-  const [ecoFor, setEcoFor] = useState<MatingRow | null>(null)
-  const [ecoResult, setEcoResult] = useState<EcoResult>("Preñada")
-  const [checkDate, setCheckDate] = useState(today())
-  const [nextCheckDate, setNextCheckDate] = useState("")
-  const [ecoNotes, setEcoNotes] = useState("")
-  const [ecoVitasel, setEcoVitasel] = useState(false)
+  const [diagTarget, setDiagTarget] = useState<BreedingDiagnosisTarget | null>(null)
 
   const [partoFor, setPartoFor] = useState<MatingRow | null>(null)
   const [deliveryDate, setDeliveryDate] = useState(today())
   const [partoNotes, setPartoNotes] = useState("")
+  const [offspringBorn, setOffspringBorn] = useState("")
+  const [offspringAlive, setOffspringAlive] = useState("")
+  const [offspringLost, setOffspringLost] = useState("")
 
   const partnerLabel = isFemale ? "Reproductor" : "Oveja"
   const { params: reproParams } = useReproductionParameters()
@@ -198,11 +188,6 @@ export function SheepMontasTab({
     return formatSheepLabel(cycle.ram, cycle.ramId)
   }
 
-  const ecoOutsideWindow = useMemo(() => {
-    if (!ecoFor || !checkDate) return false
-    return isOutsideEcoWindow(checkDate, ecoFor.matingDate, reproParams)
-  }, [checkDate, ecoFor, reproParams])
-
   function partnerOf(row: MatingRow) {
     return isFemale ? row.maleId : row.femaleId
   }
@@ -233,59 +218,30 @@ export function SheepMontasTab({
     setPlannedTarget(null)
   }
 
-  function openEco(row: MatingRow) {
-    const { phase } = matingActions(row.checks)
-    const options = diagnoseOptionsForPhase(phase, row.checks)
-    const window = suggestedEcoWindow(row.matingDate, reproParams)
-    const defaultDate =
-      today() >= window.min && today() <= window.max ? today() : window.min
-    const followUp = isPostPregnancyFollowUp(row.checks)
-    setEcoFor(row)
-    setEcoResult(options[0] ?? "Preñada")
-    setCheckDate(followUp ? today() : defaultDate)
-    setNextCheckDate(followUp ? "" : window.max)
-    setEcoNotes("")
-    setEcoVitasel(false)
-  }
-
-  async function handleEcoSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!ecoFor || !checkDate) return
-
-    const followUp = isPostPregnancyFollowUp(ecoFor.checks)
-    if (ecoResult === "Vacía" && followUp) {
-      const ok = window.confirm(
-        "La oveja fue confirmada preñada en esta monta. ¿Marcar como vacía (pérdida de gestación o error de diagnóstico)? Esto desbloqueará la oveja para una nueva monta.",
-      )
-      if (!ok) return
-    }
-
-    setSaving(true)
-    try {
-      const isPregnant = ecoResult === "Preñada"
-      await recordPregnancyCheck({
-        matingId: ecoFor.id,
-        checkDate,
-        isPregnant,
-        checkType: DiagnosisType.ECO,
-        notes: ecoNotes.trim() || undefined,
-        nextCheckDate: ecoResult === "Revisar" && nextCheckDate ? nextCheckDate : undefined,
-        vitaselApplied: ecoResult === "Vacía" ? ecoVitasel : undefined,
-      } satisfies PregnancyCheckCreatePayload)
-      setEcoFor(null)
-      await load()
-      onUpdated?.()
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : "No se pudo guardar el chequeo")
-    } finally {
-      setSaving(false)
-    }
+  function openDiagnosis(row: MatingRow) {
+    setDiagTarget({
+      kind: "mating",
+      mating: row,
+      partnerLabel: partnerDisplay(row),
+      sheepId,
+      isFemale,
+    })
   }
 
   function openParto(row: MatingRow) {
     setPartoFor(row)
     setDeliveryDate(today())
     setPartoNotes("")
+    setOffspringBorn("")
+    setOffspringAlive("")
+    setOffspringLost("")
+  }
+
+  function parseCount(value: string): number | undefined {
+    const trimmed = value.trim()
+    if (!trimmed) return undefined
+    const n = Number.parseInt(trimmed, 10)
+    return Number.isFinite(n) && n >= 0 ? n : undefined
   }
 
   async function handlePartoSave(e: React.FormEvent) {
@@ -296,6 +252,9 @@ export function SheepMontasTab({
       await recordDelivery(partoFor.id, {
         deliveryDate,
         notes: partoNotes.trim() || "Parto registrado",
+        offspringBorn: parseCount(offspringBorn),
+        offspringAlive: parseCount(offspringAlive),
+        offspringLost: parseCount(offspringLost),
       })
       setPartoFor(null)
       await load()
@@ -314,8 +273,17 @@ export function SheepMontasTab({
       sheep.category === SheepCategory.OVEJA_PRENADA ||
       sheep.category === SheepCategory.BORREGA_PRENADA)
 
+  const newMatingBlockReason =
+    registerBlockReason ??
+    (isFemale && plannedCycles.length > 0
+      ? "Hay monta(s) planificada(s) — confírmalas desde la tabla"
+      : null)
+
   return (
-    <div className="rounded-lg bg-white p-6 shadow">
+    <div className="space-y-6">
+      <SheepReproStats sheep={sheep} />
+
+      <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
           <IconMating className="h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -324,8 +292,8 @@ export function SheepMontasTab({
         <button
           type="button"
           onClick={openNewMating}
-          disabled={!!registerBlockReason}
-          title={registerBlockReason ?? undefined}
+          disabled={!!newMatingBlockReason}
+          title={newMatingBlockReason ?? undefined}
           className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconMating className="h-4 w-4" aria-hidden="true" />
@@ -455,7 +423,7 @@ export function SheepMontasTab({
               className: "whitespace-nowrap",
               cell: (item) => {
                 if (item.kind === "planned") {
-                  return <StatusBadge color="yellow">Programada</StatusBadge>
+                  return <StatusBadge color="yellow">{labelPlannedMatingStatus()}</StatusBadge>
                 }
                 const m = item.row
                 const phaseInfo = matingPhaseSummary(m.checks)
@@ -572,7 +540,7 @@ export function SheepMontasTab({
                     {actions.canDiagnose && (
                       <button
                         type="button"
-                        onClick={() => openEco(m)}
+                        onClick={() => openDiagnosis(m)}
                         title="Diagnóstico"
                         aria-label="Diagnóstico"
                         className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
@@ -624,6 +592,7 @@ export function SheepMontasTab({
         partnerLabel={partnerLabel}
         partnerOptions={partnerOptions}
         plannedCycle={plannedTarget}
+        hasActivePlannedCycle={isFemale && plannedCycles.length > 0}
         onSaved={async (message) => {
           setSuccess(message)
           await load()
@@ -631,131 +600,15 @@ export function SheepMontasTab({
         }}
       />
 
-      <Drawer
-        open={ecoFor !== null}
-        onClose={() => setEcoFor(null)}
-        title="Registrar diagnóstico"
-        description={ecoFor ? `Monta del ${formatDisplayDate(ecoFor.matingDate)} · ${partnerDisplay(ecoFor)}` : undefined}
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setEcoFor(null)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="eco-form"
-              disabled={saving}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-            >
-              {saving ? "Guardando…" : "Guardar chequeo"}
-            </button>
-          </>
-        }
-      >
-        <form id="eco-form" onSubmit={handleEcoSave} className="flex flex-col gap-4">
-          {ecoFor && !isPostPregnancyFollowUp(ecoFor.checks) && (
-            <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
-              Ventana ECO recomendada:{" "}
-              {formatDisplayDate(suggestedEcoWindow(ecoFor.matingDate, reproParams).min)} –{" "}
-              {formatDisplayDate(suggestedEcoWindow(ecoFor.matingDate, reproParams).max)}
-            </p>
-          )}
-          {ecoFor && isPostPregnancyFollowUp(ecoFor.checks) && (
-            <p className="rounded-md bg-pink-50 px-3 py-2 text-sm text-pink-800">
-              Preñez confirmada. <strong>Revisar</strong> programa un control ECO de gestación sin cambiar el
-              estado preñada. <strong>Vacía</strong> solo si hubo pérdida o el diagnóstico fue erróneo.
-            </p>
-          )}
-          <Field label="Resultado" required>
-            <div className="flex gap-2">
-              {(ecoFor
-                ? diagnoseOptionsForPhase(matingActions(ecoFor.checks).phase, ecoFor.checks)
-                : (["Preñada", "Vacía", "Revisar"] as EcoResult[])
-              ).map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setEcoResult(opt)}
-                  className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
-                    ecoResult === opt
-                      ? opt === "Preñada"
-                        ? "border-pink-300 bg-pink-50 text-pink-700"
-                        : opt === "Revisar"
-                          ? "border-yellow-300 bg-yellow-50 text-yellow-800"
-                          : "border-gray-400 bg-gray-100 text-gray-800"
-                      : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </Field>
-          <Field label="Fecha chequeo" htmlFor="eco-date" required>
-            <TextInput id="eco-date" type="date" value={checkDate} onChange={(e) => setCheckDate(e.target.value)} />
-          </Field>
-          {ecoOutsideWindow && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              La fecha está fuera de la ventana ECO recomendada ({reproParams.ecoCheckMinDays}–
-              {reproParams.ecoCheckMaxDays} días post-monta). Puedes guardar igualmente si hay motivo
-              clínico.
-            </p>
-          )}
-          {ecoResult === "Revisar" && (
-            <Field label="Próximo chequeo" htmlFor="eco-next">
-              <TextInput
-                id="eco-next"
-                type="date"
-                value={nextCheckDate}
-                onChange={(e) => setNextCheckDate(e.target.value)}
-              />
-              {ecoFor && isPostPregnancyFollowUp(ecoFor.checks) && (
-                <p className="mt-1 text-xs text-gray-500">
-                  La oveja sigue preñada; solo se agenda el próximo control.
-                </p>
-              )}
-            </Field>
-          )}
-          {ecoResult === "Vacía" && (
-            <>
-              <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                {ecoFor && isPostPregnancyFollowUp(ecoFor.checks)
-                  ? "Solo si hubo pérdida de gestación o el ECO inicial fue erróneo. La oveja quedará disponible para nueva monta."
-                  : `Aplicar Vitasel y programar segunda monta (~${reproParams.heatCycleDays} días).`}
-                {checkDate && !(ecoFor && isPostPregnancyFollowUp(ecoFor.checks)) && (
-                  <>
-                    {" "}
-                    Remate sugerido: {formatDisplayDate(suggestedRemateDate(checkDate, reproParams))}.
-                  </>
-                )}
-              </p>
-              {!(ecoFor && isPostPregnancyFollowUp(ecoFor.checks)) && (
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={ecoVitasel}
-                    onChange={(e) => setEcoVitasel(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                  />
-                  Vitasel aplicado
-                </label>
-              )}
-            </>
-          )}
-          <Field label="Notas" htmlFor="eco-notes">
-            <Textarea
-              id="eco-notes"
-              rows={2}
-              value={ecoNotes}
-              onChange={(e) => setEcoNotes(e.target.value)}
-            />
-          </Field>
-        </form>
-      </Drawer>
+      <BreedingDiagnosisDrawer
+        open={diagTarget !== null}
+        onClose={() => setDiagTarget(null)}
+        target={diagTarget}
+        onSaved={async () => {
+          await load()
+          onUpdated?.()
+        }}
+      />
 
       <Drawer
         open={partoFor !== null}
@@ -793,6 +646,41 @@ export function SheepMontasTab({
               onChange={(e) => setDeliveryDate(e.target.value)}
             />
           </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field label="Crías nacidas" htmlFor="parto-born">
+              <TextInput
+                id="parto-born"
+                type="number"
+                min="0"
+                step="1"
+                value={offspringBorn}
+                onChange={(e) => setOffspringBorn(e.target.value)}
+                placeholder="Ej. 1"
+              />
+            </Field>
+            <Field label="Crías vivas" htmlFor="parto-alive">
+              <TextInput
+                id="parto-alive"
+                type="number"
+                min="0"
+                step="1"
+                value={offspringAlive}
+                onChange={(e) => setOffspringAlive(e.target.value)}
+                placeholder="Ej. 1"
+              />
+            </Field>
+            <Field label="Crías perdidas" htmlFor="parto-lost">
+              <TextInput
+                id="parto-lost"
+                type="number"
+                min="0"
+                step="1"
+                value={offspringLost}
+                onChange={(e) => setOffspringLost(e.target.value)}
+                placeholder="Ej. 0"
+              />
+            </Field>
+          </div>
           <Field label="Notas" htmlFor="parto-notes">
             <Textarea
               id="parto-notes"
@@ -807,6 +695,7 @@ export function SheepMontasTab({
           </p>
         </form>
       </Drawer>
+    </div>
     </div>
   )
 }

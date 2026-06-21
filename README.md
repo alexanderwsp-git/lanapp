@@ -21,20 +21,21 @@ UI contract for v0: [`lanapp-ui/docs/APP_CONTEXT.md`](lanapp-ui/docs/APP_CONTEXT
 Always install from **this directory** (`webapp/`):
 
 ```bash
-npm install
-npm run build:packages
+make setup
+cp lanapp-ui/.env.example lanapp-ui/.env
+cp lanapp/.env.example lanapp/.env
 
-# Postgres (once)
-cd lanapp && docker compose up -d && cd ..
+make db          # Postgres (once, or after reboot)
+make migrate     # pending migrations (optional — API also runs them on start)
+make seed        # optional demo fixtures
 
-# Terminal 1 — API
-npm run dev:api
-
-# Terminal 2 — UI
-npm run dev:ui
+make api         # terminal 1 — API :4001
+make ui          # terminal 2 — UI :3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Copy `lanapp-ui/.env.example` → `lanapp-ui/.env`.
+Open [http://localhost:3000](http://localhost:3000). With `SKIP_AUTH=true` / `NEXT_PUBLIC_SKIP_AUTH=true` no login is required locally.
+
+Run `make help` for all commands (`db`, `migrate`, `migrate-revert`, `seed`, …).
 
 ## v0 workflow (monorepo)
 

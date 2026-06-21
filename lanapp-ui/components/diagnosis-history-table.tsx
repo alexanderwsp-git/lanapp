@@ -1,5 +1,6 @@
 import type { ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
-import { MatingActivityFeed, matingPhaseSummary } from "@/components/mating-timeline"
+import { MatingActivityFeed } from "@/components/mating-timeline"
+import { matingPhaseSummary } from "@/lib/labels/mating"
 
 /** Activity feed of diagnosis + parto events. */
 export function DiagnosisHistoryTable({

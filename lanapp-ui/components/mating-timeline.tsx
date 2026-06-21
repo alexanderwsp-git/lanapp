@@ -8,14 +8,12 @@ import type { ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
 import { formatDisplayDate, formatRelativeDate } from "@/lib/format"
 import { labelDiagnosisType } from "@/lib/labels/breeding"
 import {
-  PregnancyCheckKind,
-  deriveMatingPhase,
-  deliveryCheck,
   hasConfirmedPregnancy,
-  latestDiagnosis,
-  MATING_PHASE_LABELS,
-  type MatingPhase,
+  PregnancyCheckKind,
 } from "@sheep/domain"
+import { matingPhaseBadgeColor, matingPhaseSummary } from "@/lib/labels/mating"
+
+export { matingPhaseBadgeColor, matingPhaseSummary }
 
 function diagnosisResultLabel(check: ApiPregnancyCheck): string {
   if (check.isPregnant) return "Preñada"
@@ -31,7 +29,7 @@ function diagnosisResultDot(check: ApiPregnancyCheck): string {
 
 function displayNotes(notes?: string | null): string | undefined {
   if (!notes?.trim()) return undefined
-  const stripped = notes.replace(/^\[(ECO|FAMACHA|Control Monta)\]\s*/i, "").trim()
+  const stripped = notes.replace(/^\[(ECO|Manual|FAMACHA|Control Monta)\]\s*/i, "").trim()
   return stripped || undefined
 }
 
@@ -79,50 +77,6 @@ function FeedIcon({ children }: { children: ReactNode }) {
       </div>
     </div>
   )
-}
-
-export function matingPhaseBadgeColor(phase: MatingPhase): "green" | "red" | "yellow" | "gray" | "indigo" {
-  switch (phase) {
-    case "pregnant":
-    case "delivered":
-      return "green"
-    case "empty":
-      return "red"
-    case "recheck":
-      return "yellow"
-    case "awaiting_diagnosis":
-      return "gray"
-    default:
-      return "indigo"
-  }
-}
-
-export function matingPhaseSummary(checks: ApiPregnancyCheck[]): {
-  phase: MatingPhase
-  label: string
-  color: ReturnType<typeof matingPhaseBadgeColor>
-  detail?: string
-} {
-  const phase = deriveMatingPhase(checks)
-  const label = MATING_PHASE_LABELS[phase]
-  const color = matingPhaseBadgeColor(phase)
-
-  const delivery = deliveryCheck(checks)
-  const dx = latestDiagnosis(checks)
-
-  if (phase === "delivered" && delivery) {
-    return { phase, label, color, detail: formatDisplayDate(delivery.checkDate) }
-  }
-  if (dx) {
-    const type = dx.checkType ? labelDiagnosisType(dx.checkType as ApiPregnancyCheck["checkType"]) : "Chequeo"
-    return {
-      phase,
-      label,
-      color,
-      detail: `${type} · ${formatDisplayDate(dx.checkDate)}`,
-    }
-  }
-  return { phase, label, color }
 }
 
 export type MatingActivityFeedProps = {

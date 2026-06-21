@@ -99,16 +99,6 @@ export function WeaningRecordDrawer({
       <form id="weaning-record-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 
-        <Field label="Notas" htmlFor="weaning-notes">
-          <Textarea
-            id="weaning-notes"
-            rows={2}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Opcional"
-          />
-        </Field>
-
         <Field label="Fecha de destete" required htmlFor="weaning-date">
           <TextInput
             id="weaning-date"
@@ -131,6 +121,16 @@ export function WeaningRecordDrawer({
             onChange={(e) => setWeight(e.target.value)}
             placeholder="0.0"
             required
+          />
+        </Field>
+
+        <Field label="Notas" htmlFor="weaning-notes">
+          <Textarea
+            id="weaning-notes"
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Opcional"
           />
         </Field>
       </form>

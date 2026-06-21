@@ -8,7 +8,6 @@ import {
   type ApiWeaningRecord,
 } from "@/lib/api/weaning"
 import type { ApiSheep } from "@/lib/api/types"
-import { formatDisplayDate } from "@/lib/format"
 import { weaningEligibility } from "@/lib/weaning-eligibility"
 import { WeaningRecordDrawer } from "@/components/weaning-record-drawer"
 
@@ -55,14 +54,7 @@ export function SheepWeaningAction({
   }
 
   if (record) {
-    return (
-      <div className="flex items-center gap-2">
-        <StatusBadge color="green">Destetada</StatusBadge>
-        <span className="text-xs text-gray-500">
-          {formatDisplayDate(record.weaningDate)} · {Number(record.weaningWeight)} kg
-        </span>
-      </div>
-    )
+    return <StatusBadge color="green">Destetada</StatusBadge>
   }
 
   return (

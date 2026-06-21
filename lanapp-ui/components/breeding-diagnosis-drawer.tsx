@@ -1,108 +1,163 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { DiagnosisType } from "@sheep/domain"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, Select, TextInput, Textarea } from "@/components/ui/form-fields"
 import { SwitchField } from "@/components/ui/switch"
 import { DiagnosisHistoryTable } from "@/components/diagnosis-history-table"
-import {
-  recordBreedingDiagnosis,
-  type ApiBreedingCycle,
-} from "@/lib/api/breeding-cycle"
+import type { ApiBreedingCycle } from "@/lib/api/breeding-cycle"
 import { fetchPregnancyChecksByMating, type ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
+import type { ApiMating } from "@/lib/api/mating"
 import {
   breedingResultToUiOptions,
-  uiResultToBreedingResult,
+  diagnosisTypesForForms,
+  labelDiagnosisType,
 } from "@/lib/labels/breeding"
-import { toDateInputValue } from "@/lib/format"
+import { formatDisplayDate, toDateInputValue } from "@/lib/format"
+import { useReproductionParameters } from "@/lib/hooks/use-reproduction-parameters"
+import { diagnoseOptionsForPhase, isPostPregnancyFollowUp, matingActions } from "@/lib/mating-actions"
+import {
+  defaultRemateDate,
+  diagnosisFormFromCycle,
+  diagnosisFormFromMating,
+  ecoOutsideWindow,
+  emptyDiagnosisForm,
+  saveCycleDiagnosis,
+  saveMatingDiagnosis,
+  type DiagnosisFormState,
+  type EcoResult,
+} from "@/lib/mating/diagnosis-form"
+import { suggestedEcoWindow } from "@sheep/domain"
 
-const today = () => new Date().toISOString().split("T")[0]
+type MatingTarget = {
+  kind: "mating"
+  mating: ApiMating & { checks: ApiPregnancyCheck[] }
+  partnerLabel: string
+  sheepId: string
+  isFemale: boolean
+}
 
-type EcoResult = "Preñada" | "Vacía" | "Revisar"
+type CycleTarget = {
+  kind: "cycle"
+  cycle: ApiBreedingCycle
+  eweLabel: string
+}
+
+export type BreedingDiagnosisTarget = MatingTarget | CycleTarget
 
 type BreedingDiagnosisDrawerProps = {
   open: boolean
   onClose: () => void
-  cycle: ApiBreedingCycle | null
-  eweLabel: string
+  target: BreedingDiagnosisTarget | null
   onSaved: () => void | Promise<void>
 }
 
 export function BreedingDiagnosisDrawer({
   open,
   onClose,
-  cycle,
-  eweLabel,
+  target,
   onSaved,
 }: BreedingDiagnosisDrawerProps) {
-  const [dDate, setDDate] = useState(today())
-  const [dResult, setDResult] = useState<EcoResult>("Preñada")
-  const [dNotes, setDNotes] = useState("")
-  const [dNextCheck, setDNextCheck] = useState("")
-  const [confirmMating, setConfirmMating] = useState(false)
-  const [confirmMatingDate, setConfirmMatingDate] = useState(today())
+  const { params: reproParams } = useReproductionParameters()
+  const [form, setForm] = useState<DiagnosisFormState>(emptyDiagnosisForm())
   const [diagHistory, setDiagHistory] = useState<ApiPregnancyCheck[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const hasMating = !!cycle?.matingId
+  const isMating = target?.kind === "mating"
+  const mating = isMating ? target.mating : null
+  const cycle = target?.kind === "cycle" ? target.cycle : null
+  const hasMating = isMating ? true : !!cycle?.matingId
+
+  const matingDate = mating?.matingDate ?? cycle?.confirmedMatingDate ?? cycle?.matingDate ?? ""
+  const followUp = mating ? isPostPregnancyFollowUp(mating.checks) : false
+
+  const resultOptions: EcoResult[] = useMemo(() => {
+    if (mating) {
+      const { phase } = matingActions(mating.checks)
+      return diagnoseOptionsForPhase(phase, mating.checks)
+    }
+    return breedingResultToUiOptions()
+  }, [mating])
+
+  const outsideWindow = useMemo(() => {
+    if (!matingDate || !form.checkDate) return false
+    return ecoOutsideWindow(form.checkDate, matingDate, reproParams)
+  }, [form.checkDate, matingDate, reproParams])
 
   useEffect(() => {
-    if (!open || !cycle) return
-    setDDate(today())
-    setDResult("Preñada")
-    setDNotes("")
-    setDNextCheck("")
-    setConfirmMating(!cycle.matingId)
-    setConfirmMatingDate(today())
+    if (!open || !target) return
     setError(null)
     setDiagHistory([])
-    if (cycle.matingId) {
-      fetchPregnancyChecksByMating(cycle.matingId)
-        .then(setDiagHistory)
-        .catch(() => setDiagHistory([]))
+
+    if (target.kind === "mating") {
+      setForm(diagnosisFormFromMating(target.mating, reproParams))
+      setDiagHistory(target.mating.checks)
+    } else {
+      setForm(diagnosisFormFromCycle(target.cycle))
+      if (target.cycle.matingId) {
+        fetchPregnancyChecksByMating(target.cycle.matingId)
+          .then(setDiagHistory)
+          .catch(() => setDiagHistory([]))
+      }
     }
-  }, [open, cycle])
+  }, [open, target, reproParams])
+
+  useEffect(() => {
+    if (form.result !== "Vacía" || followUp) return
+    const suggested = defaultRemateDate(form.checkDate, reproParams)
+    setForm((prev) =>
+      prev.remateDate === suggested ? prev : { ...prev, remateDate: suggested },
+    )
+  }, [form.checkDate, form.result, followUp, reproParams])
+
+  function setField<K extends keyof DiagnosisFormState>(key: K, value: DiagnosisFormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!cycle || !dDate) return
-    if (!hasMating && confirmMating && !confirmMatingDate) {
-      setError("Indica la fecha de monta")
-      return
-    }
-    if (!hasMating && !confirmMating) {
-      setError('Confirma la monta o activa "Confirmar monta al guardar"')
-      return
-    }
+    if (!target || !form.checkDate) return
     setSaving(true)
     setError(null)
     try {
-      await recordBreedingDiagnosis(cycle.id, {
-        diagnosisType: DiagnosisType.ECO,
-        diagnosisDate: dDate,
-        result: uiResultToBreedingResult(dResult),
-        notes: dNotes.trim() || undefined,
-        nextCheckDate: dResult === "Revisar" && dNextCheck ? dNextCheck : undefined,
-        confirmMating: !hasMating && confirmMating,
-        confirmMatingDate: !hasMating && confirmMating ? confirmMatingDate : undefined,
-      })
+      if (target.kind === "mating") {
+        await saveMatingDiagnosis({
+          mating: target.mating,
+          form,
+          sheepId: target.sheepId,
+          isFemale: target.isFemale,
+          reproParams,
+        })
+      } else {
+        await saveCycleDiagnosis({ cycle: target.cycle, form })
+      }
       await onSaved()
       onClose()
     } catch (err) {
+      if (err instanceof Error && err.message === "Cancelado") return
       setError(err instanceof Error ? err.message : "No se pudo guardar el diagnóstico")
     } finally {
       setSaving(false)
     }
   }
 
+  const description =
+    target?.kind === "mating"
+      ? `Monta del ${formatDisplayDate(target.mating.matingDate)} · ${target.partnerLabel}`
+      : target?.kind === "cycle"
+        ? `${target.eweLabel} · ciclo ${target.cycle.cycleName}`
+        : undefined
+
+  const ecoWindow = matingDate ? suggestedEcoWindow(matingDate, reproParams) : null
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title="Registrar diagnóstico"
-      description={cycle ? `${eweLabel} · ciclo ${cycle.cycleName}` : undefined}
+      description={description}
       footer={
         <>
           <button
@@ -110,7 +165,7 @@ export function BreedingDiagnosisDrawer({
             onClick={onClose}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Cerrar
+            Cancelar
           </button>
           <button
             type="submit"
@@ -133,83 +188,205 @@ export function BreedingDiagnosisDrawer({
           </div>
         )}
 
-        <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
-          Diagnóstico de preñez por ecógrafo (ECO).
-        </p>
+        {isMating && mating && !followUp && ecoWindow && (
+          <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+            Ventana ECO recomendada: {formatDisplayDate(ecoWindow.min)} –{" "}
+            {formatDisplayDate(ecoWindow.max)}
+          </p>
+        )}
 
-        {hasMating ? (
+        {isMating && mating && followUp && (
+          <p className="rounded-md bg-pink-50 px-3 py-2 text-sm text-pink-800">
+            Preñez confirmada. <strong>Revisar</strong> programa un control de gestación sin cambiar el
+            estado preñada. <strong>Vacía</strong> solo si hubo pérdida o el diagnóstico fue erróneo.
+          </p>
+        )}
+
+        {!isMating && (
+          <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+            Diagnóstico de preñez por ecógrafo (ECO) o control manual.
+          </p>
+        )}
+
+        {cycle && hasMating ? (
           <Field label="Fecha de monta confirmada" htmlFor="confirmed-mating-date">
             <TextInput
               id="confirmed-mating-date"
               type="date"
-              value={toDateInputValue(cycle?.confirmedMatingDate ?? "")}
+              value={toDateInputValue(cycle.confirmedMatingDate ?? cycle.matingDate ?? "")}
               readOnly
             />
           </Field>
-        ) : (
+        ) : cycle ? (
           <>
             <Field label="Fecha planificada" htmlFor="planned-mating-date">
               <TextInput
                 id="planned-mating-date"
                 type="date"
-                value={cycle ? toDateInputValue(cycle.matingDate) : ""}
+                value={toDateInputValue(cycle.matingDate)}
                 readOnly
               />
             </Field>
 
             <SwitchField
               label="Confirmar monta al guardar"
-              description="Registra la monta real antes del diagnóstico ECO"
-              checked={confirmMating}
-              onChange={setConfirmMating}
+              description="Registra la monta real antes del diagnóstico"
+              checked={form.confirmMating}
+              onChange={(checked) => setField("confirmMating", checked)}
               aria-label="Confirmar monta al guardar"
             />
 
-            {confirmMating && (
+            {form.confirmMating && (
               <Field label="Fecha de monta" required htmlFor="confirm-mating-date">
                 <TextInput
                   id="confirm-mating-date"
                   type="date"
-                  value={confirmMatingDate}
-                  onChange={(e) => setConfirmMatingDate(e.target.value)}
+                  value={form.confirmMatingDate}
+                  onChange={(e) => setField("confirmMatingDate", e.target.value)}
                   required
                 />
               </Field>
             )}
           </>
-        )}
+        ) : null}
 
-        <Field label="Fecha del diagnóstico" required htmlFor="d-date">
-          <TextInput id="d-date" type="date" value={dDate} onChange={(e) => setDDate(e.target.value)} />
-        </Field>
-
-        <Field label="Resultado" required htmlFor="d-result">
+        <Field label="Tipo" required htmlFor="d-type">
           <Select
-            id="d-result"
-            value={dResult}
-            onChange={(e) => setDResult(e.target.value as EcoResult)}
+            id="d-type"
+            value={form.diagnosisType}
+            onChange={(e) => setField("diagnosisType", e.target.value as DiagnosisType)}
           >
-            {breedingResultToUiOptions().map((r) => (
-              <option key={r} value={r}>
-                {r}
+            {diagnosisTypesForForms.map((type) => (
+              <option key={type} value={type}>
+                {labelDiagnosisType(type)}
               </option>
             ))}
           </Select>
         </Field>
 
-        {dResult === "Revisar" && (
+        <Field label="Fecha del diagnóstico" required htmlFor="d-date">
+          <TextInput
+            id="d-date"
+            type="date"
+            value={form.checkDate}
+            onChange={(e) => setField("checkDate", e.target.value)}
+          />
+        </Field>
+
+        {outsideWindow && (
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            La fecha está fuera de la ventana ECO recomendada ({reproParams.ecoCheckMinDays}–
+            {reproParams.ecoCheckMaxDays} días post-monta). Puedes guardar igualmente si hay motivo
+            clínico.
+          </p>
+        )}
+
+        <Field label="Resultado" required>
+          <div className="flex gap-2">
+            {resultOptions.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setField("result", opt)}
+                className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
+                  form.result === opt
+                    ? opt === "Preñada"
+                      ? "border-pink-300 bg-pink-50 text-pink-700"
+                      : opt === "Revisar"
+                        ? "border-yellow-300 bg-yellow-50 text-yellow-800"
+                        : "border-gray-400 bg-gray-100 text-gray-800"
+                    : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        {form.result === "Revisar" && (
           <Field label="Próximo chequeo" htmlFor="d-next">
             <TextInput
               id="d-next"
               type="date"
-              value={dNextCheck}
-              onChange={(e) => setDNextCheck(e.target.value)}
+              value={form.nextCheckDate}
+              onChange={(e) => setField("nextCheckDate", e.target.value)}
             />
+            {followUp && (
+              <p className="mt-1 text-xs text-gray-500">
+                La oveja sigue preñada; solo se agenda el próximo control.
+              </p>
+            )}
           </Field>
         )}
 
+        {form.result === "Vacía" && (
+          <>
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {followUp
+                ? "Solo si hubo pérdida de gestación o el diagnóstico inicial fue erróneo. La oveja quedará disponible para nueva monta."
+                : `Aplicar Vitasel y programar remate (~${reproParams.heatCycleDays} días).`}
+              {form.checkDate && !followUp && (
+                <> Remate sugerido: {formatDisplayDate(form.remateDate)}.</>
+              )}
+            </p>
+
+            {!followUp && (
+              <>
+                <SwitchField
+                  label="Vitasel aplicado"
+                  checked={form.vitaselApplied}
+                  onChange={(checked) => setField("vitaselApplied", checked)}
+                  aria-label="Vitasel aplicado"
+                />
+
+                <SwitchField
+                  label="Programar remate"
+                  description={`Crea una monta planificada (~${reproParams.heatCycleDays} días)`}
+                  checked={form.scheduleRemate}
+                  onChange={(checked) => {
+                    setField("scheduleRemate", checked)
+                    if (checked && !form.remateDate) {
+                      setField("remateDate", defaultRemateDate(form.checkDate, reproParams))
+                    }
+                  }}
+                  aria-label="Programar remate"
+                />
+
+                {form.scheduleRemate && (
+                  <>
+                    <Field label="Fecha remate" required htmlFor="d-remate-date">
+                      <TextInput
+                        id="d-remate-date"
+                        type="date"
+                        value={form.remateDate}
+                        onChange={(e) => setField("remateDate", e.target.value)}
+                        required
+                      />
+                    </Field>
+                    <Field label="Notas (remate)" htmlFor="d-remate-notes">
+                      <Textarea
+                        id="d-remate-notes"
+                        rows={2}
+                        value={form.remateNotes}
+                        onChange={(e) => setField("remateNotes", e.target.value)}
+                        placeholder="Opcional"
+                      />
+                    </Field>
+                  </>
+                )}
+              </>
+            )}
+          </>
+        )}
+
         <Field label="Notas" htmlFor="d-notes">
-          <Textarea id="d-notes" rows={2} value={dNotes} onChange={(e) => setDNotes(e.target.value)} />
+          <Textarea
+            id="d-notes"
+            rows={2}
+            value={form.notes}
+            onChange={(e) => setField("notes", e.target.value)}
+          />
         </Field>
       </form>
     </Drawer>

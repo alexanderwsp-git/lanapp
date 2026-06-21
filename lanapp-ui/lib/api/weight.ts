@@ -21,4 +21,25 @@ export type WeightCreatePayload = {
 
 export type WeightUpdatePayload = Partial<WeightCreatePayload>
 
-export const { fetchWeightsBySheep, createWeight, updateWeight, deleteWeight } = resolveApi(real, mock)
+export type BulkWeightRecordItem = {
+  sheepId: string
+  weight: number
+  notes?: string
+}
+
+export type BulkWeightPayload = {
+  measurementDate: string
+  notes?: string
+  records?: BulkWeightRecordItem[]
+  sheepIds?: string[]
+  filters?: {
+    gender?: string
+    status?: string
+    category?: string
+    locationId?: string
+  }
+  defaultWeight?: number
+}
+
+export const { fetchWeightsBySheep, createWeight, updateWeight, deleteWeight, bulkRecordWeights } =
+  resolveApi(real, mock)

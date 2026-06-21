@@ -30,6 +30,15 @@ export class PregnancyCheck extends BaseEntity {
     @Column({ nullable: true })
     notes?: string;
 
+    @Column({ type: 'int', nullable: true })
+    offspringBorn?: number | null;
+
+    @Column({ type: 'int', nullable: true })
+    offspringAlive?: number | null;
+
+    @Column({ type: 'int', nullable: true })
+    offspringLost?: number | null;
+
     @Column({ type: 'date', nullable: true })
     nextCheckDate?: Date;
 

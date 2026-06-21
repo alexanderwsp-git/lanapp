@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -12,11 +11,13 @@ import {
   ChartBarIcon,
   BellAlertIcon,
   UsersIcon,
+  ScaleIcon,
+  SunIcon,
 } from "@heroicons/react/24/outline"
 import type { IconType } from "react-icons"
 import { IconAnalysis, IconMedicine } from "@/lib/icons/analysis-medicine"
 import { GiSheep } from "react-icons/gi"
-import { getAccessToken } from "@/lib/auth/session"
+import { useAuth } from "@/lib/auth/use-auth"
 
 type NavItem = {
   label: string
@@ -32,6 +33,9 @@ const primaryNav: NavItem[] = [
   { label: "Alertas destete", href: "/weaning", icon: BellAlertIcon },
   { label: "Medicamentos", href: "/medicines", icon: IconMedicine },
   { label: "Análisis", href: "/analysis", icon: IconAnalysis },
+  { label: "Pesos", href: "/weights", icon: ScaleIcon },
+  { label: "Reproductores", href: "/reproductors", icon: UsersIcon },
+  { label: "Partos", href: "/births", icon: SunIcon },
 ]
 
 const reportsNav: NavItem[] = [
@@ -64,22 +68,8 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
-  const [isAdmin, setIsAdmin] = useState(false)
+  const { isAdmin } = useAuth()
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/")
-
-  useEffect(() => {
-    const token = getAccessToken()
-    fetch("/api/auth/me", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((body) => {
-        if (body.success && body.data?.roles?.includes("admin")) {
-          setIsAdmin(true)
-        }
-      })
-      .catch(() => undefined)
-  }, [])
 
   return (
     <div className="flex h-full flex-col bg-white">

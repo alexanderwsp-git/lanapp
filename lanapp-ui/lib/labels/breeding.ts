@@ -13,6 +13,7 @@ const BREEDING_CYCLE_STATUS_LABELS: Record<BreedingCycleStatus, string> = {
 
 const DIAGNOSIS_TYPE_LABELS: Record<DiagnosisType, string> = {
   [DiagnosisType.ECO]: "ECO",
+  [DiagnosisType.MANUAL]: "Manual",
   [DiagnosisType.CONTROL_MONTA]: "Control manual",
   [DiagnosisType.FAMACHA]: "ECO",
 }

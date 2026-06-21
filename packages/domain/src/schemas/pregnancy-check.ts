@@ -2,8 +2,10 @@ import { z } from 'zod';
 import { BreedingResult, DiagnosisType } from '../enums/breeding';
 import { PregnancyCheckKind } from '../enums/breeding';
 
+const pregnancyDiagnosisTypeSchema = z.enum([DiagnosisType.ECO, DiagnosisType.MANUAL]);
+
 export const BreedingDiagnosisSchema = z.object({
-    diagnosisType: z.literal(DiagnosisType.ECO),
+    diagnosisType: pregnancyDiagnosisTypeSchema,
     diagnosisDate: z.coerce.date(),
     result: z.nativeEnum(BreedingResult),
     vitaselApplied: z.boolean().optional(),
@@ -19,7 +21,7 @@ export const PregnancyCheckSchema = z.object({
     matingId: z.string().uuid(),
     checkDate: z.coerce.date(),
     isPregnant: z.boolean(),
-    checkType: z.literal(DiagnosisType.ECO).optional().default(DiagnosisType.ECO),
+    checkType: pregnancyDiagnosisTypeSchema.optional().default(DiagnosisType.ECO),
     kind: z.nativeEnum(PregnancyCheckKind).default(PregnancyCheckKind.DIAGNOSIS),
     notes: z.string().optional(),
     nextCheckDate: z.coerce.date().optional(),
@@ -34,6 +36,9 @@ export type PregnancyCheckCreate = z.infer<typeof PregnancyCheckCreateSchema>;
 export const DeliveryRecordSchema = z.object({
     deliveryDate: z.coerce.date(),
     notes: z.string().optional(),
+    offspringBorn: z.number().int().nonnegative().optional(),
+    offspringAlive: z.number().int().nonnegative().optional(),
+    offspringLost: z.number().int().nonnegative().optional(),
 });
 
 export type DeliveryRecord = z.infer<typeof DeliveryRecordSchema>;

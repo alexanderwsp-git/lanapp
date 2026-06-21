@@ -1,4 +1,13 @@
-import { clearSession, storeTokens } from './session';
+import {
+  clearSession,
+  getRefreshToken,
+  getTokenUsername,
+  isSkipAuthEnabled,
+  isTokenExpiredOrExpiring,
+  storeTokens,
+} from './session';
+
+let refreshInFlight: Promise<boolean> | null = null;
 
 type AuthEnvelope<T> = {
   success: boolean;
@@ -83,6 +92,54 @@ export async function resetPassword(username: string, code: string, newPassword:
     method: 'POST',
     body: JSON.stringify({ username, code, newPassword }),
   });
+}
+
+export async function refreshSession(): Promise<boolean> {
+  if (isSkipAuthEnabled()) return true;
+
+  const username = getTokenUsername();
+  const refreshToken = getRefreshToken();
+  if (!username || !refreshToken) return false;
+
+  try {
+    const body = await authFetch<{
+      AccessToken: string;
+      RefreshToken?: string;
+      IdToken?: string;
+      ExpiresIn?: number;
+    }>('/api/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ username, refreshToken }),
+    });
+    storeTokens({
+      AccessToken: body.data.AccessToken,
+      RefreshToken: body.data.RefreshToken ?? refreshToken,
+      IdToken: body.data.IdToken,
+      ExpiresIn: body.data.ExpiresIn,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function refreshSessionIfNeeded(): Promise<boolean> {
+  if (isSkipAuthEnabled()) return true;
+  if (!isTokenExpiredOrExpiring()) return true;
+
+  if (!refreshInFlight) {
+    refreshInFlight = refreshSession().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+export async function forceLogout(nextPath?: string) {
+  if (typeof window === 'undefined') return;
+  await logout();
+  const next = nextPath ?? `${window.location.pathname}${window.location.search}`;
+  window.location.href = `/login?next=${encodeURIComponent(next)}`;
 }
 
 export async function logout() {

@@ -20,6 +20,7 @@ export const SheepSchema = z.object({
     imageUrl: z.string().url().optional(),
     isPregnant: z.boolean().optional(),
     isBreedingRam: z.boolean().optional(),
+    breedingRamMarkedAt: z.coerce.date().optional().nullable(),
     lastMountedDate: z.coerce.date().optional(),
     pregnancyConfirmedAt: z.coerce.date().optional(),
     deliveryDate: z.coerce.date().optional(),
@@ -61,6 +62,7 @@ export const SheepJsonSchema = SheepSchema.extend({
     lastMountedDate: z.string().optional(),
     pregnancyConfirmedAt: z.string().optional(),
     deliveryDate: z.string().optional(),
+    breedingRamMarkedAt: z.string().optional().nullable(),
 });
 
 export type SheepJson = z.infer<typeof SheepJsonSchema>;

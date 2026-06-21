@@ -127,3 +127,42 @@ export const BulkWeaningSchema = z
     });
 
 export type BulkWeaning = z.infer<typeof BulkWeaningSchema>;
+
+export const BulkWeightRecordItemSchema = z.object({
+    sheepId: z.string().uuid(),
+    weight: z.number().positive(),
+    notes: z.string().optional(),
+});
+
+export type BulkWeightRecordItem = z.infer<typeof BulkWeightRecordItemSchema>;
+
+export const BulkWeightScheduleSchema = z
+    .object({
+        measurementDate: z.coerce.date(),
+        notes: z.string().optional(),
+        records: z.array(BulkWeightRecordItemSchema).min(1).max(500).optional(),
+        sheepIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+        filters: SheepTargetFiltersSchema.optional(),
+        defaultWeight: z.number().positive().optional(),
+    })
+    .superRefine((data, ctx) => {
+        const hasRecords = (data.records?.length ?? 0) > 0;
+        const hasIds = (data.sheepIds?.length ?? 0) > 0;
+        const hasFilters = data.filters !== undefined;
+
+        if (!hasRecords && !hasIds && !hasFilters) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Provide records, sheepIds, or filters',
+            });
+        }
+
+        if (!hasRecords && (hasIds || hasFilters) && data.defaultWeight === undefined) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'defaultWeight is required when using sheepIds or filters without records',
+            });
+        }
+    });
+
+export type BulkWeightSchedule = z.infer<typeof BulkWeightScheduleSchema>;

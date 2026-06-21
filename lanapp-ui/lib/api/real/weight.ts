@@ -1,5 +1,6 @@
 import { lanapp } from "../client"
-import type { ApiWeight, WeightCreatePayload, WeightUpdatePayload } from "../weight"
+import type { ApiWeight, BulkWeightPayload, WeightCreatePayload, WeightUpdatePayload } from "../weight"
+import type { BulkResult } from "../types"
 
 export async function fetchWeightsBySheep(sheepId: string): Promise<ApiWeight[]> {
   const res = await lanapp.get<ApiWeight[]>(`weight/sheep/${sheepId}`)
@@ -18,4 +19,9 @@ export async function updateWeight(id: string, payload: WeightUpdatePayload): Pr
 
 export async function deleteWeight(id: string): Promise<void> {
   await lanapp.delete<null>(`weight/${id}`)
+}
+
+export async function bulkRecordWeights(payload: BulkWeightPayload): Promise<BulkResult> {
+  const res = await lanapp.post<BulkResult>("weight/bulk", payload)
+  return res.data
 }

@@ -3,7 +3,7 @@ SHELL := /bin/bash
 UI_PORT ?= 3000
 API_PORT ?= 4001
 
-.PHONY: help install packages build build-all setup api ui kill-port kill-api kill-ui seed
+.PHONY: help install packages build build-all setup api ui kill-port kill-api kill-ui seed db db-down migrate migrate-revert
 
 .DEFAULT_GOAL := help
 
@@ -31,6 +31,18 @@ build-all: ## Build packages + lanapp + auth + lanapp-ui
 	npm run build:all
 
 setup: install packages ## First-time dev setup
+
+db: ## Start Postgres (docker compose in lanapp/)
+	cd lanapp && docker compose up -d
+
+db-down: ## Stop Postgres
+	cd lanapp && docker compose down
+
+migrate: ## Run pending lanapp DB migrations
+	npm run migration:run -w lanapp
+
+migrate-revert: ## Revert last lanapp migration
+	npm run migration:revert -w lanapp
 
 seed: ## Load demo fixtures into Postgres (npm run seed -w lanapp)
 	npm run seed -w lanapp
