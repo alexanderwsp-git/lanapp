@@ -57,7 +57,10 @@ export async function fetchMedicineApplications(
 export async function fetchMedicineApplicationsBySheep(
   sheepId: string,
 ): Promise<ApiMedicineApplication[]> {
-  const res = await lanapp.get<ApiMedicineApplication[]>(`medicine-application/sheep/${sheepId}`)
+  const id = sheepId?.trim()
+  if (!id) throw new Error("Falta identificador de oveja")
+  const qs = new URLSearchParams({ sheepId: id, limit: "500" })
+  const res = await lanapp.get<ApiMedicineApplication[]>(`medicine-application?${qs.toString()}`)
   return res.data
 }
 

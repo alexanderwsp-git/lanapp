@@ -12,7 +12,7 @@ import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import { bulkRecordWeights } from "@/lib/api/weight"
 import type { ApiLocation, ApiSheep, BulkResult } from "@/lib/api/types"
-import { labelCategory } from "@/lib/labels/sheep"
+import { SheepCategoryCell } from "@/components/sheep-category-cell"
 import { displayKgValue, formatDisplayDate, toKg } from "@/lib/format"
 import { IconSchedule } from "@/lib/icons/analysis-medicine"
 import { ScaleIcon } from "@heroicons/react/24/outline"
@@ -226,9 +226,9 @@ export default function WeightsPage() {
             },
             {
               key: "category",
-              header: "Categoría",
+              header: "Estado",
               className: "whitespace-nowrap",
-              cell: (s) => labelCategory(s.category),
+              cell: (s) => <SheepCategoryCell sheep={s} compact />,
             },
             {
               key: "birth",
@@ -334,7 +334,7 @@ export default function WeightsPage() {
                 <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">{s.tag}</p>
-                    <p className="truncate text-xs text-gray-500">{s.name || labelCategory(s.category)}</p>
+                    <p className="truncate text-xs text-gray-500">{s.name ?? "—"}</p>
                   </div>
                   <input
                     type="number"

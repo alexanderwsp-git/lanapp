@@ -97,7 +97,7 @@ export function DataTable<T>({
   const colCount = columns.length + (selection ? 1 : 0)
 
   return (
-    <div className={bare ? "overflow-hidden" : "overflow-hidden rounded-lg bg-white shadow"}>
+    <div className={bare ? "overflow-x-auto" : "overflow-hidden rounded-lg bg-white shadow"}>
       {loading ? (
         <p className="p-8 text-center text-sm text-gray-500">{loadingText}</p>
       ) : total === 0 ? (
@@ -174,7 +174,7 @@ export function DataTable<T>({
                       </tr>
                       {expand && expanded && (
                         <tr>
-                          <td colSpan={colCount} className="bg-gray-50/60 px-4 py-3">
+                          <td colSpan={colCount} className="border-t border-gray-100 bg-gray-50/60 px-4 py-4 pb-6">
                             {expand.render(row)}
                           </td>
                         </tr>

@@ -26,3 +26,7 @@ export const QuerySchema = z.object({
     sortBy: z.string().optional(),
     order: z.enum(['asc', 'desc']).optional(),
 });
+
+export const SheepIdQuerySchema = QuerySchema.extend({
+    sheepId: z.string().uuid('Invalid sheep ID format').optional(),
+});

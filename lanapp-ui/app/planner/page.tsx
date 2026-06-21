@@ -21,6 +21,7 @@ import {
   fetchBreedingCycles,
   type ApiBreedingCycle,
 } from "@/lib/api/breeding-cycle"
+import { fetchPregnancyChecksByMating, type ApiPregnancyCheck } from "@/lib/api/pregnancy-check"
 import type { ApiLocation, ApiSheep, BulkResult } from "@/lib/api/types"
 import { BreedingCycleStatus, Gender, SheepCategory, SheepStatus } from "@sheep/domain"
 import { labelCategory } from "@/lib/labels/sheep"
@@ -28,7 +29,15 @@ import {
   breedingResultBadgeColor,
   labelBreedingResult,
 } from "@/lib/labels/breeding"
-import { isEweBreedingEligible, isRamBreedingEligible } from "@/lib/breeding-eligibility"
+import {
+  eweBreedingEligibility,
+  isEweBreedingEligible,
+  isRamBreedingEligible,
+} from "@/lib/breeding-eligibility"
+import { SheepCategoryCell } from "@/components/sheep-category-cell"
+import { cycleDiagnosisGate } from "@/lib/mating/cycle-diagnosis"
+import { matingActions } from "@/lib/mating-actions"
+import { useReproductionParameters } from "@/lib/hooks/use-reproduction-parameters"
 import { formatDisplayDate } from "@/lib/format"
 import {
   CalendarDaysIcon,
@@ -47,9 +56,13 @@ function sheepLabel(s: { tag: string; name?: string | null }) {
 }
 
 export default function PlannerPage() {
+  const { params: reproParams } = useReproductionParameters()
   const [addOpen, setAddOpen] = useState(false)
 
   const [rows, setRows] = useState<ApiBreedingCycle[]>([])
+  const [checksByMatingId, setChecksByMatingId] = useState<Map<string, ApiPregnancyCheck[]>>(
+    new Map(),
+  )
   const [ewes, setEwes] = useState<ApiSheep[]>([])
   const [rams, setRams] = useState<ApiSheep[]>([])
   const [locations, setLocations] = useState<ApiLocation[]>([])
@@ -108,7 +121,18 @@ export default function PlannerPage() {
         fetchSheep({ gender: Gender.MALE, status: SheepStatus.ACTIVE, category: SheepCategory.REPRODUCTOR, limit: 200 }),
         fetchLocations(200).catch(() => [] as ApiLocation[]),
       ])
-      setRows(cycles.filter((c) => c.status === BreedingCycleStatus.ACTIVE))
+      const active = cycles.filter((c) => c.status === BreedingCycleStatus.ACTIVE)
+      setRows(active)
+
+      const matingIds = [
+        ...new Set(active.map((c) => c.matingId).filter((id): id is string => !!id)),
+      ]
+      const checkEntries = await Promise.all(
+        matingIds.map(
+          async (id) => [id, await fetchPregnancyChecksByMating(id).catch(() => [])] as const,
+        ),
+      )
+      setChecksByMatingId(new Map(checkEntries))
       setEwes(females.items)
       setRams(males.items)
       setLocations(locs)
@@ -172,7 +196,14 @@ export default function PlannerPage() {
   }
 
   function openDiag(row: ApiBreedingCycle) {
+    const checks = row.matingId ? checksByMatingId.get(row.matingId) : undefined
+    if (!cycleDiagnosisGate(row, checks).canDiagnose) return
     setDiagFor(row)
+  }
+
+  function diagnosisGateFor(row: ApiBreedingCycle) {
+    const checks = row.matingId ? checksByMatingId.get(row.matingId) : undefined
+    return cycleDiagnosisGate(row, checks)
   }
 
   function openConfirmMating(row?: ApiBreedingCycle) {
@@ -210,8 +241,13 @@ export default function PlannerPage() {
   }
 
   const selectableBulk = useMemo(
-    () => bulkVisible.filter((s) => !ewesAlreadyInCycle.has(s.id)),
-    [bulkVisible, ewesAlreadyInCycle],
+    () =>
+      bulkVisible.filter((s) => {
+        if (ewesAlreadyInCycle.has(s.id)) return false
+        if (!eligibleOnly && eweBreedingEligibility(s)) return false
+        return true
+      }),
+    [bulkVisible, ewesAlreadyInCycle, eligibleOnly],
   )
 
   const bulkAllSelected =
@@ -232,6 +268,8 @@ export default function PlannerPage() {
 
   function toggleBulkOne(id: string) {
     if (ewesAlreadyInCycle.has(id)) return
+    const sheep = eweById.get(id)
+    if (sheep && !eligibleOnly && eweBreedingEligibility(sheep)) return
     setBSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -315,6 +353,13 @@ export default function PlannerPage() {
           </div>
         }
       />
+
+      <p className="-mt-2 mb-4 text-sm text-gray-500">
+        Resultado = diagnóstico del ciclo. Estado oveja = situación actual (lactancia bloquea nuevas
+        montas). Diagnóstico = ECO de esta monta; tras Vacía definitiva o parto, el ciclo queda
+        cerrado. Tras Vacía, programa remate o registra monta nueva. Revisar solo repite ECO o
+        agenda control si ya hubo Preñada.
+      </p>
 
       {loadError && (
         <div className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -404,6 +449,16 @@ export default function PlannerPage() {
             }
             columns={[
               { key: "ewe", header: "Oveja", className: "whitespace-nowrap font-medium text-gray-900", cell: (r) => displayEwe(r) },
+              {
+                key: "eweState",
+                header: "Estado oveja",
+                className: "whitespace-nowrap",
+                cell: (r) => {
+                  const ewe = eweById.get(r.eweId) ?? r.ewe
+                  if (!ewe || !("category" in ewe)) return "—"
+                  return <SheepCategoryCell sheep={ewe} showBreedingHint compact />
+                },
+              },
               { key: "ram", header: "Reproductor", className: "whitespace-nowrap", cell: (r) => displayRam(r) },
               { key: "cycle", header: "Ciclo", className: "whitespace-nowrap", cell: (r) => r.cycleName },
               {
@@ -438,11 +493,22 @@ export default function PlannerPage() {
                 key: "result",
                 header: "Resultado",
                 className: "whitespace-nowrap",
-                cell: (r) => (
-                  <StatusBadge color={breedingResultBadgeColor(r.result)}>
-                    {labelBreedingResult(r.result)}
-                  </StatusBadge>
-                ),
+                cell: (r) => {
+                  const checks = r.matingId ? checksByMatingId.get(r.matingId) : undefined
+                  const phase = checks ? matingActions(checks).phase : null
+                  return (
+                    <div className="flex max-w-xs flex-col gap-1">
+                      <StatusBadge color={breedingResultBadgeColor(r.result)}>
+                        {labelBreedingResult(r.result)}
+                      </StatusBadge>
+                      {phase === "empty" && (
+                        <p className="text-xs text-amber-700">
+                          Aplicar Vitasel y registrar nueva monta (~{reproParams.heatCycleDays} días)
+                        </p>
+                      )}
+                    </div>
+                  )
+                },
               },
               {
                 key: "vitasel",
@@ -476,9 +542,14 @@ export default function PlannerPage() {
                     <button
                       type="button"
                       onClick={() => openDiag(r)}
-                      title="Registrar diagnóstico"
+                      disabled={!diagnosisGateFor(r).canDiagnose}
+                      title={
+                        diagnosisGateFor(r).canDiagnose
+                          ? "Registrar diagnóstico"
+                          : diagnosisGateFor(r).diagnoseBlockedReason
+                      }
                       aria-label="Registrar diagnóstico"
-                      className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50"
+                      className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
                     >
                       <BeakerIcon className="size-5" aria-hidden="true" />
                     </button>
@@ -594,7 +665,10 @@ export default function PlannerPage() {
             <Textarea id="b-notes" rows={2} value={bNotes} onChange={(e) => setBNotes(e.target.value)} />
           </Field>
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
-            <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
+            <label
+              className="mb-2 flex items-center gap-2 text-sm text-gray-700"
+              title="Oculta lactantes, preñadas y categorías no aptas"
+            >
               <input
                 type="checkbox"
                 checked={eligibleOnly}
@@ -622,17 +696,19 @@ export default function PlannerPage() {
               ) : (
                 bulkVisible.map((s) => {
                   const alreadyIn = ewesAlreadyInCycle.has(s.id)
+                  const blockReason = !eligibleOnly ? eweBreedingEligibility(s) : null
+                  const disabled = alreadyIn || !!blockReason
                   return (
                     <label
                       key={s.id}
                       className={`flex items-center gap-3 px-3 py-2 ${
-                        alreadyIn ? "cursor-not-allowed bg-gray-50 opacity-60" : "cursor-pointer hover:bg-gray-50"
+                        disabled ? "cursor-not-allowed bg-gray-50 opacity-60" : "cursor-pointer hover:bg-gray-50"
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={bSelected.has(s.id)}
-                        disabled={alreadyIn}
+                        disabled={disabled}
                         onChange={() => toggleBulkOne(s.id)}
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                       />
@@ -643,10 +719,16 @@ export default function PlannerPage() {
                             <span className="ml-2 text-xs font-normal text-gray-500">Ya en ciclo</span>
                           )}
                         </span>
-                        <span className="block truncate text-xs text-gray-500">
-                          {labelCategory(s.category)}
-                          {s.currentLocation?.name ? ` · ${s.currentLocation.name}` : ""}
-                        </span>
+                        {blockReason ? (
+                          <span className="mt-0.5 block">
+                            <SheepCategoryCell sheep={s} showBreedingHint compact />
+                          </span>
+                        ) : (
+                          <span className="block truncate text-xs text-gray-500">
+                            {labelCategory(s.category)}
+                            {s.currentLocation?.name ? ` · ${s.currentLocation.name}` : ""}
+                          </span>
+                        )}
                       </span>
                     </label>
                   )
@@ -660,7 +742,16 @@ export default function PlannerPage() {
       <BreedingDiagnosisDrawer
         open={diagFor !== null}
         onClose={() => setDiagFor(null)}
-        target={diagFor ? { kind: "cycle", cycle: diagFor, eweLabel: displayEwe(diagFor) } : null}
+        target={
+          diagFor
+            ? {
+                kind: "cycle",
+                cycle: diagFor,
+                eweLabel: displayEwe(diagFor),
+                checks: diagFor.matingId ? checksByMatingId.get(diagFor.matingId) : undefined,
+              }
+            : null
+        }
         onSaved={load}
       />
 

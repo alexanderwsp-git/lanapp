@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from "react"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
 import { AnalysisDiagnosisDrawer } from "@/components/analysis-diagnosis-drawer"
+import { AnalysisDetailPanel } from "@/components/analysis-detail-panel"
 import { SheepAnalysisSummary } from "@/components/sheep-analysis-summary"
 import { isAnalysisDue, todayInput } from "@/lib/analysis/due"
 import { fetchAnalysesBySheep, fetchAnalysisTypes } from "@/lib/api/analysis"
-import { fetchMedicines } from "@/lib/api/medicine"
-import type { ApiMedicine, ApiSheep } from "@/lib/api/types"
+import { fetchMedicineApplicationsBySheep, fetchMedicines } from "@/lib/api/medicine"
+import type { ApiMedicine, ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
 import { analysisEligibility } from "@/lib/sheep-action-eligibility"
 import { AnalysisStatus, AnalysisType, type ApiAnalysis, type ApiAnalysisType } from "@/lib/analysis/types"
 import {
@@ -16,7 +17,6 @@ import {
   IconAnalysis,
   IconDiagnosis,
   IconDue,
-  IconEdit,
 } from "@/lib/icons/analysis-medicine"
 import {
   analysisStatusColor,
@@ -25,7 +25,7 @@ import {
   labelAnalysisType,
 } from "@/lib/labels/analysis"
 import { formatDisplayDate, toDateInputValue } from "@/lib/format"
-import { MdOutlineAnalytics } from "react-icons/md"
+import { ClockIcon } from "@heroicons/react/24/outline"
 
 function resultCell(a: ApiAnalysis) {
   if (a.status === AnalysisStatus.SCHEDULED) {
@@ -62,8 +62,12 @@ export function SheepAnalysisTab({
   const [records, setRecords] = useState<ApiAnalysis[]>([])
   const [types, setTypes] = useState<ApiAnalysisType[]>([])
   const [meds, setMeds] = useState<ApiMedicine[]>([])
+  const [medAppsByAnalysis, setMedAppsByAnalysis] = useState<Map<string, ApiMedicineApplication>>(
+    new Map(),
+  )
   const [loading, setLoading] = useState(true)
   const [success, setSuccess] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [diagnoseTarget, setDiagnoseTarget] = useState<ApiAnalysis | null>(null)
@@ -71,18 +75,27 @@ export function SheepAnalysisTab({
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [list, typePage, medPage] = await Promise.all([
+      const [list, typePage, medPage, medApps] = await Promise.all([
         fetchAnalysesBySheep(sheepId),
         fetchAnalysisTypes(),
         fetchMedicines(1, 100),
+        fetchMedicineApplicationsBySheep(sheepId).catch(() => [] as ApiMedicineApplication[]),
       ])
       setRecords(sortAnalyses(list))
       setTypes(typePage.items)
       setMeds(medPage.items)
+      setMedAppsByAnalysis(
+        new Map(
+          medApps
+            .filter((a) => a.analysisId)
+            .map((a) => [a.analysisId as string, a]),
+        ),
+      )
     } catch {
       setRecords([])
       setTypes([])
       setMeds([])
+      setMedAppsByAnalysis(new Map())
     } finally {
       setLoading(false)
     }
@@ -154,6 +167,20 @@ export function SheepAnalysisTab({
           loading={loading}
           loadingText="Cargando análisis…"
           empty={<p className="text-sm text-gray-500">Sin análisis registrados.</p>}
+          expand={{
+            isExpanded: (a) => expandedId === a.id,
+            render: (a) => (
+              <>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Detalle del análisis
+                </p>
+                <AnalysisDetailPanel
+                  record={a}
+                  linkedMedicine={medAppsByAnalysis.get(a.id) ?? null}
+                />
+              </>
+            ),
+          }}
           columns={[
             {
               key: "date",
@@ -209,8 +236,20 @@ export function SheepAnalysisTab({
               header: "",
               align: "right",
               className: "whitespace-nowrap",
-              cell: (a) => (
+              cell: (a) => {
+                const isExpanded = expandedId === a.id
+                return (
                 <div className="flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : a.id)}
+                    title={isExpanded ? "Ocultar detalle" : "Ver detalle"}
+                    aria-label={isExpanded ? "Ocultar detalle" : "Ver detalle"}
+                    aria-expanded={isExpanded}
+                    className="inline-flex items-center gap-1 rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-indigo-600"
+                  >
+                    <ClockIcon className="size-5" aria-hidden="true" />
+                  </button>
                   {a.status === AnalysisStatus.SCHEDULED && (
                     <button
                       type="button"
@@ -234,7 +273,8 @@ export function SheepAnalysisTab({
                     </button>
                   )}
                 </div>
-              ),
+                )
+              },
             },
           ]}
         />

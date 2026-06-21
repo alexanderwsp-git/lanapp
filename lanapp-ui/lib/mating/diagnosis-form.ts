@@ -69,7 +69,29 @@ export function diagnosisFormFromMating(
   })
 }
 
-export function diagnosisFormFromCycle(cycle: ApiBreedingCycle): DiagnosisFormState {
+export function diagnosisFormFromCycle(
+  cycle: ApiBreedingCycle,
+  checks?: ApiPregnancyCheck[],
+  reproParams?: ReproductionParameters,
+): DiagnosisFormState {
+  if (cycle.matingId && checks && reproParams) {
+    const { phase } = matingActions(checks)
+    const options = diagnoseOptionsForPhase(phase, checks)
+    const followUp = isPostPregnancyFollowUp(checks)
+    const matingDate = cycle.confirmedMatingDate ?? cycle.matingDate
+    const window = suggestedEcoWindow(matingDate, reproParams)
+    const defaultDate = today() >= window.min && today() <= window.max ? today() : window.min
+    const checkDate = followUp ? today() : defaultDate
+    return emptyDiagnosisForm({
+      result: options[0] ?? "Preñada",
+      checkDate,
+      confirmMating: false,
+      confirmMatingDate: matingDate,
+      nextCheckDate: followUp ? "" : window.max,
+      remateDate: suggestedRemateDate(checkDate, reproParams),
+    })
+  }
+
   return emptyDiagnosisForm({
     confirmMating: !cycle.matingId,
     confirmMatingDate: today(),
@@ -143,9 +165,18 @@ export async function saveMatingDiagnosis(input: {
 export async function saveCycleDiagnosis(input: {
   cycle: ApiBreedingCycle
   form: DiagnosisFormState
-}): Promise<void> {
-  const { cycle, form } = input
+  checks?: ApiPregnancyCheck[]
+}): Promise<{ remateCycleName?: string }> {
+  const { cycle, form, checks = [] } = input
   const hasMating = !!cycle.matingId
+  const followUp = isPostPregnancyFollowUp(checks)
+
+  if (form.result === "Vacía" && followUp) {
+    const ok = window.confirm(
+      "La oveja fue confirmada preñada en esta monta. ¿Marcar como vacía (pérdida de gestación o error de diagnóstico)? Esto desbloqueará la oveja para una nueva monta.",
+    )
+    if (!ok) throw new Error("Cancelado")
+  }
 
   if (!hasMating && form.confirmMating && !form.confirmMatingDate) {
     throw new Error("Indica la fecha de monta")
@@ -165,7 +196,11 @@ export async function saveCycleDiagnosis(input: {
     confirmMatingDate: !hasMating && form.confirmMating ? form.confirmMatingDate : undefined,
   })
 
-  if (form.result === "Vacía" && form.scheduleRemate && form.remateDate) {
+  if (form.result === "Vacía" && form.scheduleRemate && form.remateDate && !followUp) {
+    const baseName = (cycle.cycleName?.trim() || defaultCycleName())
+      .replace(/\s*·\s*remate$/i, "")
+      .trim()
+    const remateCycleName = `${baseName} · remate`
     await scheduleRemateCycle({
       femaleId: cycle.eweId,
       maleId: cycle.ramId ?? undefined,
@@ -173,7 +208,10 @@ export async function saveCycleDiagnosis(input: {
       remateDate: form.remateDate,
       remateNotes: form.remateNotes.trim() || undefined,
     })
+    return { remateCycleName }
   }
+
+  return {}
 }
 
 export function defaultRemateDate(checkDate: string, reproParams: ReproductionParameters): string {

@@ -8,7 +8,6 @@ import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DataTable } from "@/components/ui/data-table"
-import { StatusBadge } from "@/components/ui/status-badge"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import { fetchSheep } from "@/lib/api/sheep"
@@ -21,7 +20,7 @@ import {
 import type { ApiSheep } from "@/lib/api/types"
 import { matingActions } from "@/lib/mating-actions"
 import { formatDisplayDate } from "@/lib/format"
-import { labelCategory } from "@/lib/labels/sheep"
+import { SheepCategoryCell } from "@/components/sheep-category-cell"
 import { SunIcon, UserGroupIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
@@ -211,9 +210,9 @@ export default function BirthsPage() {
             },
             {
               key: "category",
-              header: "Categoría",
+              header: "Estado",
               className: "whitespace-nowrap",
-              cell: (r) => <StatusBadge color="indigo">{labelCategory(r.sheep.category)}</StatusBadge>,
+              cell: (r) => <SheepCategoryCell sheep={r.sheep} showBreedingHint compact />,
             },
             {
               key: "mating",

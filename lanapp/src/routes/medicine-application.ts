@@ -3,6 +3,8 @@ import {
     MedicineApplicationUpdateSchema,
     BulkMedicineScheduleSchema,
     IdSchema,
+    SheepIdParamSchema,
+    SheepIdQuerySchema,
 } from '@sheep/domain';
 import {
     created,
@@ -14,6 +16,7 @@ import {
     asyncHandler,
     validateSchema,
     validateParams,
+    validateQuery,
 } from '@sheep/server';
 import { Router, Request, Response } from 'express';
 import { MedicineApplicationService } from '../services';
@@ -22,17 +25,6 @@ import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 const medicineApplicationService = new MedicineApplicationService();
-
-router.get(
-    '/',
-    verifyToken,
-    asyncHandler(async (req: Request, res: Response) => {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const result = await medicineApplicationService.findAll(page, limit);
-        foundPaginated(res, result, page, limit);
-    })
-);
 
 router.get(
     '/pending',
@@ -46,10 +38,41 @@ router.get(
 router.get(
     '/sheep/:sheepId',
     verifyToken,
-    validateParams(IdSchema),
+    validateParams(SheepIdParamSchema),
     asyncHandler(async (req: Request, res: Response) => {
         const applications = await medicineApplicationService.findBySheep(req.params.sheepId);
         found(res, applications);
+    })
+);
+
+router.get(
+    '/',
+    verifyToken,
+    validateQuery(SheepIdQuerySchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const sheepId = req.query.sheepId as string | undefined;
+        if (sheepId) {
+            const applications = await medicineApplicationService.findBySheep(sheepId);
+            return found(res, applications);
+        }
+
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const result = await medicineApplicationService.findAll(page, limit);
+        foundPaginated(res, result, page, limit);
+    })
+);
+
+router.post(
+    '/bulk/schedule',
+    verifyToken,
+    validateSchema(BulkMedicineScheduleSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const result = await medicineApplicationService.bulkSchedule(
+            req.body,
+            req.user!.username
+        );
+        created(res, result);
     })
 );
 
@@ -72,19 +95,6 @@ router.get(
         const application = await medicineApplicationService.findOne(req.params.id);
         if (!application) return failed(res, 'Medicine application not found');
         found(res, application);
-    })
-);
-
-router.post(
-    '/bulk/schedule',
-    verifyToken,
-    validateSchema(BulkMedicineScheduleSchema),
-    asyncHandler(async (req: Request, res: Response) => {
-        const result = await medicineApplicationService.bulkSchedule(
-            req.body,
-            req.user!.username
-        );
-        created(res, result);
     })
 );
 

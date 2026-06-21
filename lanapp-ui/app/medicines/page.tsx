@@ -33,7 +33,7 @@ import {
 import { fetchSheep } from "@/lib/api/sheep"
 import { fetchLocations } from "@/lib/api/location"
 import type { ApiLocation, ApiMedicine, ApiMedicineApplication, ApiSheep, BulkResult } from "@/lib/api/types"
-import { labelCategory } from "@/lib/labels/sheep"
+import { SheepCategoryCell } from "@/components/sheep-category-cell"
 import { toDateInputValue, formatDisplayDate, formatMedicineNotes } from "@/lib/format"
 import {
   labelMedicineStatus,
@@ -985,12 +985,12 @@ export default function MedicinesPage() {
                       onChange={() => toggleBulkOne(s.id)}
                       className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
                     />
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-gray-900">{s.tag}</span>
-                      <span className="block truncate text-xs text-gray-500">
-                        {s.name ? `${s.name} · ` : ""}
-                        {labelCategory(s.category)}
-                      </span>
+                      {s.name && (
+                        <span className="block truncate text-xs text-gray-500">{s.name}</span>
+                      )}
+                      <SheepCategoryCell sheep={s} compact />
                     </span>
                   </label>
                 ))

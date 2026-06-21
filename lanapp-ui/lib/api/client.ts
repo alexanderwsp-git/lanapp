@@ -78,12 +78,20 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok || body.success === false) {
+    const detail =
+      typeof body.error === "string" &&
+      body.error !== "Invalid request parameters" &&
+      body.message &&
+      body.message !== "Request failed"
+        ? body.message
+        : null
     const err =
-      typeof body.error === "string"
+      detail ??
+      (typeof body.error === "string"
         ? body.error
         : Array.isArray(body.error)
           ? body.error.map((e: { message?: string }) => e.message).filter(Boolean).join("; ")
-          : body.message
+          : body.message)
     throw new Error(err || `HTTP ${res.status}`)
   }
   return body

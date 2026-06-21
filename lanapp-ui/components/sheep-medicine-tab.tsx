@@ -41,22 +41,27 @@ export function SheepMedicineTab({
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
-    try {
-      const [list, medPage] = await Promise.all([
-        fetchMedicineApplicationsBySheep(sheepId),
-        fetchMedicines(1, 100),
-      ])
-      const sorted = [...list].sort(
+    const [appsResult, medsResult] = await Promise.allSettled([
+      fetchMedicineApplicationsBySheep(sheepId),
+      fetchMedicines(1, 100),
+    ])
+    if (appsResult.status === "fulfilled") {
+      const sorted = [...appsResult.value].sort(
         (a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime(),
       )
       setApps(sorted)
-      setMedicines(medPage.items)
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "No se pudo cargar medicina")
+    } else {
       setApps([])
-    } finally {
-      setLoading(false)
+      setLoadError(
+        appsResult.reason instanceof Error
+          ? appsResult.reason.message
+          : "No se pudieron cargar las aplicaciones",
+      )
     }
+    if (medsResult.status === "fulfilled") {
+      setMedicines(medsResult.value.items)
+    }
+    setLoading(false)
   }, [sheepId])
 
   useEffect(() => {

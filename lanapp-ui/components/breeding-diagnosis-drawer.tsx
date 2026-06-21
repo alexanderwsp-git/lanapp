@@ -42,6 +42,7 @@ type CycleTarget = {
   kind: "cycle"
   cycle: ApiBreedingCycle
   eweLabel: string
+  checks?: ApiPregnancyCheck[]
 }
 
 export type BreedingDiagnosisTarget = MatingTarget | CycleTarget
@@ -71,15 +72,30 @@ export function BreedingDiagnosisDrawer({
   const hasMating = isMating ? true : !!cycle?.matingId
 
   const matingDate = mating?.matingDate ?? cycle?.confirmedMatingDate ?? cycle?.matingDate ?? ""
-  const followUp = mating ? isPostPregnancyFollowUp(mating.checks) : false
+  const cycleChecks =
+    mating?.checks ??
+    (target?.kind === "cycle" ? (target.checks ?? diagHistory) : [])
+  const followUp = isPostPregnancyFollowUp(cycleChecks)
 
   const resultOptions: EcoResult[] = useMemo(() => {
     if (mating) {
       const { phase } = matingActions(mating.checks)
       return diagnoseOptionsForPhase(phase, mating.checks)
     }
+    if (cycle?.matingId) {
+      const { phase } = matingActions(cycleChecks)
+      const opts = diagnoseOptionsForPhase(phase, cycleChecks)
+      if (opts.length > 0) return opts
+    }
     return breedingResultToUiOptions()
-  }, [mating])
+  }, [mating, cycle, cycleChecks, diagHistory])
+
+  useEffect(() => {
+    if (resultOptions.length === 0) return
+    if (!resultOptions.includes(form.result)) {
+      setForm((prev) => ({ ...prev, result: resultOptions[0] }))
+    }
+  }, [resultOptions, form.result])
 
   const outsideWindow = useMemo(() => {
     if (!matingDate || !form.checkDate) return false
@@ -95,11 +111,21 @@ export function BreedingDiagnosisDrawer({
       setForm(diagnosisFormFromMating(target.mating, reproParams))
       setDiagHistory(target.mating.checks)
     } else {
-      setForm(diagnosisFormFromCycle(target.cycle))
+      const initialChecks = target.checks ?? []
+      setDiagHistory(initialChecks)
       if (target.cycle.matingId) {
-        fetchPregnancyChecksByMating(target.cycle.matingId)
-          .then(setDiagHistory)
-          .catch(() => setDiagHistory([]))
+        if (target.checks === undefined) {
+          fetchPregnancyChecksByMating(target.cycle.matingId)
+            .then((checks) => {
+              setDiagHistory(checks)
+              setForm(diagnosisFormFromCycle(target.cycle, checks, reproParams))
+            })
+            .catch(() => setDiagHistory([]))
+        } else {
+          setForm(diagnosisFormFromCycle(target.cycle, initialChecks, reproParams))
+        }
+      } else {
+        setForm(diagnosisFormFromCycle(target.cycle))
       }
     }
   }, [open, target, reproParams])
@@ -131,7 +157,18 @@ export function BreedingDiagnosisDrawer({
           reproParams,
         })
       } else {
-        await saveCycleDiagnosis({ cycle: target.cycle, form })
+        const cycleChecks =
+          target.checks ?? (target.cycle.matingId ? diagHistory : [])
+        const result = await saveCycleDiagnosis({
+          cycle: target.cycle,
+          form,
+          checks: cycleChecks,
+        })
+        if (result.remateCycleName) {
+          window.alert(`Monta cerrada. Remate programado en ciclo "${result.remateCycleName}".`)
+        } else if (form.result === "Vacía" && !followUp) {
+          window.alert("Monta cerrada. Puedes programar remate o registrar una nueva monta.")
+        }
       }
       await onSaved()
       onClose()
@@ -188,21 +225,21 @@ export function BreedingDiagnosisDrawer({
           </div>
         )}
 
-        {isMating && mating && !followUp && ecoWindow && (
+        {(isMating || (cycle && hasMating)) && !followUp && ecoWindow && (
           <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
             Ventana ECO recomendada: {formatDisplayDate(ecoWindow.min)} –{" "}
             {formatDisplayDate(ecoWindow.max)}
           </p>
         )}
 
-        {isMating && mating && followUp && (
+        {(isMating || (cycle && hasMating)) && followUp && (
           <p className="rounded-md bg-pink-50 px-3 py-2 text-sm text-pink-800">
             Preñez confirmada. <strong>Revisar</strong> programa un control de gestación sin cambiar el
             estado preñada. <strong>Vacía</strong> solo si hubo pérdida o el diagnóstico fue erróneo.
           </p>
         )}
 
-        {!isMating && (
+        {!isMating && cycle && !hasMating && (
           <p className="rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
             Diagnóstico de preñez por ecógrafo (ECO) o control manual.
           </p>

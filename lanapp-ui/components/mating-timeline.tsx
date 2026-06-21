@@ -71,8 +71,8 @@ function NoteComment({ note, author, date }: { note: string; author?: string; da
 
 function FeedIcon({ children }: { children: ReactNode }) {
   return (
-    <div className="relative px-1">
-      <div className="flex size-8 items-center justify-center rounded-full bg-gray-100 ring-8 ring-white outline -outline-offset-1 outline-black/5">
+    <div className="relative shrink-0 px-1">
+      <div className="flex size-8 items-center justify-center rounded-full bg-gray-100 ring-8 ring-gray-50 outline -outline-offset-1 outline-black/5">
         {children}
       </div>
     </div>
@@ -88,9 +88,36 @@ export type MatingActivityFeedProps = {
   }
 }
 
-/** Activity-feed style history: monta + diagnoses + parto. */
+function diagnosisRankForSort(check: ApiPregnancyCheck): number {
+  if (check.isPregnant) return 2
+  if (check.nextCheckDate) return 1
+  return 0
+}
+
+function sortChecksDesc(checks: ApiPregnancyCheck[]): ApiPregnancyCheck[] {
+  return [...checks].sort((a, b) => {
+    const byDate = b.checkDate.localeCompare(a.checkDate)
+    if (byDate !== 0) return byDate
+    const byRank = diagnosisRankForSort(b) - diagnosisRankForSort(a)
+    if (byRank !== 0) return byRank
+    return b.id.localeCompare(a.id)
+  })
+}
+
+function sortChecksAsc(checks: ApiPregnancyCheck[]): ApiPregnancyCheck[] {
+  return [...checks].sort((a, b) => {
+    const byDate = a.checkDate.localeCompare(b.checkDate)
+    if (byDate !== 0) return byDate
+    const byRank = diagnosisRankForSort(a) - diagnosisRankForSort(b)
+    if (byRank !== 0) return byRank
+    return a.id.localeCompare(b.id)
+  })
+}
+
+/** Activity-feed style history: monta + diagnoses + parto (newest first). */
 export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) {
-  const sorted = [...checks].sort((a, b) => a.checkDate.localeCompare(b.checkDate))
+  const sortedDesc = sortChecksDesc(checks)
+  const sortedAsc = sortChecksAsc(checks)
 
   type FeedItem =
     | { id: string; kind: "mating"; date: string; partnerLabel?: string }
@@ -98,6 +125,20 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
     | { id: string; kind: "delivery"; check: ApiPregnancyCheck }
 
   const items: FeedItem[] = []
+
+
+  for (const check of sortedDesc) {
+    const priorChecks = sortedAsc.filter(
+      (c) =>
+        c.checkDate < check.checkDate ||
+        (c.checkDate === check.checkDate && c.id.localeCompare(check.id) < 0),
+    )
+    if (check.kind === PregnancyCheckKind.DELIVERY) {
+      items.push({ id: check.id, kind: "delivery", check })
+    } else {
+      items.push({ id: check.id, kind: "diagnosis", check, priorChecks })
+    }
+  }
 
   if (mating) {
     items.push({
@@ -108,29 +149,18 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
     })
   }
 
-  for (const check of sorted) {
-    const priorChecks = sorted.filter(
-      (c) => c.checkDate < check.checkDate || (c.checkDate === check.checkDate && c.id < check.id),
-    )
-    if (check.kind === PregnancyCheckKind.DELIVERY) {
-      items.push({ id: check.id, kind: "delivery", check })
-    } else {
-      items.push({ id: check.id, kind: "diagnosis", check, priorChecks })
-    }
-  }
-
   if (items.length === 0) {
     return <p className="text-sm text-gray-500">Sin eventos registrados.</p>
   }
 
   return (
-    <div className="flow-root">
-      <ul role="list" className="-mb-6">
+    <div className="flow-root pb-1">
+      <ul role="list">
         {items.map((item, idx) => {
           const isLast = idx === items.length - 1
           return (
             <li key={item.id}>
-              <div className={`relative ${isLast ? "pb-0" : "pb-6"}`}>
+              <div className={`relative ${isLast ? "pb-1" : "pb-6"}`}>
                 {!isLast && (
                   <span
                     aria-hidden="true"
@@ -165,12 +195,21 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                   {item.kind === "diagnosis" && (
                     <>
                       <FeedIcon>
-                        <BeakerIcon aria-hidden="true" className="size-4 text-gray-500" />
+                        {item.check.isPregnant ? (
+                          <SunIcon aria-hidden="true" className="size-4 text-amber-500" />
+                        ) : (
+                          <BeakerIcon aria-hidden="true" className="size-4 text-gray-500" />
+                        )}
                       </FeedIcon>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <span className="text-sm font-medium text-gray-900">Diagnóstico</span>
+                            {idx === 0 && (
+                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-indigo-100 ring-inset">
+                                Más reciente
+                              </span>
+                            )}
                             {item.check.checkType && (
                               <TypePill label={labelDiagnosisType(item.check.checkType)} />
                             )}
@@ -211,6 +250,11 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <span className="text-sm font-medium text-gray-900">Parto registrado</span>
+                            {idx === 0 && (
+                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-indigo-100 ring-inset">
+                                Más reciente
+                              </span>
+                            )}
                             <ResultPill label="Parto" dotClass="fill-indigo-500" />
                           </div>
                           <span className="whitespace-nowrap text-sm text-gray-500">

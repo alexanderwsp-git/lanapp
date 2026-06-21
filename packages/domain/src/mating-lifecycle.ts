@@ -62,9 +62,28 @@ function latestIsDefinitiveEmpty(latest: MatingCheckLike): boolean {
     return !latest.isPregnant && !latest.nextCheckDate;
 }
 
+function sortChecksAsc(checks: MatingCheckLike[]): MatingCheckLike[] {
+    return [...checks].sort((a, b) => {
+        const byDate = checkTime(a.checkDate) - checkTime(b.checkDate);
+        if (byDate !== 0) return byDate;
+        return diagnosisRank(b) - diagnosisRank(a);
+    });
+}
+
+/** Definitive Vacía recorded before any Preñada closes this mating permanently. */
+export function hadTerminalEmptyBeforeAnyPregnancy(checks: MatingCheckLike[]): boolean {
+    for (const c of sortChecksAsc(diagnosisChecks(checks))) {
+        if (c.isPregnant) return false;
+        if (latestIsDefinitiveEmpty(c)) return true;
+    }
+    return false;
+}
+
 /** Derive the current reproductive step for a mating from its check history. */
 export function deriveMatingPhase(checks: MatingCheckLike[]): MatingPhase {
     if (deliveryCheck(checks)) return 'delivered';
+
+    if (hadTerminalEmptyBeforeAnyPregnancy(checks)) return 'empty';
 
     const latest = latestDiagnosis(checks);
     if (!latest) return 'awaiting_diagnosis';

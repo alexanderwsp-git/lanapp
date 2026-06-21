@@ -8,13 +8,18 @@ import { StatCard } from "@/components/ui/stat-card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DataTable } from "@/components/ui/data-table"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { Select } from "@/components/ui/form-fields"
+import { useSheepFilter } from "@/components/ui/sheep-filter"
+import { SheepCategoryCell } from "@/components/sheep-category-cell"
 import { fetchSheep, updateSheep } from "@/lib/api/sheep"
-import type { ApiSheep } from "@/lib/api/types"
+import { fetchLocations } from "@/lib/api/location"
+import type { ApiLocation, ApiSheep } from "@/lib/api/types"
 import { ageInDays, formatDisplayDate } from "@/lib/format"
-import { labelCategory } from "@/lib/labels/sheep"
 import { reproductorStatus } from "@/lib/reproductor-status"
 import { GiSheep } from "react-icons/gi"
 import { CheckCircleIcon, UserGroupIcon } from "@heroicons/react/24/outline"
+
+type MarkedFilter = "" | "marked" | "unmarked"
 
 const CANDIDATE_CATEGORIES = new Set<SheepCategory>([
   SheepCategory.BORREGO,
@@ -30,18 +35,32 @@ function isCandidate(s: ApiSheep): boolean {
 
 export default function ReproductorsPage() {
   const [rows, setRows] = useState<ApiSheep[]>([])
+  const [locations, setLocations] = useState<ApiLocation[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [resultMsg, setResultMsg] = useState<string | null>(null)
+  const [markedFilter, setMarkedFilter] = useState<MarkedFilter>("")
+
+  const { filtered: filterVisible, controls: filterControls } = useSheepFilter(rows, locations)
+
+  const visibleRows = useMemo(() => {
+    if (markedFilter === "marked") return filterVisible.filter((s) => s.isBreedingRam)
+    if (markedFilter === "unmarked") return filterVisible.filter((s) => !s.isBreedingRam)
+    return filterVisible
+  }, [filterVisible, markedFilter])
 
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
     try {
-      const res = await fetchSheep({ page: 1, limit: 300, gender: Gender.MALE, status: SheepStatus.ACTIVE })
+      const [res, locs] = await Promise.all([
+        fetchSheep({ page: 1, limit: 300, gender: Gender.MALE, status: SheepStatus.ACTIVE }),
+        fetchLocations(200).catch(() => [] as ApiLocation[]),
+      ])
       setRows(res.items.filter(isCandidate))
+      setLocations(locs)
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los machos")
       setRows([])
@@ -56,10 +75,15 @@ export default function ReproductorsPage() {
 
   const marked = useMemo(() => rows.filter((s) => s.isBreedingRam), [rows])
   const unmarked = useMemo(() => rows.filter((s) => !s.isBreedingRam), [rows])
-  const allSelected = rows.length > 0 && selected.size === rows.length
+  const allSelected =
+    visibleRows.length > 0 && visibleRows.every((s) => selected.has(s.id))
 
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(rows.map((s) => s.id)))
+    setSelected(
+      allSelected
+        ? new Set(Array.from(selected).filter((id) => !visibleRows.some((s) => s.id === id)))
+        : new Set([...selected, ...visibleRows.map((s) => s.id)]),
+    )
   }
 
   function toggleOne(id: string) {
@@ -135,9 +159,24 @@ export default function ReproductorsPage() {
         <StatCard label="Sin marcar" value={unmarked.length} icon={GiSheep} hint="Listos para seleccionar" />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 rounded-lg bg-white p-4 shadow">
+        <div className="mb-4 flex flex-col gap-3">
+          {filterControls}
+          <Select
+            value={markedFilter}
+            onChange={(e) => setMarkedFilter(e.target.value as MarkedFilter)}
+            aria-label="Filtrar por marcado"
+            className="sm:max-w-xs"
+          >
+            <option value="">Marcado (todos)</option>
+            <option value="marked">Solo marcados</option>
+            <option value="unmarked">Sin marcar</option>
+          </Select>
+        </div>
+
         <DataTable
-          rows={rows}
+          bare
+          rows={visibleRows}
           rowKey={(s) => s.id}
           loading={loading}
           loadingText="Cargando machos..."
@@ -153,7 +192,7 @@ export default function ReproductorsPage() {
             <EmptyState
               icon={GiSheep}
               title="Sin candidatos"
-              description="No hay machos activos con ≥12 meses en categoría borrego o reproductor."
+              description="No hay machos que coincidan con los filtros."
             />
           }
           columns={[
@@ -161,9 +200,9 @@ export default function ReproductorsPage() {
             { key: "name", header: "Nombre", className: "whitespace-nowrap", cell: (s) => s.name || "—" },
             {
               key: "category",
-              header: "Categoría",
+              header: "Estado",
               className: "whitespace-nowrap",
-              cell: (s) => <StatusBadge color="indigo">{labelCategory(s.category)}</StatusBadge>,
+              cell: (s) => <SheepCategoryCell sheep={s} compact />,
             },
             {
               key: "age",

@@ -11,8 +11,15 @@ const RAM_BREEDING_CATEGORIES = new Set<SheepCategory>([SheepCategory.REPRODUCTO
 export function eweBreedingEligibility(sheep: ApiSheep): string | null {
   if (sheep.gender !== Gender.FEMALE) return "No es hembra"
   if (sheep.status !== SheepStatus.ACTIVE) return "No está activa"
-  if (sheep.isPregnant) return "Ya está preñada"
-  if (!EWE_BREEDING_CATEGORIES.has(sheep.category as SheepCategory)) {
+  if (sheep.isPregnant) return "Preñada — esperar parto"
+  const cat = sheep.category as SheepCategory
+  if (cat === SheepCategory.OVEJA_LACTANCIA) {
+    return "En lactancia — destetar antes de montar"
+  }
+  if (cat === SheepCategory.OVEJA_PRENADA || cat === SheepCategory.BORREGA_PRENADA) {
+    return "Preñada — esperar parto"
+  }
+  if (!EWE_BREEDING_CATEGORIES.has(cat)) {
     return "Categoría no apta para monta"
   }
   return null

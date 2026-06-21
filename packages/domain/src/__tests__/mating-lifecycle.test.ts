@@ -2,6 +2,7 @@ import { BreedingResult, PregnancyCheckKind } from '../enums/breeding';
 import {
     canRecordDiagnosis,
     deriveMatingPhase,
+    hadTerminalEmptyBeforeAnyPregnancy,
     hasConfirmedPregnancy,
 } from '../mating-lifecycle';
 
@@ -52,5 +53,24 @@ describe('mating-lifecycle', () => {
             { checkDate: '2026-07-01', isPregnant: false, kind: PregnancyCheckKind.DELIVERY },
         ];
         expect(deriveMatingPhase(checks)).toBe('delivered');
+    });
+
+    it('stays empty after Vacía then Revisar without prior Preñada', () => {
+        expect(deriveMatingPhase([vacia, revisar])).toBe('empty');
+    });
+
+    it('stays empty after Vacía then Revisar then Preñada without prior Preñada', () => {
+        const laterPrenada = { checkDate: '2026-07-20', isPregnant: true };
+        expect(deriveMatingPhase([vacia, revisar, laterPrenada])).toBe('empty');
+    });
+
+    it('detects terminal empty before pregnancy in history order', () => {
+        expect(hadTerminalEmptyBeforeAnyPregnancy([vacia, revisar])).toBe(true);
+        expect(hadTerminalEmptyBeforeAnyPregnancy([prenada, vacia])).toBe(false);
+        expect(hadTerminalEmptyBeforeAnyPregnancy([revisar])).toBe(false);
+    });
+
+    it('blocks Revisar when mating closed by Vacía without Preñada', () => {
+        expect(canRecordDiagnosis('empty', BreedingResult.RECHECK).ok).toBe(false);
     });
 });

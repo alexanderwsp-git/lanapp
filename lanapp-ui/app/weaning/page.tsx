@@ -6,13 +6,12 @@ import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DataTable } from "@/components/ui/data-table"
-import { StatusBadge } from "@/components/ui/status-badge"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
 import { WeaningRecentPanel } from "@/components/weaning-recent-panel"
 import { fetchWeaningAlerts, bulkRecordWeaning } from "@/lib/api/weaning"
 import type { ApiSheep, BulkResult } from "@/lib/api/types"
-import { labelCategory } from "@/lib/labels/sheep"
+import { SheepCategoryCell } from "@/components/sheep-category-cell"
 import { displayKgValue, formatDisplayDate, formatAgeDays, toKg } from "@/lib/format"
 import { AcademicCapIcon, BellAlertIcon, CheckCircleIcon, ScaleIcon } from "@heroicons/react/24/outline"
 
@@ -260,9 +259,9 @@ export default function WeaningPage() {
             },
             {
               key: "category",
-              header: "Categoría",
+              header: "Estado",
               className: "whitespace-nowrap",
-              cell: (s) => <StatusBadge color="indigo">{labelCategory(s.category)}</StatusBadge>,
+              cell: (s) => <SheepCategoryCell sheep={s} compact />,
             },
             { key: "age", header: "Edad (días)", className: "whitespace-nowrap", cell: (s) => formatAgeDays(s.birthDate) },
             {
@@ -360,7 +359,7 @@ export default function WeaningPage() {
                 <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">{s.tag}</p>
-                    <p className="truncate text-xs text-gray-500">{s.name || labelCategory(s.category)}</p>
+                    <p className="truncate text-xs text-gray-500">{s.name ?? "—"}</p>
                   </div>
                   <input
                     type="number"
