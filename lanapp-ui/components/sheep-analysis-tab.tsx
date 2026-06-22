@@ -1,19 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { DataTable } from "@/components/ui/data-table"
 import { AnalysisDiagnosisDrawer } from "@/components/analysis-diagnosis-drawer"
 import { AnalysisDetailPanel } from "@/components/analysis-detail-panel"
 import { SheepAnalysisSummary } from "@/components/sheep-analysis-summary"
 import { isAnalysisDue, todayInput } from "@/lib/analysis/due"
-import { fetchAnalysesBySheep, fetchAnalysisTypes } from "@/lib/api/analysis"
-import { fetchMedicineApplicationsBySheep, fetchMedicines } from "@/lib/api/medicine"
+import { fetchAnalysisTypes } from "@/lib/api/analysis"
+import { fetchMedicines } from "@/lib/api/medicine"
 import type { ApiMedicine, ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
 import { analysisEligibility } from "@/lib/sheep-action-eligibility"
 import { AnalysisStatus, AnalysisType, type ApiAnalysis, type ApiAnalysisType } from "@/lib/analysis/types"
 import {
-  IconAdd,
   IconAnalysis,
   IconDiagnosis,
   IconDue,
@@ -51,59 +50,58 @@ function sortAnalyses(list: ApiAnalysis[]): ApiAnalysis[] {
 
 export function SheepAnalysisTab({
   sheep,
+  analyses,
+  medicineApplications,
   onUpdated,
 }: {
   sheep: ApiSheep
+  analyses: ApiAnalysis[]
+  medicineApplications: ApiMedicineApplication[]
   onUpdated?: () => void | Promise<void>
 }) {
   const sheepId = sheep.id
   const sheepLabel = sheep.name ? `${sheep.tag} · ${sheep.name}` : sheep.tag
 
-  const [records, setRecords] = useState<ApiAnalysis[]>([])
+  const records = useMemo(() => sortAnalyses(analyses), [analyses])
+  const medAppsByAnalysis = useMemo(
+    () =>
+      new Map(
+        medicineApplications
+          .filter((a) => a.analysisId)
+          .map((a) => [a.analysisId as string, a]),
+      ),
+    [medicineApplications],
+  )
+
   const [types, setTypes] = useState<ApiAnalysisType[]>([])
   const [meds, setMeds] = useState<ApiMedicine[]>([])
-  const [medAppsByAnalysis, setMedAppsByAnalysis] = useState<Map<string, ApiMedicineApplication>>(
-    new Map(),
-  )
-  const [loading, setLoading] = useState(true)
+  const [catalogLoading, setCatalogLoading] = useState(true)
   const [success, setSuccess] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [diagnoseTarget, setDiagnoseTarget] = useState<ApiAnalysis | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const loadCatalog = useCallback(async () => {
+    setCatalogLoading(true)
     try {
-      const [list, typePage, medPage, medApps] = await Promise.all([
-        fetchAnalysesBySheep(sheepId),
+      const [typePage, medPage] = await Promise.all([
         fetchAnalysisTypes(),
         fetchMedicines(1, 100),
-        fetchMedicineApplicationsBySheep(sheepId).catch(() => [] as ApiMedicineApplication[]),
       ])
-      setRecords(sortAnalyses(list))
       setTypes(typePage.items)
       setMeds(medPage.items)
-      setMedAppsByAnalysis(
-        new Map(
-          medApps
-            .filter((a) => a.analysisId)
-            .map((a) => [a.analysisId as string, a]),
-        ),
-      )
     } catch {
-      setRecords([])
       setTypes([])
       setMeds([])
-      setMedAppsByAnalysis(new Map())
     } finally {
-      setLoading(false)
+      setCatalogLoading(false)
     }
-  }, [sheepId])
+  }, [])
 
   useEffect(() => {
-    load()
-  }, [load])
+    void loadCatalog()
+  }, [loadCatalog])
 
   const pending = records.filter((r) => r.status === AnalysisStatus.SCHEDULED).length
   const registerBlockReason = analysisEligibility(sheep)
@@ -121,14 +119,13 @@ export function SheepAnalysisTab({
 
   async function handleSaved(message: string) {
     setSuccess(message)
-    await load()
     await onUpdated?.()
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-lg bg-white p-6 shadow">
-        <SheepAnalysisSummary sheepId={sheepId} embedded />
+        <SheepAnalysisSummary sheepId={sheepId} records={analyses} embedded />
       </div>
       <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -139,7 +136,7 @@ export function SheepAnalysisTab({
         <button
           type="button"
           onClick={openNewAnalysis}
-          disabled={!!registerBlockReason}
+          disabled={!!registerBlockReason || catalogLoading}
           title={registerBlockReason ?? undefined}
           className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -164,7 +161,7 @@ export function SheepAnalysisTab({
           hideFooter
           rows={records}
           rowKey={(a) => a.id}
-          loading={loading}
+          loading={false}
           loadingText="Cargando análisis…"
           empty={<p className="text-sm text-gray-500">Sin análisis registrados.</p>}
           expand={{

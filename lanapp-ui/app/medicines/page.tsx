@@ -172,46 +172,51 @@ export default function MedicinesPage() {
     }
   }, [])
 
-  const loadSheep = useCallback(async () => {
-    try {
-      const result = await fetchSheep({ page: 1, limit: 200 })
-      setSheep(result.items)
-    } catch {
-      setSheep([])
-    }
-  }, [])
-
   useEffect(() => {
     let cancelled = false
     async function loadAll() {
       setLoadingMeds(true)
       setLoadingApps(true)
       setLoadError(null)
-      try {
-        const [medsRes, appsRes, sheepRes, locsRes] = await Promise.all([
-          fetchMedicines(1, 200),
-          fetchMedicineApplications(1, 200),
-          fetchSheep({ page: 1, limit: 200 }),
-          fetchLocations(200).catch(() => [] as ApiLocation[]),
-        ])
-        if (cancelled) return
-        setMeds(medsRes.items)
-        setApps(appsRes.items)
-        setSheep(sheepRes.items)
-        setLocations(locsRes)
-      } catch (err) {
-        if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : "No se pudieron cargar los datos")
-          setMeds([])
-          setApps([])
-          setSheep([])
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingMeds(false)
-          setLoadingApps(false)
-        }
+      const [medsResult, appsResult, sheepResult, locsResult] = await Promise.allSettled([
+        fetchMedicines(1, 200),
+        fetchMedicineApplications(1, 200),
+        fetchSheep({ page: 1, limit: 200 }),
+        fetchLocations(200),
+      ])
+      if (cancelled) return
+      if (medsResult.status === "fulfilled") {
+        setMeds(medsResult.value.items)
+      } else {
+        setMeds([])
+        setLoadError(
+          medsResult.reason instanceof Error
+            ? medsResult.reason.message
+            : "No se pudieron cargar los fármacos",
+        )
       }
+      if (appsResult.status === "fulfilled") {
+        setApps(appsResult.value.items)
+      } else {
+        setApps([])
+        setLoadError(
+          appsResult.reason instanceof Error
+            ? appsResult.reason.message
+            : "No se pudieron cargar las aplicaciones",
+        )
+      }
+      if (sheepResult.status === "fulfilled") {
+        setSheep(sheepResult.value.items)
+      } else {
+        setSheep([])
+      }
+      if (locsResult.status === "fulfilled") {
+        setLocations(locsResult.value)
+      } else {
+        setLocations([])
+      }
+      setLoadingMeds(false)
+      setLoadingApps(false)
     }
     loadAll()
     return () => {

@@ -61,6 +61,20 @@ function mapApiReport(reportType: ReportType, data: ApiReportPayload): ReportCon
   }
 }
 
+export type DashboardSummary = {
+  totalSheep: number
+  pregnantCount: number
+  maltonasCount: number
+  quarantineCount: number
+  healthAlertCount: number
+  generatedAt?: string
+}
+
+export async function fetchDashboardSummary(): Promise<DashboardSummary> {
+  const res = await lanapp.get<DashboardSummary>("reports/dashboard")
+  return res.data
+}
+
 export async function fetchReport(reportType: ReportType): Promise<ReportConfig> {
   const res = await lanapp.get<ApiReportPayload>(`reports/${reportType}`)
   return mapApiReport(reportType, res.data)

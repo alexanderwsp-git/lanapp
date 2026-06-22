@@ -9,6 +9,8 @@ import {
 import { BaseService } from './base.service';
 import { PregnancyCheckRepository } from '../repositories/pregnancy-check.repository';
 import { PregnancyCheck } from '../entities/pregnancy-check.entity';
+import { Mating } from '../entities/mating.entity';
+import { Sheep } from '../entities/sheep.entity';
 import { MatingService } from './mating.service';
 import { SheepService } from './sheep.service';
 import { BreedingCycleRepository } from '../repositories/breeding-cycle.repository';
@@ -222,6 +224,26 @@ export class PregnancyCheckService extends BaseService<PregnancyCheck> {
         }
 
         return check;
+    }
+
+    async findPendingDeliveries(): Promise<Array<{ sheep: Sheep; mating: Mating; checks: PregnancyCheck[] }>> {
+        const pregnant = await this.sheepService.findPregnant();
+        const results: Array<{ sheep: Sheep; mating: Mating; checks: PregnancyCheck[] }> = [];
+
+        for (const sheep of pregnant) {
+            const matings = await this.matingService.findBySheep(sheep.id);
+            for (const mating of matings) {
+                if (mating.femaleId !== sheep.id) continue;
+                const checks = await this.findByMating(mating.id);
+                const phase = deriveMatingPhase(checks);
+                if (canRecordDelivery(phase).ok) {
+                    results.push({ sheep, mating, checks });
+                    break;
+                }
+            }
+        }
+
+        return results;
     }
 
     async getCheckHistory(matingId: string): Promise<PregnancyCheck[]> {

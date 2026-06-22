@@ -83,6 +83,28 @@ router.get(
 );
 
 router.get(
+    '/:id/family',
+    verifyToken,
+    validateParams(IdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const family = await sheepService.findFamily(req.params.id);
+        if (!family) return failed(res, 'Sheep not found');
+        const toEnrich = [
+            ...(family.mother ? [family.mother] : []),
+            ...(family.father ? [family.father] : []),
+            ...family.children,
+        ];
+        const enriched = await weightService.attachLatestWeights(toEnrich);
+        const byId = new Map(enriched.map(s => [s.id, s]));
+        found(res, {
+            mother: family.mother ? byId.get(family.mother.id) : undefined,
+            father: family.father ? byId.get(family.father.id) : undefined,
+            children: family.children.map(c => byId.get(c.id) ?? c),
+        });
+    })
+);
+
+router.get(
     '/:id',
     verifyToken,
     validateParams(IdSchema),

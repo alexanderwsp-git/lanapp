@@ -17,6 +17,7 @@ import importRoutes from './import';
 import farmParameters from './farm-parameters';
 import analysis from './analysis';
 import analysisType from './analysis-type';
+import births from './births';
 
 const router = Router();
 
@@ -38,5 +39,6 @@ router.use('/import', importRoutes);
 router.use('/farm-parameters', farmParameters);
 router.use('/analysis-type', analysisType);
 router.use('/analysis', analysis);
+router.use('/births', births);
 
 export default router;

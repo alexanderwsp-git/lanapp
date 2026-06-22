@@ -91,9 +91,10 @@ router.get(
     '/dashboard',
     verifyToken,
     asyncHandler(async (_req: Request, res: Response) => {
-        const [allSheep, pregnant, quarantine, healthAlerts] = await Promise.all([
+        const [allSheep, pregnant, maltonas, quarantine, healthAlerts] = await Promise.all([
             sheepService.findAll(1, 1),
             sheepService.findPregnant(),
+            sheepService.findMaltonas(),
             sheepService.findInQuarantine(),
             analysisService.findFamachaAlerts(2),
         ]);
@@ -101,6 +102,7 @@ router.get(
         found(res, {
             totalSheep: allSheep.total,
             pregnantCount: pregnant.length,
+            maltonasCount: maltonas.length,
             quarantineCount: quarantine.length,
             healthAlertCount: healthAlerts.length,
             generatedAt: new Date(),

@@ -1,12 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { AcademicCapIcon } from "@heroicons/react/24/outline"
 import { StatusBadge } from "@/components/ui/status-badge"
-import {
-  fetchWeaningRecordsBySheep,
-  type ApiWeaningRecord,
-} from "@/lib/api/weaning"
+import type { ApiWeaningRecord } from "@/lib/api/weaning"
 import type { ApiSheep } from "@/lib/api/types"
 import { weaningEligibility } from "@/lib/weaning-eligibility"
 import { WeaningRecordDrawer } from "@/components/weaning-record-drawer"
@@ -17,39 +14,22 @@ import { WeaningRecordDrawer } from "@/components/weaning-record-drawer"
  */
 export function SheepWeaningAction({
   sheep,
+  weaningRecords,
+  weaningLoading,
   onWeaned,
 }: {
   sheep: ApiSheep
+  weaningRecords: ApiWeaningRecord[]
+  weaningLoading: boolean
   onWeaned?: () => void | Promise<void>
 }) {
   const sheepId = sheep.id
-  const [record, setRecord] = useState<ApiWeaningRecord | null>(null)
-  const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  const record = weaningRecords[0] ?? null
   const blockReason = record ? null : weaningEligibility(sheep)
 
-  const load = () => {
-    let cancelled = false
-    setLoading(true)
-    fetchWeaningRecordsBySheep(sheepId)
-      .then((records) => {
-        if (!cancelled) setRecord(records[0] ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setRecord(null)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }
-
-  useEffect(load, [sheepId])
-
-  if (loading) {
+  if (weaningLoading) {
     return <div className="h-9 w-28 animate-pulse rounded-md bg-gray-200" />
   }
 
@@ -79,7 +59,6 @@ export function SheepWeaningAction({
         sheepId={sheepId}
         sheepLabel={sheep.name ? `${sheep.tag} · ${sheep.name}` : sheep.tag}
         onSaved={async () => {
-          load()
           await onWeaned?.()
         }}
       />

@@ -10,12 +10,18 @@ export type ApiEnvelope<T> = {
   error: string | null
 }
 
+export type FetchOptions = {
+  signal?: AbortSignal
+}
+
 import { refreshSessionIfNeeded, forceLogout } from '@/lib/auth/client'
 import { getAccessToken, isSkipAuthEnabled } from '@/lib/auth/session'
 
 const API_PREFIX = process.env.NEXT_PUBLIC_API_PREFIX || "/api/v1"
 
 let handling401 = false
+
+const inflightGets = new Map<string, Promise<ApiEnvelope<unknown>>>()
 
 async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   if (!isSkipAuthEnabled()) {
@@ -52,11 +58,11 @@ function getHeaders(): HeadersInit {
   return headers
 }
 
-export async function apiFetch<T>(
-  path: string,
-  init?: RequestInit
-): Promise<ApiEnvelope<T>> {
-  const url = path.startsWith("http") ? path : `${API_PREFIX}/${path.replace(/^\//, "")}`
+function resolveUrl(path: string): string {
+  return path.startsWith("http") ? path : `${API_PREFIX}/${path.replace(/^\//, "")}`
+}
+
+async function apiFetchInternal<T>(url: string, init?: RequestInit): Promise<ApiEnvelope<T>> {
   const res = await fetchWithAuth(url, init)
 
   if (res.status === 204) {
@@ -97,8 +103,36 @@ export async function apiFetch<T>(
   return body
 }
 
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit
+): Promise<ApiEnvelope<T>> {
+  const url = resolveUrl(path)
+  const method = (init?.method ?? "GET").toUpperCase()
+
+  if (method === "GET") {
+    const existing = inflightGets.get(url)
+    if (existing) return existing as Promise<ApiEnvelope<T>>
+
+    // Shared in-flight GETs must not carry a consumer AbortSignal — Strict Mode
+    // would abort the first mount and break deduped callers on the second mount.
+    const { signal: _signal, ...initWithoutSignal } = init ?? {}
+    const promise = apiFetchInternal<T>(
+      url,
+      Object.keys(initWithoutSignal).length > 0 ? initWithoutSignal : undefined,
+    ).finally(() => {
+      if (inflightGets.get(url) === promise) inflightGets.delete(url)
+    })
+    inflightGets.set(url, promise as Promise<ApiEnvelope<unknown>>)
+    return promise
+  }
+
+  return apiFetchInternal<T>(url, init)
+}
+
 export const lanapp = {
-  get: <T>(path: string) => apiFetch<T>(`lanapp/${path}`),
+  get: <T>(path: string, options?: FetchOptions) =>
+    apiFetch<T>(`lanapp/${path}`, options?.signal ? { signal: options.signal } : undefined),
   post: <T>(path: string, data: unknown) =>
     apiFetch<T>(`lanapp/${path}`, { method: "POST", body: JSON.stringify(data) }),
   put: <T>(path: string, data: unknown) =>

@@ -4,7 +4,7 @@ import type {
   MedicineCreate,
   MedicineUpdate,
 } from "@sheep/domain"
-import { lanapp } from "../client"
+import { lanapp, type FetchOptions } from "../client"
 import type { ApiMedicine, ApiMedicineApplication, BulkResult, Paginated } from "../types"
 
 export type BulkMedicineSchedulePayload = {
@@ -56,11 +56,12 @@ export async function fetchMedicineApplications(
 
 export async function fetchMedicineApplicationsBySheep(
   sheepId: string,
+  options?: FetchOptions,
 ): Promise<ApiMedicineApplication[]> {
   const id = sheepId?.trim()
   if (!id) throw new Error("Falta identificador de oveja")
   const qs = new URLSearchParams({ sheepId: id, limit: "500" })
-  const res = await lanapp.get<ApiMedicineApplication[]>(`medicine-application?${qs.toString()}`)
+  const res = await lanapp.get<ApiMedicineApplication[]>(`medicine-application?${qs.toString()}`, options)
   return res.data
 }
 

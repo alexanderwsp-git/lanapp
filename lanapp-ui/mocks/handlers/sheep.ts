@@ -7,6 +7,7 @@ import {
   type SheepStatus as SheepStatusType,
   type SheepUpdate,
 } from "@sheep/domain"
+import type { ApiSheepFamily } from "@/lib/api/real/sheep"
 import type { SheepListParams, SheepListResult } from "@/lib/api/sheep"
 import type { ApiSheep } from "@/lib/api/types"
 import {
@@ -38,6 +39,20 @@ export async function fetchSheepById(id: string): Promise<ApiSheep> {
   const sheep = findSheep(id)
   if (!sheep) throw notFound("Oveja", id)
   return enrichSheep(sheep)
+}
+
+export async function fetchSheepFamily(id: string): Promise<ApiSheepFamily> {
+  const sheep = findSheep(id)
+  if (!sheep) throw notFound("Oveja", id)
+  const all = getMockStore().sheep
+  const mother = sheep.motherId ? all.find((s) => s.id === sheep.motherId) : undefined
+  const father = sheep.fatherId ? all.find((s) => s.id === sheep.fatherId) : undefined
+  const children = all.filter((s) => s.motherId === id || s.fatherId === id)
+  return {
+    mother: mother ? enrichSheep(mother) : undefined,
+    father: father ? enrichSheep(father) : undefined,
+    children: enrichSheepList(children),
+  }
 }
 
 export async function createSheep(payload: SheepCreate): Promise<ApiSheep> {

@@ -6,13 +6,10 @@ import { DataTable } from "@/components/ui/data-table"
 import { MedicineApplyDrawer } from "@/components/medicine-apply-drawer"
 import { MedicineScheduleDrawer } from "@/components/medicine-schedule-drawer"
 import { SheepMedicineSummary } from "@/components/sheep-medicine-summary"
-import {
-  fetchMedicineApplicationsBySheep,
-  fetchMedicines,
-} from "@/lib/api/medicine"
+import { fetchMedicines } from "@/lib/api/medicine"
 import type { ApiMedicine, ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
 import { medicineEligibility } from "@/lib/sheep-action-eligibility"
-import { IconAdd, IconApplyMedicine, IconMedicine } from "@/lib/icons/analysis-medicine"
+import { IconApplyMedicine, IconMedicine } from "@/lib/icons/analysis-medicine"
 import { labelMedicineStatus, labelMedicineType, medicineStatusColor } from "@/lib/labels/medicine"
 import { MedicineStatus } from "@sheep/domain"
 import { formatDisplayDate, formatMedicineNotes } from "@/lib/format"
@@ -22,61 +19,55 @@ const isScheduled = (status: string) =>
 
 export function SheepMedicineTab({
   sheep,
+  applications,
   onUpdated,
 }: {
   sheep: ApiSheep
+  applications: ApiMedicineApplication[]
   onUpdated?: () => void | Promise<void>
 }) {
   const sheepId = sheep.id
   const sheepLabel = sheep.name ? `${sheep.tag} · ${sheep.name}` : sheep.tag
 
-  const [apps, setApps] = useState<ApiMedicineApplication[]>([])
   const [medicines, setMedicines] = useState<ApiMedicine[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [applyTarget, setApplyTarget] = useState<ApiMedicineApplication | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setLoadError(null)
-    const [appsResult, medsResult] = await Promise.allSettled([
-      fetchMedicineApplicationsBySheep(sheepId),
-      fetchMedicines(1, 100),
-    ])
-    if (appsResult.status === "fulfilled") {
-      const sorted = [...appsResult.value].sort(
-        (a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime(),
-      )
-      setApps(sorted)
-    } else {
-      setApps([])
-      setLoadError(
-        appsResult.reason instanceof Error
-          ? appsResult.reason.message
-          : "No se pudieron cargar las aplicaciones",
-      )
+  const loadCatalog = useCallback(async () => {
+    setCatalogLoading(true)
+    setCatalogError(null)
+    try {
+      const result = await fetchMedicines(1, 100)
+      setMedicines(result.items)
+    } catch (err) {
+      setMedicines([])
+      setCatalogError(err instanceof Error ? err.message : "No se pudo cargar el catálogo")
+    } finally {
+      setCatalogLoading(false)
     }
-    if (medsResult.status === "fulfilled") {
-      setMedicines(medsResult.value.items)
-    }
-    setLoading(false)
-  }, [sheepId])
+  }, [])
 
   useEffect(() => {
-    load()
-  }, [load])
+    void loadCatalog()
+  }, [loadCatalog])
 
-  const pending = apps.filter((a) => isScheduled(a.status)).length
+  const pending = applications.filter((a) => isScheduled(a.status)).length
   const registerBlockReason =
     medicineEligibility(sheep) ??
-    (medicines.length === 0 ? "No hay medicamentos en el catálogo" : null)
+    (medicines.length === 0 && !catalogLoading ? "No hay medicamentos en el catálogo" : null)
+
+  async function handleSaved(message: string) {
+    setSuccess(message)
+    await onUpdated?.()
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-lg bg-white p-6 shadow">
-        <SheepMedicineSummary sheepId={sheepId} embedded />
+        <SheepMedicineSummary sheepId={sheepId} applications={applications} embedded />
       </div>
       <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -103,13 +94,13 @@ export function SheepMedicineTab({
         {pending > 0 ? `${pending} programada(s).` : ""}
       </p>
 
-      {loadError && (
+      {catalogError && (
         <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {loadError}
+          {catalogError}
         </div>
       )}
 
-      {!loading && !loadError && medicines.length === 0 && (
+      {!catalogLoading && !catalogError && medicines.length === 0 && (
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           No hay medicamentos en el catálogo.{" "}
           <a href="/medicines" className="font-medium text-indigo-600 hover:text-indigo-500">
@@ -128,9 +119,9 @@ export function SheepMedicineTab({
         <DataTable
           bare
           hideFooter
-          rows={apps}
+          rows={applications}
           rowKey={(a) => a.id}
-          loading={loading}
+          loading={false}
           loadingText="Cargando aplicaciones…"
           empty={<p className="text-sm text-gray-500">Sin aplicaciones registradas.</p>}
           columns={[
@@ -197,11 +188,7 @@ export function SheepMedicineTab({
         sheepId={sheepId}
         sheepLabel={sheepLabel}
         medicines={medicines}
-        onSaved={async (message) => {
-          setSuccess(message)
-          await load()
-          await onUpdated?.()
-        }}
+        onSaved={handleSaved}
       />
 
       <MedicineApplyDrawer
@@ -210,11 +197,7 @@ export function SheepMedicineTab({
         application={applyTarget}
         medicineName={applyTarget?.medicine?.name ?? "Medicamento"}
         sheepLabel={sheepLabel}
-        onSaved={async () => {
-          setSuccess("Aplicación registrada.")
-          await load()
-          await onUpdated?.()
-        }}
+        onSaved={() => handleSaved("Aplicación registrada.")}
       />
       </div>
     </div>

@@ -77,9 +77,11 @@ function formatSheepLabel(
 
 export function SheepMontasTab({
   sheep,
+  offspring = [],
   onUpdated,
 }: {
   sheep: ApiSheep
+  offspring?: ApiSheep[]
   onUpdated?: () => void
 }) {
   const sheepId = sheep.id
@@ -281,7 +283,7 @@ export function SheepMontasTab({
 
   return (
     <div className="space-y-6">
-      <SheepReproStats sheep={sheep} />
+      <SheepReproStats sheep={sheep} offspring={offspring} forceLoad />
 
       <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-center justify-between gap-2">

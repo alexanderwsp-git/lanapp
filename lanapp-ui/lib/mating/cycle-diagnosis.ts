@@ -6,7 +6,6 @@ import { matingActions } from "@/lib/mating-actions"
 export type CycleDiagnosisGate = {
   canDiagnose: boolean
   diagnoseBlockedReason?: string
-  phase?: ReturnType<typeof matingActions>["phase"]
 }
 
 export function cycleDiagnosisGate(
@@ -25,7 +24,6 @@ export function cycleDiagnosisGate(
     return {
       canDiagnose: actions.canDiagnose,
       diagnoseBlockedReason: actions.diagnoseBlockedReason,
-      phase: actions.phase,
     }
   }
 

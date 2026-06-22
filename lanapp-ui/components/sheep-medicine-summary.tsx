@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { MedicineStatus } from "@sheep/domain"
 import { StatCard } from "@/components/ui/stat-card"
@@ -16,35 +16,51 @@ const isScheduled = (status: string) =>
 
 export function SheepMedicineSummary({
   sheepId,
+  applications: applicationsProp,
+  loading: loadingProp,
   onViewTab,
   embedded = false,
 }: {
   sheepId: string
+  applications?: ApiMedicineApplication[]
+  loading?: boolean
   onViewTab?: () => void
   embedded?: boolean
 }) {
-  const [apps, setApps] = useState<ApiMedicineApplication[]>([])
-  const [loading, setLoading] = useState(true)
+  const [apps, setApps] = useState<ApiMedicineApplication[]>(applicationsProp ?? [])
+  const [loading, setLoading] = useState(loadingProp ?? applicationsProp === undefined)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const list = await fetchMedicineApplicationsBySheep(sheepId)
-      setApps(
-        [...list].sort(
-          (a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime(),
-        ),
-      )
-    } catch {
-      setApps([])
-    } finally {
-      setLoading(false)
-    }
-  }, [sheepId])
+  const controlled = applicationsProp !== undefined
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (controlled) {
+      setApps(applicationsProp)
+      setLoading(loadingProp ?? false)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    fetchMedicineApplicationsBySheep(sheepId)
+      .then((list) => {
+        if (cancelled) return
+        setApps(
+          [...list].sort(
+            (a, b) => new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime(),
+          ),
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setApps([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [controlled, applicationsProp, loadingProp, sheepId])
 
   const pending = useMemo(() => apps.filter((a) => isScheduled(a.status)).length, [apps])
   const lastApplied = useMemo(

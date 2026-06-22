@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { StatCard } from "@/components/ui/stat-card"
@@ -23,37 +23,53 @@ function lastFamacha(records: ApiAnalysis[]): ApiAnalysis | undefined {
 
 export function SheepAnalysisSummary({
   sheepId,
+  records: recordsProp,
+  loading: loadingProp,
   onViewTab,
   embedded = false,
 }: {
   sheepId: string
+  records?: ApiAnalysis[]
+  loading?: boolean
   onViewTab?: () => void
   embedded?: boolean
 }) {
-  const [records, setRecords] = useState<ApiAnalysis[]>([])
-  const [loading, setLoading] = useState(true)
+  const [records, setRecords] = useState<ApiAnalysis[]>(recordsProp ?? [])
+  const [loading, setLoading] = useState(loadingProp ?? recordsProp === undefined)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const list = await fetchAnalysesBySheep(sheepId)
-      setRecords(
-        [...list].sort((a, b) => {
-          const ad = a.completedDate ?? a.scheduledDate
-          const bd = b.completedDate ?? b.scheduledDate
-          return new Date(bd).getTime() - new Date(ad).getTime()
-        }),
-      )
-    } catch {
-      setRecords([])
-    } finally {
-      setLoading(false)
-    }
-  }, [sheepId])
+  const controlled = recordsProp !== undefined
 
   useEffect(() => {
-    load()
-  }, [load])
+    if (controlled) {
+      setRecords(recordsProp)
+      setLoading(loadingProp ?? false)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    fetchAnalysesBySheep(sheepId)
+      .then((list) => {
+        if (cancelled) return
+        setRecords(
+          [...list].sort((a, b) => {
+            const ad = a.completedDate ?? a.scheduledDate
+            const bd = b.completedDate ?? b.scheduledDate
+            return new Date(bd).getTime() - new Date(ad).getTime()
+          }),
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setRecords([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [controlled, recordsProp, loadingProp, sheepId])
 
   const pending = useMemo(
     () => records.filter((a) => a.status === AnalysisStatus.SCHEDULED),

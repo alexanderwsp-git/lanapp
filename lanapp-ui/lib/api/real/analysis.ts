@@ -1,4 +1,4 @@
-import { lanapp } from "../client"
+import { lanapp, type FetchOptions } from "../client"
 import type { Paginated, BulkResult } from "../types"
 import type {
   AnalysisCreate,
@@ -37,8 +37,11 @@ export async function fetchAnalyses(page = 1, limit = 100): Promise<Paginated<Ap
   return res.data
 }
 
-export async function fetchAnalysesBySheep(sheepId: string): Promise<ApiAnalysis[]> {
-  const res = await lanapp.get<ApiAnalysis[]>(`analysis/sheep/${sheepId}`)
+export async function fetchAnalysesBySheep(
+  sheepId: string,
+  options?: FetchOptions,
+): Promise<ApiAnalysis[]> {
+  const res = await lanapp.get<ApiAnalysis[]>(`analysis/sheep/${sheepId}`, options)
   return res.data
 }
 

@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { BreedingCycleStatus, SheepCategory } from "@sheep/domain"
+import { BreedingCycleStatus } from "@sheep/domain"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { fetchBreedingCycles } from "@/lib/api/breeding-cycle"
-import { fetchSheep } from "@/lib/api/sheep"
+import { fetchDashboardSummary } from "@/lib/api/reports"
 import { fetchWeaningAlerts } from "@/lib/api/weaning"
 import { formatAgeDays, formatDisplayDate, formatLastWeight } from "@/lib/format"
 import { labelBreedingResult, breedingResultBadgeColor } from "@/lib/labels/breeding"
@@ -33,33 +33,34 @@ export default function DashboardPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    Promise.all([
-      fetchSheep({ limit: 500 }),
+    Promise.allSettled([
+      fetchDashboardSummary(),
       fetchWeaningAlerts(70),
       fetchBreedingCycles({ limit: 100 }),
-    ])
-      .then(([sheepResult, alerts, cycles]) => {
-        if (cancelled) return
-        const items = sheepResult.items
-        setTotal(sheepResult.total)
-        setPrenadas(items.filter((s) => s.isPregnant).length)
-        setMaltonas(
-          items.filter(
-            (s) =>
-              s.category === SheepCategory.CORDERO_DESTETADO ||
-              s.category === SheepCategory.CORDERA_DESTETADA,
-          ).length,
-        )
-        setWeaningAlerts(alerts)
+    ]).then(([summaryResult, alertsResult, cyclesResult]) => {
+      if (cancelled) return
+      if (summaryResult.status === "fulfilled") {
+        setTotal(summaryResult.value.totalSheep)
+        setPrenadas(summaryResult.value.pregnantCount)
+        setMaltonas(summaryResult.value.maltonasCount)
+      }
+      if (alertsResult.status === "fulfilled") {
+        setWeaningAlerts(alertsResult.value)
+      } else {
+        setWeaningAlerts([])
+      }
+      if (cyclesResult.status === "fulfilled") {
         setPendingCycles(
-          cycles.filter(
+          cyclesResult.value.filter(
             (c) => c.status === BreedingCycleStatus.ACTIVE && !c.result && !c.diagnosisDate,
           ),
         )
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      } else {
+        setPendingCycles([])
+      }
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
     return () => {
       cancelled = true
     }

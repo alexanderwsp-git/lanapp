@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   PencilSquareIcon,
   ClipboardDocumentListIcon,
@@ -21,10 +21,12 @@ import { SheepFormDrawer } from "@/components/sheep-form-drawer"
 import { SheepMedicineSummary } from "@/components/sheep-medicine-summary"
 import { SheepAnalysisSummary } from "@/components/sheep-analysis-summary"
 import { SwitchField } from "@/components/ui/switch"
-import type { ApiSheep } from "@/lib/api/types"
+import type { ApiAnalysis } from "@/lib/analysis/types"
+import type { ApiSheepFamily } from "@/lib/api/sheep"
+import type { ApiMedicineApplication, ApiSheep } from "@/lib/api/types"
 import { updateSheep } from "@/lib/api/sheep"
-import { fetchWeaningRecordsBySheep, type ApiWeaningRecord } from "@/lib/api/weaning"
-import { useSheepWeights } from "@/lib/hooks/use-sheep-weights"
+import type { ApiWeaningRecord } from "@/lib/api/weaning"
+import type { ApiWeight } from "@/lib/api/weight"
 import { formatDisplayDate, formatAgeDays, formatDailyGain, formatLastWeight } from "@/lib/format"
 import { reproductorStatus } from "@/lib/reproductor-status"
 import {
@@ -43,16 +45,45 @@ const TABS = [
   { id: "analisis", label: "Análisis" },
 ] as const
 
-export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?: () => void | Promise<void> }) {
+export function SheepDetail({
+  sheep,
+  family,
+  weaningRecords,
+  weightRecords,
+  weightError,
+  setWeightRecords,
+  medicineApplications,
+  analyses,
+  offspring,
+  onRefreshSheep,
+  onRefreshFamily,
+  onRefreshWeaning,
+  onRefreshWeights,
+  onRefreshMedicine,
+  onRefreshAnalyses,
+}: {
+  sheep: ApiSheep
+  family: ApiSheepFamily | null
+  weaningRecords: ApiWeaningRecord[]
+  weightRecords: ApiWeight[]
+  weightError: string | null
+  setWeightRecords: React.Dispatch<React.SetStateAction<ApiWeight[]>>
+  medicineApplications: ApiMedicineApplication[]
+  analyses: ApiAnalysis[]
+  offspring: ApiSheep[]
+  onRefreshSheep: () => Promise<void>
+  onRefreshFamily: () => Promise<void>
+  onRefreshWeaning: () => Promise<void>
+  onRefreshWeights: () => Promise<void>
+  onRefreshMedicine: () => Promise<void>
+  onRefreshAnalyses: () => Promise<void>
+}) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("general")
-  const [weaningRecords, setWeaningRecords] = useState<ApiWeaningRecord[]>([])
-  const [weaningLoading, setWeaningLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   const [reproSaving, setReproSaving] = useState(false)
   const [reproError, setReproError] = useState<string | null>(null)
-  const sheepWeights = useSheepWeights(sheep.id)
+  const reproStatsRef = useRef<HTMLDivElement>(null)
 
-  // Support deep-link redirects from the legacy /sheep/[id]/edit route.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get("edit") === "1") {
@@ -65,30 +96,24 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
   const locationName = sheep.currentLocation?.name ?? "—"
   const repro = reproductorStatus(sheep)
 
-  useEffect(() => {
-    let cancelled = false
-    setWeaningLoading(true)
-    fetchWeaningRecordsBySheep(sheep.id)
-      .then((records) => {
-        if (!cancelled) setWeaningRecords(records)
-      })
-      .catch(() => {
-        if (!cancelled) setWeaningRecords([])
-      })
-      .finally(() => {
-        if (!cancelled) setWeaningLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [sheep.id])
+  async function handleWeaned() {
+    await Promise.all([onRefreshWeaning(), onRefreshSheep()])
+  }
+
+  async function handleMedicineUpdated() {
+    await Promise.all([onRefreshMedicine(), onRefreshSheep()])
+  }
+
+  async function handleAnalysisUpdated() {
+    await Promise.all([onRefreshAnalyses(), onRefreshSheep()])
+  }
 
   async function toggleBreedingRam(checked: boolean) {
     setReproError(null)
     setReproSaving(true)
     try {
       await updateSheep(sheep.id, { isBreedingRam: checked })
-      await onRefresh?.()
+      await onRefreshSheep()
     } catch (err) {
       setReproError(err instanceof Error ? err.message : "No se pudo actualizar el reproductor")
     } finally {
@@ -107,7 +132,12 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <SheepWeaningAction sheep={sheep} onWeaned={onRefresh} />
+            <SheepWeaningAction
+              sheep={sheep}
+              weaningRecords={weaningRecords}
+              weaningLoading={false}
+              onWeaned={handleWeaned}
+            />
             <button
               type="button"
               onClick={() => setEditOpen(true)}
@@ -207,11 +237,7 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
         <div className="mt-6">
           {tab === "general" && (
             <div className="flex flex-col gap-6">
-              <SheepWeightSummary
-                records={sheepWeights.records}
-                loading={sheepWeights.loading}
-                compact
-              />
+              <SheepWeightSummary records={weightRecords} loading={false} compact />
 
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
@@ -230,14 +256,22 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
                 </dl>
               </div>
 
-              <SheepGenealogy sheep={sheep} />
+              <SheepGenealogy sheep={sheep} family={family} loading={false} />
 
               <div className="rounded-lg bg-white p-6 shadow">
-                <SheepMedicineSummary sheepId={sheep.id} onViewTab={() => setTab("medicina")} />
+                <SheepMedicineSummary
+                  sheepId={sheep.id}
+                  applications={medicineApplications}
+                  onViewTab={() => setTab("medicina")}
+                />
               </div>
 
               <div className="rounded-lg bg-white p-6 shadow">
-                <SheepAnalysisSummary sheepId={sheep.id} onViewTab={() => setTab("analisis")} />
+                <SheepAnalysisSummary
+                  sheepId={sheep.id}
+                  records={analyses}
+                  onViewTab={() => setTab("analisis")}
+                />
               </div>
 
               <div className="rounded-lg bg-white p-6 shadow">
@@ -254,7 +288,7 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
                     hideFooter
                     rows={weaningRecords}
                     rowKey={(r) => r.id}
-                    loading={weaningLoading}
+                    loading={false}
                     loadingText="Cargando destetes…"
                     empty={<p className="text-sm text-gray-500">Sin registro de destete.</p>}
                     columns={[
@@ -273,26 +307,52 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
                 </div>
               </div>
 
-              <SheepReproStats sheep={sheep} />
+              <div ref={reproStatsRef}>
+                <SheepReproStats
+                  sheep={sheep}
+                  offspring={offspring}
+                  loadWhenVisible
+                  visibleRef={reproStatsRef}
+                />
+              </div>
             </div>
           )}
 
           {tab === "peso" && (
             <SheepPesosTab
               sheep={sheep}
-              records={sheepWeights.records}
-              loading={sheepWeights.loading}
-              loadError={sheepWeights.error}
-              reload={sheepWeights.reload}
-              setRecords={sheepWeights.setRecords}
+              records={weightRecords}
+              loading={false}
+              loadError={weightError}
+              reload={onRefreshWeights}
+              setRecords={setWeightRecords}
             />
           )}
 
-          {tab === "montas" && <SheepMontasTab sheep={sheep} onUpdated={onRefresh} />}
+          {tab === "montas" && (
+            <SheepMontasTab
+              sheep={sheep}
+              offspring={offspring}
+              onUpdated={onRefreshSheep}
+            />
+          )}
 
-          {tab === "medicina" && <SheepMedicineTab sheep={sheep} onUpdated={onRefresh} />}
+          {tab === "medicina" && (
+            <SheepMedicineTab
+              sheep={sheep}
+              applications={medicineApplications}
+              onUpdated={handleMedicineUpdated}
+            />
+          )}
 
-          {tab === "analisis" && <SheepAnalysisTab sheep={sheep} onUpdated={onRefresh} />}
+          {tab === "analisis" && (
+            <SheepAnalysisTab
+              sheep={sheep}
+              analyses={analyses}
+              medicineApplications={medicineApplications}
+              onUpdated={handleAnalysisUpdated}
+            />
+          )}
         </div>
       </div>
 
@@ -301,7 +361,9 @@ export function SheepDetail({ sheep, onRefresh }: { sheep: ApiSheep; onRefresh?:
         onClose={() => setEditOpen(false)}
         mode="edit"
         initial={sheep}
-        onSaved={() => onRefresh?.()}
+        onSaved={async () => {
+          await Promise.all([onRefreshFamily(), onRefreshSheep()])
+        }}
       />
     </div>
   )

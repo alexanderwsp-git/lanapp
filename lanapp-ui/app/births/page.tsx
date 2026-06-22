@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { Gender, SheepCategory } from "@sheep/domain"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
@@ -10,43 +9,21 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { DataTable } from "@/components/ui/data-table"
 import { Drawer } from "@/components/ui/drawer"
 import { Field, TextInput, Textarea } from "@/components/ui/form-fields"
-import { fetchSheep } from "@/lib/api/sheep"
-import { fetchMatingsBySheep, type ApiMating } from "@/lib/api/mating"
-import {
-  fetchPregnancyChecksByMating,
-  recordDelivery,
-  type ApiPregnancyCheck,
-} from "@/lib/api/pregnancy-check"
-import type { ApiSheep } from "@/lib/api/types"
-import { matingActions } from "@/lib/mating-actions"
+import { fetchPendingDeliveries, type ApiPendingDelivery } from "@/lib/api/births"
+import { recordDelivery } from "@/lib/api/pregnancy-check"
 import { formatDisplayDate } from "@/lib/format"
 import { SheepCategoryCell } from "@/components/sheep-category-cell"
 import { SunIcon, UserGroupIcon } from "@heroicons/react/24/outline"
 
 const today = () => new Date().toISOString().split("T")[0]
 
-type PregnantRow = {
-  sheep: ApiSheep
-  mating: ApiMating
-  checks: ApiPregnancyCheck[]
-}
-
-function isPregnantEwe(s: ApiSheep): boolean {
-  return (
-    s.gender === Gender.FEMALE &&
-    (s.isPregnant ||
-      s.category === SheepCategory.OVEJA_PRENADA ||
-      s.category === SheepCategory.BORREGA_PRENADA)
-  )
-}
-
 export default function BirthsPage() {
-  const [rows, setRows] = useState<PregnantRow[]>([])
+  const [rows, setRows] = useState<ApiPendingDelivery[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [target, setTarget] = useState<PregnantRow | null>(null)
+  const [target, setTarget] = useState<ApiPendingDelivery | null>(null)
   const [deliveryDate, setDeliveryDate] = useState(today())
   const [notes, setNotes] = useState("")
   const [offspringBorn, setOffspringBorn] = useState("")
@@ -59,20 +36,7 @@ export default function BirthsPage() {
     setLoading(true)
     setLoadError(null)
     try {
-      const res = await fetchSheep({ page: 1, limit: 300, gender: Gender.FEMALE })
-      const pregnant = res.items.filter(isPregnantEwe)
-      const loaded: PregnantRow[] = []
-      for (const sheep of pregnant) {
-        const matings = await fetchMatingsBySheep(sheep.id)
-        for (const mating of matings) {
-          const checks = await fetchPregnancyChecksByMating(mating.id)
-          if (matingActions(checks).canDeliver) {
-            loaded.push({ sheep, mating, checks })
-            break
-          }
-        }
-      }
-      setRows(loaded)
+      setRows(await fetchPendingDeliveries())
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "No se pudieron cargar las preñadas")
       setRows([])
@@ -94,7 +58,7 @@ export default function BirthsPage() {
     [rows],
   )
 
-  function openDrawer(row: PregnantRow) {
+  function openDrawer(row: ApiPendingDelivery) {
     setTarget(row)
     setDeliveryDate(today())
     setNotes("")

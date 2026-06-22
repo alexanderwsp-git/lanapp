@@ -73,6 +73,18 @@ export class SheepService extends BaseService<Sheep> {
         return (this.repository as SheepRepository).findWithParents(id);
     }
 
+    async findFamily(id: string): Promise<{ mother?: Sheep; father?: Sheep; children: Sheep[] } | null> {
+        const repo = this.repository as SheepRepository;
+        const sheep = await repo.findWithParents(id);
+        if (!sheep) return null;
+        const children = await repo.findChildren(id);
+        return {
+            mother: sheep.mother,
+            father: sheep.father,
+            children,
+        };
+    }
+
     async findOne(id: string): Promise<Sheep | null> {
         const sheep = await super.findOne(id);
         if (!sheep) return null;

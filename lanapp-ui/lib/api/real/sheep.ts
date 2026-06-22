@@ -1,5 +1,5 @@
 import type { Gender, SheepCreate, SheepStatus, SheepUpdate, SheepCategory } from "@sheep/domain"
-import { lanapp } from "../client"
+import { lanapp, type FetchOptions } from "../client"
 import type { ApiSheep, Paginated } from "../types"
 
 export type SheepListParams = {
@@ -12,6 +12,12 @@ export type SheepListParams = {
 }
 
 export type SheepListResult = Paginated<ApiSheep>
+
+export type ApiSheepFamily = {
+  mother?: ApiSheep
+  father?: ApiSheep
+  children: ApiSheep[]
+}
 
 export async function fetchSheep(params: SheepListParams = {}): Promise<SheepListResult> {
   const { page = 1, limit = 100, gender, status, category, locationId } = params
@@ -37,9 +43,18 @@ export async function fetchSheep(params: SheepListParams = {}): Promise<SheepLis
   return data
 }
 
-export async function fetchSheepById(id: string): Promise<ApiSheep> {
-  const res = await lanapp.get<ApiSheep>(`sheep/${id}`)
+export async function fetchSheepById(id: string, options?: FetchOptions): Promise<ApiSheep> {
+  const res = await lanapp.get<ApiSheep>(`sheep/${id}`, options)
   return res.data
+}
+
+export async function fetchSheepFamily(id: string, options?: FetchOptions): Promise<ApiSheepFamily> {
+  const res = await lanapp.get<ApiSheepFamily>(`sheep/${id}/family`, options)
+  return {
+    mother: res.data.mother,
+    father: res.data.father,
+    children: res.data.children ?? [],
+  }
 }
 
 export async function createSheep(payload: SheepCreate): Promise<ApiSheep> {

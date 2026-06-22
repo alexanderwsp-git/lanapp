@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Field, TextInput, Select, Textarea } from "@/components/ui/form-fields"
 import { Combobox } from "@/components/ui/combobox"
@@ -28,6 +28,7 @@ import {
   recordTypeOptions,
   statusOptions,
 } from "@/lib/labels/sheep"
+import { isFatherParentCandidate, isMotherParentCandidate } from "@/lib/sheep-parent-eligibility"
 
 type FormState = {
   tag: string
@@ -119,30 +120,55 @@ export function SheepForm({
     fetchLocations()
       .then(setLocations)
       .catch(() => setLocations([]))
-    fetchSheep({ page: 1, limit: 300 })
-      .then((res) => setAllSheep(res.items))
-      .catch(() => setAllSheep([]))
+    Promise.allSettled([
+      fetchSheep({ page: 1, limit: 200, gender: Gender.FEMALE, status: SheepStatus.ACTIVE }),
+      fetchSheep({ page: 1, limit: 100, gender: Gender.MALE, status: SheepStatus.ACTIVE }),
+    ]).then(([femalesResult, malesResult]) => {
+      const females = femalesResult.status === "fulfilled" ? femalesResult.value.items : []
+      const males = malesResult.status === "fulfilled" ? malesResult.value.items : []
+      setAllSheep([...females, ...males])
+    })
   }, [])
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  const motherOptions = allSheep
-    .filter((s) => s.gender === Gender.FEMALE && s.id !== initial?.id)
-    .map((s) => ({
-      value: s.id,
-      label: s.tag,
-      sublabel: s.name ?? labelCategory(s.category),
-    }))
+  const parentOpts = useMemo(
+    () => ({
+      childBirthDate: form.birthDate,
+      excludeId: initial?.id,
+    }),
+    [form.birthDate, initial?.id],
+  )
 
-  const fatherOptions = allSheep
-    .filter((s) => s.gender === Gender.MALE && s.id !== initial?.id)
-    .map((s) => ({
-      value: s.id,
-      label: s.tag,
-      sublabel: s.name ?? labelCategory(s.category),
-    }))
+  const motherOptions = useMemo(
+    () =>
+      allSheep
+        .filter((s) =>
+          isMotherParentCandidate(s, { ...parentOpts, allowId: form.motherId || undefined }),
+        )
+        .map((s) => ({
+          value: s.id,
+          label: s.tag,
+          sublabel: s.name ?? labelCategory(s.category),
+        })),
+    [allSheep, form.motherId, parentOpts],
+  )
+
+  const fatherOptions = useMemo(
+    () =>
+      allSheep
+        .filter((s) =>
+          isFatherParentCandidate(s, { ...parentOpts, allowId: form.fatherId || undefined }),
+        )
+        .map((s) => ({
+          value: s.id,
+          label: s.tag,
+          sublabel: s.name ?? labelCategory(s.category),
+        })),
+    [allSheep, form.fatherId, parentOpts],
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -270,7 +296,33 @@ export function SheepForm({
             id="birthDate"
             type="date"
             value={form.birthDate}
-            onChange={(e) => setField("birthDate", e.target.value)}
+            onChange={(e) => {
+              const birthDate = e.target.value
+              setForm((prev) => {
+                const next = { ...prev, birthDate }
+                const mother = allSheep.find((s) => s.id === prev.motherId)
+                if (
+                  mother &&
+                  !isMotherParentCandidate(mother, {
+                    childBirthDate: birthDate,
+                    excludeId: initial?.id,
+                  })
+                ) {
+                  next.motherId = ""
+                }
+                const father = allSheep.find((s) => s.id === prev.fatherId)
+                if (
+                  father &&
+                  !isFatherParentCandidate(father, {
+                    childBirthDate: birthDate,
+                    excludeId: initial?.id,
+                  })
+                ) {
+                  next.fatherId = ""
+                }
+                return next
+              })
+            }}
             required
           />
         </Field>

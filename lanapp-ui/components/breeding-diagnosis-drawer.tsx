@@ -88,7 +88,7 @@ export function BreedingDiagnosisDrawer({
       if (opts.length > 0) return opts
     }
     return breedingResultToUiOptions()
-  }, [mating, cycle, cycleChecks, diagHistory])
+  }, [mating, cycle, cycleChecks])
 
   useEffect(() => {
     if (resultOptions.length === 0) return

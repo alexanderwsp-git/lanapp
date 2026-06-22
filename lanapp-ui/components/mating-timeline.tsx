@@ -280,8 +280,3 @@ export function MatingActivityFeed({ checks, mating }: MatingActivityFeedProps) 
     </div>
   )
 }
-
-/** @deprecated Use MatingActivityFeed */
-export function MatingTimeline(props: MatingActivityFeedProps) {
-  return <MatingActivityFeed {...props} />
-}

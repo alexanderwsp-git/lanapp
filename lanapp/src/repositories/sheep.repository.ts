@@ -110,6 +110,14 @@ export class SheepRepository extends BaseRepository<Sheep> {
         });
     }
 
+    async findChildren(id: string): Promise<Sheep[]> {
+        return this.repository
+            .createQueryBuilder('sheep')
+            .where('sheep.motherId = :id OR sheep.fatherId = :id', { id })
+            .orderBy('sheep.birthDate', 'DESC')
+            .getMany();
+    }
+
     async findWithDetails(id: string): Promise<Sheep | null> {
         return this.repository.findOne({
             where: { id },

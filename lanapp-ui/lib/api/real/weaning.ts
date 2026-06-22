@@ -1,4 +1,4 @@
-import { lanapp } from "../client"
+import { lanapp, type FetchOptions } from "../client"
 import type { ApiSheep, BulkResult } from "../types"
 import type {
   ApiRecentWeaningRecord,
@@ -27,7 +27,10 @@ export async function fetchRecentWeanings(query: WeaningRecentQuery = {}): Promi
   return res.data
 }
 
-export async function fetchWeaningRecordsBySheep(sheepId: string): Promise<ApiWeaningRecord[]> {
-  const res = await lanapp.get<ApiWeaningRecord[]>(`weaning-record/sheep/${sheepId}`)
+export async function fetchWeaningRecordsBySheep(
+  sheepId: string,
+  options?: FetchOptions,
+): Promise<ApiWeaningRecord[]> {
+  const res = await lanapp.get<ApiWeaningRecord[]>(`weaning-record/sheep/${sheepId}`, options)
   return res.data
 }

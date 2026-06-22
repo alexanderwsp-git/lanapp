@@ -196,8 +196,7 @@ export default function PlannerPage() {
   }
 
   function openDiag(row: ApiBreedingCycle) {
-    const checks = row.matingId ? checksByMatingId.get(row.matingId) : undefined
-    if (!cycleDiagnosisGate(row, checks).canDiagnose) return
+    if (!diagnosisGateFor(row).canDiagnose) return
     setDiagFor(row)
   }
 
@@ -525,7 +524,9 @@ export default function PlannerPage() {
                 key: "actions",
                 header: "Acciones",
                 className: "whitespace-nowrap",
-                cell: (r) => (
+                cell: (r) => {
+                  const diagGate = diagnosisGateFor(r)
+                  return (
                   <div className="flex flex-wrap items-center gap-2">
                     {!r.matingId && (
                       <button
@@ -542,11 +543,11 @@ export default function PlannerPage() {
                     <button
                       type="button"
                       onClick={() => openDiag(r)}
-                      disabled={!diagnosisGateFor(r).canDiagnose}
+                      disabled={!diagGate.canDiagnose}
                       title={
-                        diagnosisGateFor(r).canDiagnose
+                        diagGate.canDiagnose
                           ? "Registrar diagnóstico"
-                          : diagnosisGateFor(r).diagnoseBlockedReason
+                          : diagGate.diagnoseBlockedReason
                       }
                       aria-label="Registrar diagnóstico"
                       className="rounded-md p-1.5 text-indigo-600 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
@@ -565,7 +566,8 @@ export default function PlannerPage() {
                       </button>
                     )}
                   </div>
-                ),
+                  )
+                },
               },
             ]}
           />

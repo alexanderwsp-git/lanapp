@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Gender } from "@sheep/domain"
 import { UsersIcon } from "@heroicons/react/24/outline"
-import { fetchSheep } from "@/lib/api/sheep"
 import type { ApiSheep } from "@/lib/api/types"
+import type { ApiSheepFamily } from "@/lib/api/sheep"
 import { labelCategory } from "@/lib/labels/sheep"
 
 type NodeRole = "father" | "mother" | "self" | "child"
@@ -23,14 +22,18 @@ function SheepNode({
     sheep.gender === Gender.MALE
       ? "border-blue-200 bg-blue-50"
       : "border-pink-200 bg-pink-50"
-  const dotColor = sheep.gender === Gender.MALE ? "bg-blue-500" : "bg-pink-500"
+  const dotColor = highlight
+    ? "bg-amber-500"
+    : sheep.gender === Gender.MALE
+      ? "bg-blue-500"
+      : "bg-pink-500"
 
   return (
     <Link
       href={`/sheep/${sheep.id}`}
       className={`group flex min-w-[8.5rem] items-center gap-2 rounded-lg border px-3 py-2 transition ${
         highlight
-          ? "border-indigo-300 bg-indigo-50 ring-2 ring-indigo-200"
+          ? "border-amber-400 bg-amber-50 ring-2 ring-amber-200"
           : `${genderColor} hover:border-indigo-300 hover:ring-2 hover:ring-indigo-100`
       }`}
     >
@@ -56,36 +59,18 @@ function EmptyNode({ label }: { label: string }) {
   )
 }
 
-export function SheepGenealogy({ sheep }: { sheep: ApiSheep }) {
-  const [all, setAll] = useState<ApiSheep[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    fetchSheep({ limit: 500 })
-      .then((res) => {
-        if (!cancelled) setAll(res.items)
-      })
-      .catch(() => {
-        if (!cancelled) setAll([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [sheep.id])
-
-  const byId = useMemo(() => new Map(all.map((s) => [s.id, s])), [all])
-
-  const mother = sheep.motherId ? byId.get(sheep.motherId) : undefined
-  const father = sheep.fatherId ? byId.get(sheep.fatherId) : undefined
-  const children = useMemo(
-    () => all.filter((s) => s.motherId === sheep.id || s.fatherId === sheep.id),
-    [all, sheep.id],
-  )
+export function SheepGenealogy({
+  sheep,
+  family,
+  loading,
+}: {
+  sheep: ApiSheep
+  family: ApiSheepFamily | null
+  loading: boolean
+}) {
+  const mother = family?.mother
+  const father = family?.father
+  const children = family?.children ?? []
 
   const hasParents = Boolean(mother || father)
   const hasFamily = hasParents || children.length > 0
@@ -116,7 +101,6 @@ export function SheepGenealogy({ sheep }: { sheep: ApiSheep }) {
         </div>
       ) : (
         <div className="mt-6 flex flex-col items-center gap-0">
-          {/* Padres */}
           <div className="flex flex-col items-center">
             <span className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
               Padres
@@ -127,15 +111,12 @@ export function SheepGenealogy({ sheep }: { sheep: ApiSheep }) {
             </div>
           </div>
 
-          {/* Conector hacia self */}
           <div className="h-6 w-px bg-gray-200" aria-hidden="true" />
 
-          {/* Oveja actual */}
           <div className="flex flex-col items-center">
             <SheepNode sheep={sheep} role="self" highlight />
           </div>
 
-          {/* Hijos */}
           {children.length > 0 && (
             <>
               <div className="h-6 w-px bg-gray-200" aria-hidden="true" />
@@ -154,7 +135,6 @@ export function SheepGenealogy({ sheep }: { sheep: ApiSheep }) {
         </div>
       )}
 
-      {/* Leyenda */}
       <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-gray-100 pt-4">
         <span className="flex items-center gap-1.5 text-xs text-gray-500">
           <span className="h-2 w-2 rounded-full bg-pink-500" aria-hidden="true" />
@@ -165,7 +145,7 @@ export function SheepGenealogy({ sheep }: { sheep: ApiSheep }) {
           Macho
         </span>
         <span className="flex items-center gap-1.5 text-xs text-gray-500">
-          <span className="h-2 w-2 rounded-full bg-indigo-500" aria-hidden="true" />
+          <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
           Oveja actual
         </span>
       </div>

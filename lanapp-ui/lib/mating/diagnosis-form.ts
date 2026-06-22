@@ -75,8 +75,7 @@ export function diagnosisFormFromCycle(
   reproParams?: ReproductionParameters,
 ): DiagnosisFormState {
   if (cycle.matingId && checks && reproParams) {
-    const { phase } = matingActions(checks)
-    const options = diagnoseOptionsForPhase(phase, checks)
+    const options = diagnoseOptionsForPhase(matingActions(checks).phase, checks)
     const followUp = isPostPregnancyFollowUp(checks)
     const matingDate = cycle.confirmedMatingDate ?? cycle.matingDate
     const window = suggestedEcoWindow(matingDate, reproParams)

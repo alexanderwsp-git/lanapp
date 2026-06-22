@@ -1,9 +1,12 @@
-import { lanapp } from "../client"
+import { lanapp, type FetchOptions } from "../client"
 import type { ApiWeight, BulkWeightPayload, WeightCreatePayload, WeightUpdatePayload } from "../weight"
 import type { BulkResult } from "../types"
 
-export async function fetchWeightsBySheep(sheepId: string): Promise<ApiWeight[]> {
-  const res = await lanapp.get<ApiWeight[]>(`weight/sheep/${sheepId}`)
+export async function fetchWeightsBySheep(
+  sheepId: string,
+  options?: FetchOptions,
+): Promise<ApiWeight[]> {
+  const res = await lanapp.get<ApiWeight[]>(`weight/sheep/${sheepId}`, options)
   return res.data
 }
 
