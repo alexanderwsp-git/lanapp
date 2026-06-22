@@ -5,7 +5,11 @@ import { AcademicCapIcon } from "@heroicons/react/24/outline"
 import { StatusBadge } from "@/components/ui/status-badge"
 import type { ApiWeaningRecord } from "@/lib/api/weaning"
 import type { ApiSheep } from "@/lib/api/types"
-import { weaningEligibility } from "@/lib/weaning-eligibility"
+import {
+  showsWeaningAction,
+  weanedBadgeLabel,
+  weaningEligibility,
+} from "@/lib/weaning-eligibility"
 import { WeaningRecordDrawer } from "@/components/weaning-record-drawer"
 
 /**
@@ -26,6 +30,10 @@ export function SheepWeaningAction({
   const sheepId = sheep.id
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  if (!showsWeaningAction(sheep)) {
+    return null
+  }
+
   const record = weaningRecords[0] ?? null
   const blockReason = record ? null : weaningEligibility(sheep)
 
@@ -34,7 +42,7 @@ export function SheepWeaningAction({
   }
 
   if (record) {
-    return <StatusBadge color="green">Destetada</StatusBadge>
+    return <StatusBadge color="green">{weanedBadgeLabel(sheep)}</StatusBadge>
   }
 
   return (

@@ -128,7 +128,14 @@ export class WeaningRecordService extends BaseService<WeaningRecord> {
             ? weanedCategory
             : determineCategory(sheep.gender, sheep.birthDate, {
                   isPregnant: sheep.isPregnant,
-                  isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+                  isLactating:
+                      !!sheep.deliveryDate &&
+                      !sheep.isPregnant &&
+                      (sheep.matingCount > 0 || sheep.effectivenessCount > 0),
+                  hasReproductiveHistory:
+                      sheep.matingCount > 0 ||
+                      sheep.effectivenessCount > 0 ||
+                      !!sheep.deliveryDate,
                   isWeaned: true,
                   referenceDate: weaningDate,
               });

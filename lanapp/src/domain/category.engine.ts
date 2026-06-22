@@ -10,6 +10,8 @@ export interface CategoryContext {
     isPregnant?: boolean;
     isLactating?: boolean;
     isBreedingRam?: boolean;
+    /** Montas, preñez confirmada o parto — required for OVEJA_* adult categories. */
+    hasReproductiveHistory?: boolean;
     /** True when a weaning_record exists — destetado is event-driven, not age-only. */
     isWeaned?: boolean;
     referenceDate?: Date;
@@ -52,6 +54,9 @@ export function determineCategory(
     }
 
     if (context.isPregnant) return SheepCategory.OVEJA_PRENADA;
-    if (context.isLactating) return SheepCategory.OVEJA_LACTANCIA;
-    return SheepCategory.OVEJA_VACIA;
+    if (context.isLactating && context.hasReproductiveHistory) {
+        return SheepCategory.OVEJA_LACTANCIA;
+    }
+    if (context.hasReproductiveHistory) return SheepCategory.OVEJA_VACIA;
+    return SheepCategory.BORREGA;
 }

@@ -50,7 +50,7 @@ describe('category.engine', () => {
         ).toBe(SheepCategory.REPRODUCTOR);
     });
 
-    it('assigns reproductive female categories after 12 months', () => {
+    it('assigns reproductive female categories after 12 months with history', () => {
         const birth = new Date('2023-01-01');
         expect(
             determineCategory(Gender.FEMALE, birth, {
@@ -62,11 +62,28 @@ describe('category.engine', () => {
             determineCategory(Gender.FEMALE, birth, {
                 referenceDate: ref,
                 isLactating: true,
+                hasReproductiveHistory: true,
             })
         ).toBe(SheepCategory.OVEJA_LACTANCIA);
+        expect(
+            determineCategory(Gender.FEMALE, birth, {
+                referenceDate: ref,
+                hasReproductiveHistory: true,
+            })
+        ).toBe(SheepCategory.OVEJA_VACIA);
+    });
+
+    it('keeps BORREGA at 12+ months without reproductive history', () => {
+        const birth = new Date('2023-01-01');
         expect(determineCategory(Gender.FEMALE, birth, { referenceDate: ref })).toBe(
-            SheepCategory.OVEJA_VACIA
+            SheepCategory.BORREGA
         );
+        expect(
+            determineCategory(Gender.FEMALE, birth, {
+                referenceDate: ref,
+                isLactating: true,
+            })
+        ).toBe(SheepCategory.BORREGA);
     });
 
     it('assigns BORREGA PREÑADA for young pregnant females', () => {

@@ -20,13 +20,29 @@ export class SheepService extends BaseService<Sheep> {
     private async buildCategoryContext(
         sheep: Pick<
             Sheep,
-            'id' | 'gender' | 'birthDate' | 'isPregnant' | 'deliveryDate' | 'isBreedingRam'
+            | 'id'
+            | 'gender'
+            | 'birthDate'
+            | 'isPregnant'
+            | 'deliveryDate'
+            | 'isBreedingRam'
+            | 'matingCount'
+            | 'effectivenessCount'
         >
     ): Promise<CategoryContext> {
         const records = await this.weaningRecordRepository.findBySheep(sheep.id);
+        const hasReproductiveHistory =
+            sheep.matingCount > 0 ||
+            sheep.effectivenessCount > 0 ||
+            !!sheep.deliveryDate;
+
         return {
             isPregnant: sheep.isPregnant,
-            isLactating: !!sheep.deliveryDate && !sheep.isPregnant,
+            isLactating:
+                !!sheep.deliveryDate &&
+                !sheep.isPregnant &&
+                (sheep.matingCount > 0 || sheep.effectivenessCount > 0),
+            hasReproductiveHistory,
             isWeaned: records.length > 0,
             isBreedingRam: sheep.isBreedingRam,
         };
@@ -108,9 +124,18 @@ export class SheepService extends BaseService<Sheep> {
         username: string
     ): Promise<Sheep> {
         const { currentLocationId, ...rest } = data;
+        const hasReproductiveHistory =
+            (rest.matingCount ?? 0) > 0 ||
+            (rest.effectivenessCount ?? 0) > 0 ||
+            !!rest.deliveryDate;
+
         const category = determineCategory(rest.gender!, rest.birthDate!, {
             isPregnant: rest.isPregnant || false,
-            isLactating: !!rest.deliveryDate && !rest.isPregnant,
+            isLactating:
+                !!rest.deliveryDate &&
+                !rest.isPregnant &&
+                ((rest.matingCount ?? 0) > 0 || (rest.effectivenessCount ?? 0) > 0),
+            hasReproductiveHistory,
             isWeaned: false,
             isBreedingRam: rest.isBreedingRam ?? false,
         });
